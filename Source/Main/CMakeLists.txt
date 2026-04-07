@@ -7,7 +7,7 @@ FILE(GLOB_RECURSE source_list
     ./*.hpp)
 message("main CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR}")
 message("main CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
-# cmake项目里关于一部分的As项目的必要配置
+# cmake锟斤拷目锟斤拷锟斤拷锟揭伙拷锟斤拷值锟紸s锟斤拷目锟侥憋拷要锟斤拷锟斤拷
 option(BUILD_SHARED_LIBS "Build shared library" OFF)
 option(AS_NO_EXCEPTIONS "Disable exception handling in script context" OFF)
 file(READ ./AngelScript/include/angelscript.h ANGELSCRIPT_H)
@@ -46,6 +46,7 @@ endif()
 target_link_libraries(Main Threads::Threads)
 target_include_directories(Main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(Main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/AngelScript/include)
+target_include_directories(Main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)  # 鏀寔 "Algorithm/ModulePublic/..." 鍐欐硶
 
-#链接库
+#锟斤拷锟接匡拷
 target_link_libraries(Main Algorithm)
