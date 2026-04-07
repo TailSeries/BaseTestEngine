@@ -159,6 +159,7 @@ int main(int argc, const char** argv)
 {
 	std::vector<int> testarr{1, 2, 3, 3, 4, 2, 1, 5};
 	//SelectSort(testarr);
-	InsertSort(testarr);
+	//InsertSort(testarr);
+	ShellSort(testarr);
 	return 0;
 }

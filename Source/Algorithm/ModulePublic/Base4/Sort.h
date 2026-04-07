@@ -83,6 +83,7 @@ void InsertSort(std::vector<int>& arr)
 
 /*
 * 2.3 希尔排序：使数组中任意间隔为h的元素有序，这样的数组被称为h有序数组。
+* 假设 a[i - h], a[i - 2h]...是有序的，那么 a[i]就应该移动到它们之间
 */
 void ShellSort(std::vector<int>& arr)
 {
@@ -94,12 +95,15 @@ void ShellSort(std::vector<int>& arr)
 
 	while (h >= 1)
 	{
-
-
+		for (int i = h; i < arr.size(); i++) // 这里i = h，并且i++; arr[h]是第一个需要向左比较的元素，另外是每个元素的h间隔，所以应该是i++；
+		{
+			for (int j = i; j >= h && arr[j] < arr[j - h]; j -= h)
+			{
+				std::swap(arr[j], arr[j - h]);
+			}
+		}
 		h = h / 3;
 	}
-
-
 
 }
 
