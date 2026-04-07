@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdio>
+
 #include "Module.h"
 class ALGOMODULE TestClass
 {
@@ -6,3 +8,10 @@ class ALGOMODULE TestClass
 public:
 	void testfunc();
 };
+
+
+void Test45486896()
+{
+	int a = 23;
+	std::printf("TestClass::testfunc() a = %d", a);
+}
