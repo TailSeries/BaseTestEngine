@@ -1,170 +1,158 @@
-#include <bit>
-#include <cassert>
-#include <deque>
-#include <iostream>
-#include <optional>
-#include <stack>
-#include <string>
-#include "AngelScript/include/angelscript.h"
-#include "AngelScript/scriptstdstring/scriptstdstring.h"
-#include "AngelScript/scriptbuilder/scriptbuilder.h"
-#include "AngelScript/source/as_tokendef.h"
-#include "Test/Test.h"
-#include "Algorithm/ModulePublic/Base4/Sort.h"
-
-void MessageCallback(const asSMessageInfo* msg, void* param)
-{
-	const char* type = "ERR ";
-	if (msg->type == asMSGTYPE_WARNING)
-		type = "WARN";
-	else if (msg->type == asMSGTYPE_INFORMATION)
-		type = "INFO";
-	printf("%s (%d, %d) : %s : %s\n", msg->section, msg->row, msg->col, type, msg->message);
-}
-
-void print(const std::string& msg)
-{
-	printf("%s", msg.c_str());
-}
-
-//test angelscript
-
-
-struct FScriptStructWildcard
-{
-	FScriptStructWildcard(){};
-	~FScriptStructWildcard(){};
-};
-std::string* GetMemory(std::string* self)
-{
-	return self;
-}
-
-
-void TestAs()
-{
-	// 1.注册标准string 以及一个cpp的打印函数
-	asIScriptEngine* Engine = asCreateScriptEngine();
-	int r = Engine->SetMessageCallback(asFUNCTION(MessageCallback), 0, asCALL_CDECL);
-	assert(r >= 0);
-	RegisterStdString(Engine);
-
-
-	{
-		// 允许对int这样Primitivetype类型和值类型使用 inout&
-		Engine->SetEngineProperty(asEP_ALLOW_UNSAFE_REFERENCES, 1);
-		//禁止自动GC
-		Engine->SetEngineProperty(asEP_AUTO_GARBAGE_COLLECT, 0);
-		//允许脚本中使用=语义绑定参数，但是会给警告
-		Engine->SetEngineProperty(asEP_ALTER_SYNTAX_NAMED_ARGS, 1);
-
-		// 禁用掉引用类型的赋值拷贝操作（构造拷贝还是有效的）
-		/*
-		 * 	FTest001 ab = a; // 成功 调用到拷贝构造
-			a = ab;// 报错
-			TestOut(a);// 报错
-		 */
-		Engine->SetEngineProperty(asEP_DISALLOW_VALUE_ASSIGN_FOR_REF_TYPE, 1);
-
-		//默认使用@声明的类型的所有变量将会默认是handle， 立即初始化没用了FTest001 a(100), 对于引用类型必须	FTest001 a = FTest001(10);
-		Engine->SetEngineProperty(asEP_ALLOW_IMPLICIT_HANDLE_TYPES, 1);
-
-		// enum 访问，必须使用 enum class:member的方式进行访问
-		Engine->SetEngineProperty(asEP_REQUIRE_ENUM_SCOPE, 1);
-		// 永远生成默认的构造器，也合理，不然&out的时候错误一堆。
-		Engine->SetEngineProperty(asEP_ALWAYS_IMPL_DEFAULT_CONSTRUCT, 1);
-
-		//有get set前缀的默认识别为虚拟属性
-		Engine->SetEngineProperty(asEP_PROPERTY_ACCESSOR_MODE, 3);
-	}
-
-	r = Engine->RegisterGlobalFunction("void print(const string &in)", asFUNCTION(print), asCALL_CDECL);
-
-	r = Engine->RegisterGlobalFunction("string@ printxs(string@)", asFUNCTION(GetMemory), asCALL_CDECL);
-	assert(r >= 0);
-
-	// 2.加载、编译脚本
-	CScriptBuilder builder;
-	{
-
-		r = builder.StartNewModule(Engine, "MyModule");
-
-		r = builder.AddSectionFromFile("test.as");
-		r = builder.AddSectionFromFile("test2.as");
-
-
-		r = builder.BuildModule();
-	}
-
-	/*{
-		r = builder.StartNewModule(Engine, "MyModule2");
-		r = builder.AddSectionFromFile("test2.as");
-		r = builder.BuildModule();
-	
-	}*/
-
-
-
-	//3.创建上下文，查找并执行脚本函数
-	asIScriptModule* mod = Engine->GetModule("MyModule");
-	asIScriptFunction* func = mod->GetFunctionByDecl("void main(int)");
-	if (func == 0)
-	{
-
-		printf("The script must have the function 'void main()'. Please add it and try again.\n");
-		return;
-	}
-
-	asIScriptContext* ctx = Engine->CreateContext();
-	ctx->Prepare(func);
-	r = ctx->Execute();
-	if (r != asEXECUTION_FINISHED)
-	{
-		if (r == asEXECUTION_EXCEPTION)
-		{
-			printf("An exception '%s' occurred. Please correct the code and try again.\n", ctx->GetExceptionString());
-		}
-	}
-}
-
-typedef int (*DLLFunc)(MainTest* mainPtr);
-
-
-
-#define METHODPR(Ret,Cls,Name,Args) ((Ret(Cls::*)Args)&Cls::Name), #Cls, #Name, false
-
 #include <Windows.h>
-void TestLoadLibrary()
-{
+#include <iostream>
+#include <map>
+#include <timeapi.h>
+#include <vector>
+#include "Common/LogAssert.h"
+#include "DirectX12/Chapter/InitDirect3D.h"
+#include "DirectX12/Common/MathHelper.h"
 
-	HMODULE hDll = LoadLibraryA("Transfer.dll");
-	if (!hDll)
+HWND CreateMainWindow(HINSTANCE hInstance);
+HWND CreateChildWindow(HWND parentWnd, HINSTANCE processHinstance);
+
+LRESULT WINAPI WndProc(HWND hWnd, UINT msgID, WPARAM sParam, LPARAM lParam)
+{
+	switch (msgID)
 	{
-		DWORD error = GetLastError();
-		return ;
-	}
-	DLLFunc DLLEntryFunc = reinterpret_cast<DLLFunc>(GetProcAddress(hDll, "TestTransfer"));
-	if (!DLLEntryFunc)
+	case WM_DESTROY:
 	{
-		FreeLibrary(hDll);
-		return;
+		PostQuitMessage(0);
+		break;
+
 	}
-	MainTest* ptr = new MainTest();
-	DLLEntryFunc(ptr);
+	}; return DefWindowProc(hWnd, msgID, sParam, lParam);
 }
 
 
+#pragma region Test001
+#include "Threads/Runnable.h"
+#include "Threads/RunnableThread.h"
 
-int main(int argc, const char** argv)
+class TestThread :public FRunnable, public FSingleThreadRunnable
 {
-	std::vector<int> testarr{1, 2, 3, 3, 4, 2, 1, 5};
-	//SelectSort(testarr);
-	//InsertSort(testarr);
-	//ShellSort(testarr);
+public:
+	int a = 0;
+	TestThread(int b) :a(b)
 	{
-		std::vector<int> temp(testarr.size());
-		MergeSorUpDown(testarr, 0, testarr.size() - 1, temp);
+		LogStringMsg("TestThread::TestThread a = %d", a);
+	};
+	virtual bool Init() override
+	{
+		a++;
+		LogStringMsg("TestThread::Init a = %d", a);
+		return true;
+	}
+	virtual uint32 Run()override
+	{
+		a++;
+		LogStringMsg("TestThread::Run a = %d", a);
+		return 0;
+
+	};
+	virtual void Stop()override
+	{
+		a++;
+		LogStringMsg("TestThread::Stop a = %d", a);
+	}
+	virtual void Exit()override
+	{
+		a++;
+		LogStringMsg("TestThread::Exit a = %d", a);
 	}
 
-	return 0;
+	virtual void Tick()override
+	{
+		a++;
+		LogStringMsg("TestThread::Tick a = %d", a);
+	}
+
+	//多线程框架不可用的时候该怎么办
+	virtual class FSingleThreadRunnable* GetSingleThreadInterface()
+	{
+		return this;
+	}
+	virtual ~TestThread() {};
+
+};
+
+static void Test001()
+{
+	uint32 currentThreadID = FPlatformTLS::GetCurrentThreadId();
+	TestThread* test = new TestThread(0);
+	FRunnableThread* testThreadHandle = nullptr;
+	testThreadHandle = FRunnableThread::Create(test, "TestThread");
 }
+#pragma endregion Test001
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+
+	int MsgResult = 0;
+
+#if defined(DEBUG) | defined(_DEBUG)
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+	AllocConsole();
+	AttachConsole(GetCurrentProcessId());
+	freopen("CON", "w", stdout);
+	{
+		WarningStringMsg("EngineTest main Start");
+		InitDirect3DApp D3DApp(hInstance);
+		if (!D3DApp.Initialize())
+		{
+			ErrorStringMsg("InitDirect3DApp Failed!");
+			return 0;
+		}
+		MsgResult = D3DApp.Run();
+	}
+
+	FreeConsole();
+	return MsgResult;
+}
+HWND CreateMainWindow(HINSTANCE hInstance)
+{
+	WNDCLASS wc = { 0 };
+	wc.cbClsExtra = 0;
+	wc.cbWndExtra = 0;
+	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 2);
+	wc.hCursor = NULL;
+	wc.hIcon = NULL;
+	wc.hInstance = hInstance;
+	wc.lpfnWndProc = WndProc;
+	wc.lpszClassName = "WinMain";
+	wc.lpszMenuName = NULL;
+	wc.style = CS_HREDRAW | CS_VREDRAW;
+
+	RegisterClass(&wc);
+	HWND hWnd = CreateWindow("WinMain", "WinMainTitle", WS_OVERLAPPEDWINDOW, 100, 100, 1440, 720, NULL, NULL, hInstance, NULL);
+	//CreateChildWindow(hWnd, hInstance);
+	ShowWindow(hWnd, SW_SHOW);
+	UpdateWindow(hWnd);
+
+	MSG nMsg = { 0 };
+	while (GetMessage(&nMsg, NULL, 0, 0))
+	{
+		TranslateMessage(&nMsg);
+		DispatchMessage(&nMsg);
+	}
+	return hWnd;
+};
+HWND CreateChildWindow(HWND parentWnd, HINSTANCE processHinstance)
+{
+	WNDCLASS wc = { 0 };
+	wc.cbClsExtra = 0;
+	wc.cbWndExtra = 0;
+	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 3);
+	wc.hCursor = NULL;
+	wc.hIcon = NULL;
+	wc.hInstance = processHinstance;
+	wc.lpfnWndProc = WndProc;
+	wc.lpszClassName = "Child";
+	wc.lpszMenuName = NULL;
+	wc.style = CS_HREDRAW | CS_VREDRAW;
+
+	RegisterClass(&wc);
+	return CreateWindowEx(0, "Child", "cl", WS_CHILD | WS_VISIBLE | WS_OVERLAPPEDWINDOW,
+		0, 0, 200, 200, parentWnd, NULL, processHinstance, NULL);
+};
+

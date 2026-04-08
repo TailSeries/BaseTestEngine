@@ -49,4 +49,4 @@ target_include_directories(Main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/AngelScript/
 target_include_directories(Main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)  # 支持 "Algorithm/ModulePublic/..." 写法
 
 #���ӿ�
-target_link_libraries(Main Algorithm)
+target_link_libraries(Main Algorithm DirectX12)

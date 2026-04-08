@@ -9,8 +9,15 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../out/bin") # 针
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../out/bin") # 针对linux静态库，以及windows的dll的依赖lib文件
 
 add_definitions(-DNOMINMAX)
+  set(PLATFORM_X86 x86)
+  set(PLATFORM_X64 x64)
+  add_definitions(-DSYSTEM_WIN)
+  add_definitions(-DPLATFORM_WIN)
+
+add_subdirectory(Core)
 #add_subdirectory(Transfer)
 add_subdirectory(Algorithm)
+add_subdirectory(DirectX12)
 add_subdirectory(Main)
 message("CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR};  CMAKE_ARCHIVE_OUTPUT_DIRECTORY = ${}")
 

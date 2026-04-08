@@ -12,11 +12,6 @@ public:
 };
 
 
-void Test45486896()
-{
-	int a = 23;
-	std::printf("TestClass::testfunc() a = %d", a);
-}
 
 
 //class Comparable
