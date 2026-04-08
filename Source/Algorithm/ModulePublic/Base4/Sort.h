@@ -84,6 +84,7 @@ void InsertSort(std::vector<int>& arr)
 /*
 * 2.3 希尔排序：使数组中任意间隔为h的元素有序，这样的数组被称为h有序数组。
 * 假设 a[i - h], a[i - 2h]...是有序的，那么 a[i]就应该移动到它们之间
+* 非稳定性排序
 */
 void ShellSort(std::vector<int>& arr)
 {
@@ -104,7 +105,63 @@ void ShellSort(std::vector<int>& arr)
 		}
 		h = h / 3;
 	}
+}
 
+/*
+ * 归并排序
+ * *两个有序数组，可以从小到大归并到一个数组中.
+ * 可以是稳定性排序，判断相等的时候就拿前面的就好
+ */
+// 这里 考虑arr[lo~mid] arr[mid + 1 ~ hi] 有序，现在归并它们两个。
+void Merge(std::vector<int>& arr, int lo, int mid , int hi, std::vector<int>& temp)
+{
+	for (int i = lo; i <= hi; i++)
+	{
+		temp[i] = arr[i];
+	}
+
+	int a = lo;
+	int b = mid + 1;
+	for (int i = lo; i <= hi; i++)
+	{
+		if (a > mid)
+		{
+			arr[i] = temp[b];
+			b++;
+		}
+		else if (b > hi)
+		{
+			arr[i] = temp[a];
+			a++;
+		}
+		else if (temp[a] <= temp[b])
+		{
+			arr[i] = temp[a];
+			a++;
+		}
+		else
+		{
+			arr[i] = temp[b];
+			b++;
+		}
+	}
+}
+
+// 从上向下归并: 所有数组元素在递归中，被分割成归并两个长度为1的数组
+void MergeSorUpDown(std::vector<int>& arr, int lo, int hi, std::vector<int>& temp)
+{
+	if (lo >= hi) return; //只有一个元素没必要归并
+	int mid = (lo + hi) / 2;
+	MergeSorUpDown(arr, lo, mid, temp);
+	MergeSorUpDown(arr, mid + 1, hi, temp);
+	Merge(arr, lo, mid, hi, temp);
+}
+
+// 从下向上归并：先两两归并，然后四四归并，最后归并成一个大数组
+void MergeSortDownUp(std::vector<int>& arr)
+{
+	std::vector<int> temp(arr.size());
+	
 }
 
 

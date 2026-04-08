@@ -160,6 +160,11 @@ int main(int argc, const char** argv)
 	std::vector<int> testarr{1, 2, 3, 3, 4, 2, 1, 5};
 	//SelectSort(testarr);
 	//InsertSort(testarr);
-	ShellSort(testarr);
+	//ShellSort(testarr);
+	{
+		std::vector<int> temp(testarr.size());
+		MergeSorUpDown(testarr, 0, testarr.size() - 1, temp);
+	}
+
 	return 0;
 }
