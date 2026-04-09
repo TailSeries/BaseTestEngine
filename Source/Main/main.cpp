@@ -66,7 +66,7 @@ public:
 		LogStringMsg("TestThread::Tick a = %d", a);
 	}
 
-	//¶àÏß³Ì¿ò¼Ü²»¿ÉÓÃµÄÊ±ºò¸ÃÔõÃ´°ì
+	//ï¿½ï¿½ï¿½ß³Ì¿ï¿½Ü²ï¿½ï¿½ï¿½ï¿½Ãµï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Ã´ï¿½ï¿½
 	virtual class FSingleThreadRunnable* GetSingleThreadInterface()
 	{
 		return this;
@@ -95,6 +95,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	AllocConsole();
 	AttachConsole(GetCurrentProcessId());
 	freopen("CON", "w", stdout);
+	InitLogFile("Engine.log");
 	{
 		WarningStringMsg("EngineTest main Start");
 		InitDirect3DApp D3DApp(hInstance);

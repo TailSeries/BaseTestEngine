@@ -2,18 +2,22 @@
 
 #include <stdio.h>
 
+#include "CoreModule.h"
+extern COREMODULE FILE* GLogFile;
+COREMODULE void InitLogFile(const char* path);
+
 #ifndef LogStringMsg
 #if PLATFORM_WIN
 #include <Windows.h>
-#define LogStringMsg(...)  do{ static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE);  SetConsoleTextAttribute(__LoghConsole, 7); printf(__VA_ARGS__);printf("\n"); SetConsoleTextAttribute(__LoghConsole, 7);}while(0);
-#define DebugStringMsg(...) do{static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE); SetConsoleTextAttribute(__LoghConsole, 15); printf(__VA_ARGS__); printf("\n");SetConsoleTextAttribute(__LoghConsole, 7);}while(0);
-#define WarningStringMsg(...) do{static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE); SetConsoleTextAttribute(__LoghConsole, 14); printf(__VA_ARGS__); printf("\n");SetConsoleTextAttribute(__LoghConsole, 7);}while(0);
-#define ErrorStringMsg(...)  do{static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE); SetConsoleTextAttribute(__LoghConsole, 12); printf(__VA_ARGS__); printf("\n");SetConsoleTextAttribute(__LoghConsole, 7);}while(0);
+#define LogStringMsg(...)  do{ static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE);  SetConsoleTextAttribute(__LoghConsole, 7); printf(__VA_ARGS__);printf("\n"); SetConsoleTextAttribute(__LoghConsole, 7); if(GLogFile){fprintf(GLogFile,__VA_ARGS__);fprintf(GLogFile,"\n");}}while(0);
+#define DebugStringMsg(...) do{static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE); SetConsoleTextAttribute(__LoghConsole, 15); printf(__VA_ARGS__); printf("\n");SetConsoleTextAttribute(__LoghConsole, 7); if(GLogFile){fprintf(GLogFile,__VA_ARGS__);fprintf(GLogFile,"\n");}}while(0);
+#define WarningStringMsg(...) do{static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE); SetConsoleTextAttribute(__LoghConsole, 14); printf(__VA_ARGS__); printf("\n");SetConsoleTextAttribute(__LoghConsole, 7); if(GLogFile){fprintf(GLogFile,__VA_ARGS__);fprintf(GLogFile,"\n");}}while(0);
+#define ErrorStringMsg(...)  do{static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE); SetConsoleTextAttribute(__LoghConsole, 12); printf(__VA_ARGS__); printf("\n");SetConsoleTextAttribute(__LoghConsole, 7); if(GLogFile){fprintf(GLogFile,__VA_ARGS__);fprintf(GLogFile,"\n");}}while(0);
 
-#define LogTraceMsg(...)  do{ static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE);  SetConsoleTextAttribute(__LoghConsole, 7); printf("[log D]%s#%d: ", __FILE__,__LINE__); printf(__VA_ARGS__); SetConsoleTextAttribute(__LoghConsole, 7);}while(0);
-#define DebugTraceMsg(...) do{static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE); SetConsoleTextAttribute(__LoghConsole, 15); printf("[log I]%s#%d: ", __FILE__,__LINE__); printf(__VA_ARGS__); SetConsoleTextAttribute(__LoghConsole, 7);}while(0);
-#define WarningTraceMsg(...) do{static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE); SetConsoleTextAttribute(__LoghConsole, 14);printf("[log W]%s#%d: ", __FILE__,__LINE__); printf(__VA_ARGS__); SetConsoleTextAttribute(__LoghConsole, 7);}while(0);
-#define ErrorTraceMsg(...)  do{static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE); SetConsoleTextAttribute(__LoghConsole, 12);printf("[log E]%s#%d: ", __FILE__,__LINE__); printf(__VA_ARGS__); SetConsoleTextAttribute(__LoghConsole, 7);}while(0);
+#define LogTraceMsg(...)  do{ static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE);  SetConsoleTextAttribute(__LoghConsole, 7); printf("[log D]%s#%d: ", __FILE__,__LINE__); printf(__VA_ARGS__); SetConsoleTextAttribute(__LoghConsole, 7); if(GLogFile){fprintf(GLogFile,"[log D]%s#%d: ",__FILE__,__LINE__);fprintf(GLogFile,__VA_ARGS__);}}while(0);
+#define DebugTraceMsg(...) do{static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE); SetConsoleTextAttribute(__LoghConsole, 15); printf("[log I]%s#%d: ", __FILE__,__LINE__); printf(__VA_ARGS__); SetConsoleTextAttribute(__LoghConsole, 7); if(GLogFile){fprintf(GLogFile,"[log I]%s#%d: ",__FILE__,__LINE__);fprintf(GLogFile,__VA_ARGS__);}}while(0);
+#define WarningTraceMsg(...) do{static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE); SetConsoleTextAttribute(__LoghConsole, 14);printf("[log W]%s#%d: ", __FILE__,__LINE__); printf(__VA_ARGS__); SetConsoleTextAttribute(__LoghConsole, 7); if(GLogFile){fprintf(GLogFile,"[log W]%s#%d: ",__FILE__,__LINE__);fprintf(GLogFile,__VA_ARGS__);}}while(0);
+#define ErrorTraceMsg(...)  do{static HANDLE __LoghConsole = GetStdHandle(STD_OUTPUT_HANDLE); SetConsoleTextAttribute(__LoghConsole, 12);printf("[log E]%s#%d: ", __FILE__,__LINE__); printf(__VA_ARGS__); SetConsoleTextAttribute(__LoghConsole, 7); if(GLogFile){fprintf(GLogFile,"[log E]%s#%d: ",__FILE__,__LINE__);fprintf(GLogFile,__VA_ARGS__);}}while(0);
 
 
 #else

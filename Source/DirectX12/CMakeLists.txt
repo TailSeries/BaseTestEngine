@@ -9,7 +9,7 @@ message("DirectX12 source_list = ${source_list}")
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${source_list})
 add_library(DirectX12 SHARED ${source_list})
 target_compile_definitions(DirectX12 PRIVATE DirectX12_LIBRARY)
-target_include_directories(DirectX12 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(DirectX12 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 set_target_properties(${target_name} PROPERTIES LINK_FLAGS
 	"/NODEFAULTLIB:LIBCMT.lib /NODEFAULTLIB:LIBCMTD.lib /ignore:4099"
 )

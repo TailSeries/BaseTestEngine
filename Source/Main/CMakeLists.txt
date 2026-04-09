@@ -39,6 +39,7 @@ endif()
 
 message("main source_list = ${source_list}")
 add_executable(Main ${source_list})
+target_link_options(Main PRIVATE /SUBSYSTEM:WINDOWS)
 
 if(MSVC)
     target_compile_definitions(Main PRIVATE -D_CRT_SECURE_NO_WARNINGS)    
