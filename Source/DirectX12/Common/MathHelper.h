@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <DirectXMath.h>
 #include "ModulePublic/DXModule.h"
+
 #include <cstdint>
 
 class DXMODULE MathHelper

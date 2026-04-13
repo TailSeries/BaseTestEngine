@@ -24,6 +24,7 @@ void InitDirect3DApp::OnResize()
 
 void InitDirect3DApp::Update(const GameTimer& gt)
 {
+	LogStringMsg("InitDirect3DApp::Update deltatime = %f", gt.DeltaTime() * 1000);
 }
 
 void InitDirect3DApp::Draw(const GameTimer& gt)
