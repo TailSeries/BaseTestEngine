@@ -83,6 +83,7 @@ public:
 class D3DUtil
 {
 public:
+    static std::wstring ToWString(const std::string& str);
 
 	/**
      * 创建的时候就将初始化数据initdata放进默认堆中，然后返回默认堆，最后一个参数返回上传堆
@@ -98,6 +99,9 @@ public:
     {
         return (byteSize + 255) & ~255;
     }
+
+    static  Microsoft::WRL::ComPtr<ID3DBlob> CompileShader(const std::string& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint, const std::string& target);
+
 };
 
 

@@ -34,6 +34,7 @@ public:
 	void BuildDescriptorHeaps();
 	void BuildConstantBuffers();
 	void BuildRootSignature();
+	void BuildShadersAndInputLayout();
 
 
 
@@ -63,6 +64,12 @@ private:
 
 	// consttandbuffer 具体的一个资源
 	std::unique_ptr<UploadBuffer<ObjectConstants>> MObjectCB = nullptr;
+
+
+	// 编译的二进制shader代码
+	Microsoft::WRL::ComPtr<ID3DBlob> MvsByteCode = nullptr;
+	Microsoft::WRL::ComPtr<ID3DBlob> MpsByteCode = nullptr;
+
 };
 
 

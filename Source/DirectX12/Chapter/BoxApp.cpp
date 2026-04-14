@@ -25,6 +25,8 @@ bool BoxApp::Initialize()
     BuildDescriptorHeaps();
     // 创建cb资源以及cbv
     BuildConstantBuffers();
+    // 编译shader为二进制，构建输入布局
+    BuildShadersAndInputLayout();
 
 }
 
@@ -96,24 +98,35 @@ void BoxApp::BuildConstantBuffers()
 }
 
 
+void BoxApp::BuildShadersAndInputLayout()
+{
+    HRESULT hr = S_OK;
+    std::string shaderPath = "F:/workspace/BaseTestEngine/Source/Shaders/Chapter6/color.hlsl";
+    MvsByteCode = D3DUtil::CompileShader(shaderPath, nullptr, "VS", "vs_5_0");
+    MpsByteCode = D3DUtil::CompileShader(shaderPath, nullptr, "PS", "ps_5_0");
+
+    //我们的顶点只有一个 struct Vertex 	D3D12_INPUT_ELEMENT_DESC
+     /*struct D3D12_INPUT_ELEMENT_DESC
+     {
+     LPCSTR SemanticName; // 语义名称
+     UINT SemanticIndex; // 同语义的不同索引下标
+     DXGI_FORMAT Format; // 该成员的数据格式
+     UINT InputSlot; //输入槽 0 ~ 15
+     UINT AlignedByteOffset; //在buffer结构中的偏移位置
+     D3D12_INPUT_CLASSIFICATION InputSlotClass; // PER_VERTEX_DATA PER_INSTANCE_DATA是instance技术用的
+     UINT InstanceDataStepRate;// 目前为0, 要用instance这里写1
+     }
+ *
+ */
+    InputLayout.push_back({ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, Pos), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+    InputLayout.push_back({ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(Vertex, Color), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+
+}
+
 void BoxApp::FillInputLayout()
 {
 
-	//我们的顶点只有一个 struct Vertex 	D3D12_INPUT_ELEMENT_DESC
-	/*struct D3D12_INPUT_ELEMENT_DESC
-    {
-    LPCSTR SemanticName; // 语义名称
-    UINT SemanticIndex; // 同语义的不同索引下标
-    DXGI_FORMAT Format; // 该成员的数据格式
-    UINT InputSlot; //输入槽 0 ~ 15
-    UINT AlignedByteOffset; //在buffer结构中的偏移位置
-    D3D12_INPUT_CLASSIFICATION InputSlotClass; // PER_VERTEX_DATA PER_INSTANCE_DATA是instance技术用的
-    UINT InstanceDataStepRate;// 目前为0, 要用instance这里写1
-    }
-	 * 
-	 */
-    InputLayout.push_back({"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, Pos), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0});
-    InputLayout.push_back({"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(Vertex, Color), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0});
+
 }
 
 #endif
