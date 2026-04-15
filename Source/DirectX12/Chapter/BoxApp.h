@@ -5,6 +5,7 @@
 #include "Common/D3DApp.h"
 #include "Common/MathHelper.h"
 #include "Common/UploadBuffer.h"
+#include <array>
 
 
 class BoxApp:public D3DApp
@@ -35,6 +36,8 @@ public:
 	void BuildConstantBuffers();
 	void BuildRootSignature();
 	void BuildShadersAndInputLayout();
+	void BuildBoxGeometry();
+	void BuildPSO();
 
 
 
@@ -48,9 +51,7 @@ private:
 	virtual void Update(const GameTimer& gt) override;
 	virtual void Draw(const GameTimer& gt) override;
 
-	virtual void OnMouseDown(WPARAM btnState, int x, int y) override;
-	virtual void OnMouseMove(WPARAM btnState, int x, int y) override;
-	virtual void OnMouseUp(WPARAM btnState, int x, int y) override;
+
 
 private:
 	//1. 顶点输入元素布局
@@ -70,6 +71,27 @@ private:
 	Microsoft::WRL::ComPtr<ID3DBlob> MvsByteCode = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> MpsByteCode = nullptr;
 
+
+	// mesh
+	std::unique_ptr<MeshGeometry>mBoxGeo = nullptr;
+
+
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> mPSO = nullptr;
+	DirectX::XMFLOAT4X4 mWorld = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 mView = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 mProj = MathHelper::Identity4x4();
+
+private: 
+
+	virtual void OnMouseDown(WPARAM btnState, int x, int y) override;
+	virtual void OnMouseMove(WPARAM btnState, int x, int y) override;
+	virtual void OnMouseUp(WPARAM btnState, int x, int y) override;
+
+	float mTheta = 1.5f * DirectX::XM_PI;
+	float mPhi = DirectX::XM_PIDIV4;
+	float mRadius = 5.0f;
+
+	POINT mLastMousePos;
 };
 
 
