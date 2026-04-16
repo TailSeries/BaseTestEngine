@@ -303,11 +303,37 @@ void BoxApp::Draw(const GameTimer& gt)
     //0 nullptr 搭配意思是清除整个RT
     MCommandList->ClearRenderTargetView(CurrentBackBufferView(), DirectX::Colors::LightSteelBlue, 0, nullptr);
     MCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+    D3D12_CPU_DESCRIPTOR_HANDLE depthstencilvview = DepthStencilView();
+    D3D12_CPU_DESCRIPTOR_HANDLE currentbackbufferview = CurrentBackBufferView();
+    MCommandList->OMSetRenderTargets(1, &currentbackbufferview, true, &depthstencilvview);
 
-    MCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
 
+    ID3D12DescriptorHeap* descriptorHeaps[] = { MCbvHeap.Get() };
+    MCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
+    MCommandList->SetGraphicsRootSignature(mRootSignature.Get());
 
+    //在DirectX12的Input Assembler阶段，确实可以有多个顶点缓冲区视图（Vertex Buffer Views），但只能有一个索引缓冲区视图（Index Buffer View）; 索引是对顶点的整体引用，GPU会从每个顶点缓冲区中读取相同位置（相同索引）的数据，然后组合成完整的顶点。
+    D3D12_VERTEX_BUFFER_VIEW vertesbufferview = mBoxGeo->VertexBufferView();
+    MCommandList->IASetVertexBuffers(0, 1, &vertesbufferview);
+    D3D12_INDEX_BUFFER_VIEW indexbufferview = mBoxGeo->IndexBufferView();
+    MCommandList->IASetIndexBuffer(&indexbufferview);
+    MCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    MCommandList->SetGraphicsRootDescriptorTable(0, MCbvHeap->GetGPUDescriptorHandleForHeapStart());
+
+    MCommandList->DrawIndexedInstanced(mBoxGeo->DrawArgs["box"].IndexCount, 1, 0, 0, 0);
+
+    CD3DX12_RESOURCE_BARRIER BackBufferTransitionPresent = CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+    MCommandList->ResourceBarrier(1, &BackBufferTransitionPresent);
+
+    ThrowIfFailed(MCommandList->Close());
+    ID3D12CommandList* cmdList[] = { MCommandList.Get()};
+    MCommandQueue->ExecuteCommandLists(_countof(cmdList), cmdList);
+
+    ThrowIfFailed(MSwapChain->Present(0, 0));
+    mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
+    FlushCommandQueue();
 }
 
 void BoxApp::OnMouseDown(WPARAM btnState, int x, int y)

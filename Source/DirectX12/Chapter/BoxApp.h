@@ -6,9 +6,10 @@
 #include "Common/MathHelper.h"
 #include "Common/UploadBuffer.h"
 #include <array>
+#include "ModulePublic/DXModule.h"
 
 
-class BoxApp:public D3DApp
+class DXMODULE BoxApp:public D3DApp
 {
 public:
 	struct Vertex

@@ -6,6 +6,7 @@
 #include "Common/LogAssert.h"
 #include "DirectX12/Chapter/InitDirect3D.h"
 #include "DirectX12/Common/MathHelper.h"
+#include "DirectX12/Chapter/BoxApp.h"
 
 HWND CreateMainWindow(HINSTANCE hInstance);
 HWND CreateChildWindow(HWND parentWnd, HINSTANCE processHinstance);
@@ -98,7 +99,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	InitLogFile("Engine.log");
 	{
 		WarningStringMsg("EngineTest main Start");
-		InitDirect3DApp D3DApp(hInstance);
+		//InitDirect3DApp D3DApp(hInstance);
+		BoxApp D3DApp(hInstance);
 		if (!D3DApp.Initialize())
 		{
 			ErrorStringMsg("InitDirect3DApp Failed!");
