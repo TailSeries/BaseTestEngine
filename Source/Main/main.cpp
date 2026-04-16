@@ -82,6 +82,10 @@ static void Test001()
 	FRunnableThread* testThreadHandle = nullptr;
 	testThreadHandle = FRunnableThread::Create(test, "TestThread");
 }
+
+
+
+
 #pragma endregion Test001
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)

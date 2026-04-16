@@ -105,7 +105,7 @@ void ShellSort(std::vector<int>& arr)
 /*
  * 归并排序
  * *两个有序数组，可以从小到大归并到一个数组中.
- * 可以是稳定性排序，判断相等的时候就拿前面的就好
+ * 可以是稳定性排序，判断相等的时候就拿前面的就好，时间负载nlogn
  */
 // 这里 考虑arr[lo~mid] arr[mid + 1 ~ hi] 有序，现在归并它们两个。
 void Merge(std::vector<int>& arr, int lo, int mid , int hi, std::vector<int>& temp)
@@ -152,11 +152,140 @@ void MergeSorUpDown(std::vector<int>& arr, int lo, int hi, std::vector<int>& tem
 	Merge(arr, lo, mid, hi, temp);
 }
 
-// 从下向上归并：先两两归并，然后四四归并，最后归并成一个大数组
+/*
+*  从下向上归并：先两两归并，然后四四归并，最后归并成一个大数组.
+* 注意这时候mid不该是 (lo + hi) / 2 了，因为数组不一定直接可以2等
+*/
+
 void MergeSortDownUp(std::vector<int>& arr)
 {
 	std::vector<int> temp(arr.size());
-	
+	int SN = 1;
+	while (SN <= (arr.size() - 1))
+	{
+		for (int lo = 0; lo < arr.size(); lo += (SN * 2))
+		{
+			int hi = lo + 2*SN - 1;
+			if (hi >= arr.size())
+			{
+				hi = arr.size() - 1;
+			}
+			int mid = lo + SN - 1; // mid 不再是简单的 (lo + hi) / 2 了。
+			if (mid > hi) { mid = hi; }
+			Merge(arr, lo, mid, hi, temp);
+		}
+		SN = SN + SN;
+	}
+}
+
+
+/*
+* 选一个“基准值”（pivot），把数组分成“比它小”和“比它大”两部分，然后递归地对两边继续做同样的事。
+*	例如：[5, 2, 8, 3, 1]
+	选 pivot = 5
+	重排
+		[小于 pivot] pivot [大于 pivot] 
+		[2, 3, 1] 5 [8]
+	递归排序左右两边
+		左边：[2, 3, 1]
+		右边：[8]
+	nlogn级别，非稳定。
+	排定一个元素，再排定这个元素的左右两边
+	边界条件：能交换切分元素和i的前提得是，i <= 切分元素，所以这里是 while(i < j && arr[i] < arr[left]) i++; 而不是 while(i < j && arr[i] <= arr[left]) i++;
+*/
+int Partition(std::vector<int>& arr, int left, int right)
+{
+	if (left >= right) return left;
+
+	int i = left;
+	int j = right;
+	int value = arr[left];
+	while (i < j)
+	{
+		while(i < j && arr[i] < arr[left]) i++; // 第一个比arr[left]大=的元素/ i == j
+		while(i < j && arr[j] >= arr[left]) j--; // 第一个比arr[left]小的元素 / i == j
+		std::swap(arr[i], arr[j]);
+	}
+	std::swap(arr[left], arr[i]);
+	return i;
+}
+
+void QuickSort(std::vector<int>& arr, int left, int right)
+{
+	if (left >= right) return;
+	int Nextindex = Partition(arr, left, right);
+	QuickSort(arr, 0, Nextindex - 1);
+	QuickSort(arr, Nextindex + 1, right);
+}
+
+/*
+* 三路切分:分治思想 关键1.一次排序把==的上下限给找到。
+* lt - 1 开始往前的元素一定比value小。
+* gt + 1 开始往后的元素一定比value大。
+* 问题：不必急于一求出来就解决 lt - 1; gt + 1;可能超数组范围的问题。
+*		left = lt - 1;//有可能  lt - 1 < 0 但是没关系，这是新loop的右边界
+		right = gt + 1; //有可能 gt + 1 > arr.size() - 1, 但是没关系，这是新loop的左边界
+		sort的loop 中应该不停记录originalLeft和originaRight，分治思想下，这俩是每次小问题的边界
+*/
+
+void TriblePartition(std::vector<int>& arr, int& left, int& right)
+{
+	if (left >= right) return;
+
+	int lt = left;
+	int gt = right;
+	int i = lt + 1;
+	int& value = arr[lt];
+
+	while (i <= gt)
+	{
+		if (arr[i] < value)
+		{
+			// lt - 1 始终就是左边界
+			std::swap(arr[i], arr[lt]);
+			lt++;
+		}
+		else if (arr[i] > value)
+		{
+			// gt + 1 开始的元素一定 >  value。
+			std::swap(arr[i], arr[gt]);
+			gt--;
+		}
+		else
+		{
+			i++;
+		}
+	}
+
+	// 其上下界在什么位置？
+	left = lt - 1;//有可能  lt - 1 < 0 但是没关系，这是新loop的右边界
+	right = gt + 1; //有可能 gt + 1 > arr.size() - 1, 但是没关系，这是新loop的左边界
+}
+/*
+* loop 中应该不停记录originalLeft和originaRight，分治思想下，这俩是每次小问题的边界
+*/
+void TribleQuickSort(std::vector<int>& arr, int& left, int& right)
+{
+	if (left >= right) return;
+	int originalLeft = left;
+	int originaRight = right;
+	TriblePartition(arr, left, right);
+	TribleQuickSort(arr, originalLeft, left);
+	TribleQuickSort(arr, right, originaRight);
+}
+
+
+/*
+* 关键：数组下标和堆节点的联系
+*	// 当前节点 i
+left  = 2*i + 1
+right = 2*i + 2
+parent = (i - 1) / 2
+*/
+void Sink(std::vector<int>& arr)
+{
+
+
 }
 
 

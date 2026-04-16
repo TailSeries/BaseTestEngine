@@ -1,0 +1,793 @@
+{
+  "Algorithm/ModulePublic/Base4/Sort.cpp": [
+    "Base4/Sort.h"
+  ],
+  "Algorithm/ModulePublic/Base4/Sort.h": [
+    "Module.h"
+  ],
+  "Core/Core.h": [
+    "CoreModule.h",
+    "Base/GenericPlatform.h",
+    "Base/NumericLimit.h",
+    "Base/GenericPlatformProcess.h",
+    "Base/BaseDefines.h"
+  ],
+  "Core/Base/BaseDefines.cpp": [
+    "BaseDefines.h"
+  ],
+  "Core/Base/BaseDefines.h": [
+    "GenericPlatform.h"
+  ],
+  "Core/Base/GenericPlatformProcess.cpp": [
+    "GenericPlatformProcess.h",
+    "Threads/EventPool.h",
+    "Threads/Win/WindowsRunnableThread.h"
+  ],
+  "Core/Base/GenericPlatformProcess.h": [
+    "Core.h"
+  ],
+  "Core/Common/LogAssert.cpp": [
+    "LogAssert.h",
+    "CoreModule.h"
+  ],
+  "Core/Common/LogAssert.h": [
+    "CoreModule.h"
+  ],
+  "Core/Task/AnyTaskThread.cpp": [
+    "AnyTaskThread.h",
+    "TaskGraphImplementation.h"
+  ],
+  "Core/Task/AnyTaskThread.h": [
+    "Core.h",
+    "TaskThreadBase.h"
+  ],
+  "Core/Task/DelegateGraphTask.cpp": [
+    "DelegateGraphTask.h"
+  ],
+  "Core/Task/DelegateGraphTask.h": [
+    "TaskGraphInterfaces.h"
+  ],
+  "Core/Task/FunctionGraphTask.cpp": [
+    "FunctionGraphTask.h"
+  ],
+  "Core/Task/FunctionGraphTask.h": [
+    "TaskGraphInterfaces.h"
+  ],
+  "Core/Task/NamedTaskThread.cpp": [
+    "NamedTaskThread.h"
+  ],
+  "Core/Task/NamedTaskThread.h": [
+    "Core.h",
+    "TaskThreadBase.h",
+    "StallingTaskQueue.h"
+  ],
+  "Core/Task/NullGraphTask.cpp": [
+    "NullGraphTask.h"
+  ],
+  "Core/Task/NullGraphTask.h": [
+    "TaskGraphInterfaces.h"
+  ],
+  "Core/Task/ReturnGraphTask.cpp": [
+    "ReturnGraphTask.h"
+  ],
+  "Core/Task/ReturnGraphTask.h": [
+    "TaskGraphInterfaces.h"
+  ],
+  "Core/Task/StallingTaskQueue.h": [
+    "Core.h",
+    "Threads/ScopeLock.h"
+  ],
+  "Core/Task/TaskGraphImplementation.cpp": [
+    "TaskGraphImplementation.h",
+    "AnyTaskThread.h",
+    "NamedTaskThread.h",
+    "ReturnGraphTask.h",
+    "TriggerEventGraphTask.h",
+    "Common/LogAssert.h"
+  ],
+  "Core/Task/TaskGraphImplementation.h": [
+    "StallingTaskQueue.h",
+    "TaskGraphInterfaces.h",
+    "WorkerThread.h",
+    "Threads/ThreadConfig.h"
+  ],
+  "Core/Task/TaskGraphInterfaces.cpp": [
+    "TaskGraphInterfaces.h",
+    "NullGraphTask.h",
+    "TaskGraphImplementation.h"
+  ],
+  "Core/Task/TaskGraphInterfaces.h": [
+    "Core.h",
+    "Threads/ScopeLock.h"
+  ],
+  "Core/Task/TaskThreadBase.cpp": [
+    "TaskThreadBase.h"
+  ],
+  "Core/Task/TaskThreadBase.h": [
+    "Core.h",
+    "TaskGraphInterfaces.h",
+    "WorkerThread.h",
+    "Threads/Runnable.h",
+    "Threads/RunnableThread.h"
+  ],
+  "Core/Task/TriggerEventGraphTask.cpp": [
+    "TriggerEventGraphTask.h"
+  ],
+  "Core/Task/TriggerEventGraphTask.h": [
+    "TaskGraphInterfaces.h",
+    "Threads/Event.h"
+  ],
+  "Core/Task/WorkerThread.h": [
+    "Core.h"
+  ],
+  "Core/Threads/Event.cpp": [
+    "Event.h",
+    "EventPool.h"
+  ],
+  "Core/Threads/Event.h": [
+    "Core.h",
+    "Base/Atomic.h",
+    "Windows.h"
+  ],
+  "Core/Threads/EventPool.h": [
+    "Event.h",
+    "ScopeLock.h"
+  ],
+  "Core/Threads/Runnable.h": [
+    "Core.h"
+  ],
+  "Core/Threads/RunnableThread.cpp": [
+    "RunnableThread.h",
+    "Runnable.h",
+    "ThreadManager.h",
+    "Win/WindowsSyncUtils.h"
+  ],
+  "Core/Threads/RunnableThread.h": [
+    "Core.h",
+    "Event.h",
+    "ThreadConfig.h",
+    "TlsAutoCleanup.h",
+    "Common/LogAssert.h",
+    "Win/WindowsSyncUtils.h"
+  ],
+  "Core/Threads/ScopeLock.h": [
+    "Core.h",
+    "Threads/Win/WindowsSyncUtils.h"
+  ],
+  "Core/Threads/ThreadConfig.cpp": [
+    "ThreadConfig.h"
+  ],
+  "Core/Threads/ThreadConfig.h": [
+    "Core.h"
+  ],
+  "Core/Threads/ThreadManager.cpp": [
+    "ThreadManager.h",
+    "ScopeLock.h",
+    "Threads/RunnableThread.h"
+  ],
+  "Core/Threads/ThreadManager.h": [
+    "Core.h",
+    "Win/WindowsSyncUtils.h"
+  ],
+  "Core/Threads/TlsAutoCleanup.cpp": [
+    "TlsAutoCleanup.h",
+    "RunnableThread.h"
+  ],
+  "Core/Threads/TlsAutoCleanup.h": [
+    "CoreModule.h"
+  ],
+  "Core/Threads/Win/WindowsRunnableThread.cpp": [
+    "WindowsRunnableThread.h"
+  ],
+  "Core/Threads/Win/WindowsRunnableThread.h": [
+    "Core.h",
+    "Threads/Runnable.h",
+    "Threads/RunnableThread.h",
+    "Threads/ThreadManager.h"
+  ],
+  "Core/Threads/Win/WindowsSyncUtils.cpp": [
+    "WindowsSyncUtils.h"
+  ],
+  "Core/Threads/Win/WindowsSyncUtils.h": [
+    "Core.h"
+  ],
+  "DirectX12/Chapter/BoxApp.cpp": [
+    "BoxApp.h"
+  ],
+  "DirectX12/Chapter/BoxApp.h": [
+    "Common/D3DApp.h",
+    "Common/MathHelper.h"
+  ],
+  "DirectX12/Chapter/InitDirect3D.cpp": [
+    "InitDirect3D.h"
+  ],
+  "DirectX12/Chapter/InitDirect3D.h": [
+    "Common/D3DApp.h",
+    "ModulePublic/DXModule.h"
+  ],
+  "DirectX12/Common/D3DApp.cpp": [
+    "D3DApp.h"
+  ],
+  "DirectX12/Common/D3DApp.h": [
+    "D3DUtil.h",
+    "Common/LogAssert.h",
+    "ModulePublic/DXModule.h",
+    "GameTimer.h"
+  ],
+  "DirectX12/Common/D3DUtil.cpp": [
+    "D3DUtil.h",
+    "Common/LogAssert.h"
+  ],
+  "DirectX12/Common/D3DUtil.h": [
+    "d3dx12.h",
+    "../../Core/Base/GenericPlatform.h"
+  ],
+  "DirectX12/Common/d3dx12.h": [
+    "d3d12.h"
+  ],
+  "DirectX12/Common/GameTimer.cpp": [
+    "GameTimer.h"
+  ],
+  "DirectX12/Common/MathHelper.cpp": [
+    "MathHelper.h"
+  ],
+  "DirectX12/Common/MathHelper.h": [
+    "ModulePublic/DXModule.h"
+  ],
+  "Main/main.cpp": [
+    "Common/LogAssert.h",
+    "DirectX12/Chapter/InitDirect3D.h",
+    "DirectX12/Common/MathHelper.h",
+    "Threads/Runnable.h",
+    "Threads/RunnableThread.h"
+  ],
+  "Main/AngelScript/contextmgr/contextmgr.cpp": [
+    "contextmgr.h"
+  ],
+  "Main/AngelScript/datetime/datetime.cpp": [
+    "datetime.h"
+  ],
+  "Main/AngelScript/debugger/debugger.cpp": [
+    "debugger.h"
+  ],
+  "Main/AngelScript/scriptany/scriptany.cpp": [
+    "scriptany.h"
+  ],
+  "Main/AngelScript/scriptarray/scriptarray.cpp": [
+    "scriptarray.h"
+  ],
+  "Main/AngelScript/scriptbuilder/scriptbuilder.cpp": [
+    "scriptbuilder.h"
+  ],
+  "Main/AngelScript/scriptdictionary/scriptdictionary.cpp": [
+    "scriptdictionary.h",
+    "../scriptarray/scriptarray.h"
+  ],
+  "Main/AngelScript/scriptfile/scriptfile.cpp": [
+    "scriptfile.h"
+  ],
+  "Main/AngelScript/scriptfile/scriptfilesystem.cpp": [
+    "scriptfilesystem.h"
+  ],
+  "Main/AngelScript/scriptfile/scriptfilesystem.h": [
+    "../scriptarray/scriptarray.h"
+  ],
+  "Main/AngelScript/scriptgrid/scriptgrid.cpp": [
+    "scriptgrid.h"
+  ],
+  "Main/AngelScript/scripthandle/scripthandle.cpp": [
+    "scripthandle.h"
+  ],
+  "Main/AngelScript/scripthelper/scripthelper.cpp": [
+    "scripthelper.h"
+  ],
+  "Main/AngelScript/scriptmath/scriptmath.cpp": [
+    "scriptmath.h"
+  ],
+  "Main/AngelScript/scriptmath/scriptmathcomplex.cpp": [
+    "scriptmathcomplex.h"
+  ],
+  "Main/AngelScript/scriptstdstring/scriptstdstring.cpp": [
+    "scriptstdstring.h"
+  ],
+  "Main/AngelScript/scriptstdstring/scriptstdstring_utils.cpp": [
+    "scriptstdstring.h",
+    "../scriptarray/scriptarray.h"
+  ],
+  "Main/AngelScript/serializer/serializer.cpp": [
+    "serializer.h"
+  ],
+  "Main/AngelScript/source/as_atomic.cpp": [
+    "as_atomic.h"
+  ],
+  "Main/AngelScript/source/as_atomic.h": [
+    "as_config.h"
+  ],
+  "Main/AngelScript/source/as_builder.cpp": [
+    "as_config.h",
+    "as_builder.h",
+    "as_parser.h",
+    "as_compiler.h",
+    "as_tokendef.h",
+    "as_string_util.h",
+    "as_outputbuffer.h",
+    "as_texts.h",
+    "as_scriptobject.h",
+    "as_debug.h"
+  ],
+  "Main/AngelScript/source/as_builder.h": [
+    "as_config.h",
+    "as_symboltable.h",
+    "as_scriptengine.h",
+    "as_module.h",
+    "as_array.h",
+    "as_scriptcode.h",
+    "as_scriptnode.h",
+    "as_datatype.h",
+    "as_property.h"
+  ],
+  "Main/AngelScript/source/as_bytecode.cpp": [
+    "as_config.h",
+    "as_bytecode.h",
+    "as_debug.h",
+    "as_array.h",
+    "as_string.h",
+    "as_scriptengine.h"
+  ],
+  "Main/AngelScript/source/as_bytecode.h": [
+    "as_config.h",
+    "as_array.h"
+  ],
+  "Main/AngelScript/source/as_callfunc.cpp": [
+    "as_config.h",
+    "as_callfunc.h",
+    "as_scriptengine.h",
+    "as_texts.h",
+    "as_context.h"
+  ],
+  "Main/AngelScript/source/as_callfunc.h": [
+    "as_array.h"
+  ],
+  "Main/AngelScript/source/as_callfunc_arm.cpp": [
+    "as_config.h",
+    "as_callfunc.h",
+    "as_scriptengine.h",
+    "as_texts.h",
+    "as_tokendef.h",
+    "as_context.h"
+  ],
+  "Main/AngelScript/source/as_callfunc_mips.cpp": [
+    "as_config.h",
+    "as_callfunc.h",
+    "as_scriptengine.h",
+    "as_texts.h",
+    "as_tokendef.h",
+    "as_context.h"
+  ],
+  "Main/AngelScript/source/as_callfunc_ppc.cpp": [
+    "as_config.h",
+    "as_callfunc.h",
+    "as_scriptengine.h",
+    "as_texts.h",
+    "as_tokendef.h",
+    "as_context.h"
+  ],
+  "Main/AngelScript/source/as_callfunc_ppc_64.cpp": [
+    "as_config.h",
+    "as_callfunc.h",
+    "as_scriptengine.h",
+    "as_texts.h",
+    "as_tokendef.h",
+    "as_context.h",
+    "ppu_asm_intrinsics.h"
+  ],
+  "Main/AngelScript/source/as_callfunc_sh4.cpp": [
+    "as_config.h",
+    "as_callfunc.h",
+    "as_scriptengine.h",
+    "as_texts.h",
+    "as_tokendef.h",
+    "as_context.h"
+  ],
+  "Main/AngelScript/source/as_callfunc_x64_gcc.cpp": [
+    "as_config.h",
+    "as_scriptengine.h",
+    "as_texts.h",
+    "as_context.h"
+  ],
+  "Main/AngelScript/source/as_callfunc_x64_mingw.cpp": [
+    "as_config.h",
+    "as_callfunc.h",
+    "as_scriptengine.h",
+    "as_texts.h",
+    "as_context.h"
+  ],
+  "Main/AngelScript/source/as_callfunc_x64_msvc.cpp": [
+    "as_config.h",
+    "as_callfunc.h",
+    "as_scriptengine.h",
+    "as_texts.h",
+    "as_context.h"
+  ],
+  "Main/AngelScript/source/as_callfunc_x86.cpp": [
+    "as_config.h",
+    "as_callfunc.h",
+    "as_scriptengine.h",
+    "as_texts.h",
+    "as_tokendef.h",
+    "as_context.h"
+  ],
+  "Main/AngelScript/source/as_callfunc_xenon.cpp": [
+    "as_config.h",
+    "as_callfunc.h",
+    "as_scriptengine.h",
+    "as_texts.h",
+    "as_tokendef.h",
+    "as_context.h"
+  ],
+  "Main/AngelScript/source/as_compiler.cpp": [
+    "as_config.h",
+    "as_compiler.h",
+    "as_tokendef.h",
+    "as_tokenizer.h",
+    "as_string_util.h",
+    "as_texts.h",
+    "as_parser.h",
+    "as_debug.h",
+    "as_context.h"
+  ],
+  "Main/AngelScript/source/as_compiler.h": [
+    "as_config.h",
+    "as_builder.h",
+    "as_scriptfunction.h",
+    "as_variablescope.h",
+    "as_bytecode.h",
+    "as_array.h",
+    "as_datatype.h"
+  ],
+  "Main/AngelScript/source/as_config.h": [
+    "../include/angelscript.h",
+    "as_memory.h"
+  ],
+  "Main/AngelScript/source/as_configgroup.cpp": [
+    "as_config.h",
+    "as_configgroup.h",
+    "as_scriptengine.h",
+    "as_texts.h"
+  ],
+  "Main/AngelScript/source/as_configgroup.h": [
+    "as_config.h",
+    "as_string.h",
+    "as_array.h",
+    "as_objecttype.h"
+  ],
+  "Main/AngelScript/source/as_context.cpp": [
+    "as_config.h",
+    "as_context.h",
+    "as_scriptengine.h",
+    "as_tokendef.h",
+    "as_texts.h",
+    "as_callfunc.h",
+    "as_generic.h",
+    "as_debug.h",
+    "as_bytecode.h",
+    "as_scriptobject.h"
+  ],
+  "Main/AngelScript/source/as_context.h": [
+    "as_config.h",
+    "as_atomic.h",
+    "as_array.h",
+    "as_string.h",
+    "as_objecttype.h",
+    "as_callfunc.h"
+  ],
+  "Main/AngelScript/source/as_criticalsection.h": [
+    "as_config.h"
+  ],
+  "Main/AngelScript/source/as_datatype.cpp": [
+    "as_config.h",
+    "as_datatype.h",
+    "as_tokendef.h",
+    "as_typeinfo.h",
+    "as_objecttype.h",
+    "as_scriptengine.h",
+    "as_tokenizer.h"
+  ],
+  "Main/AngelScript/source/as_datatype.h": [
+    "as_tokendef.h",
+    "as_string.h"
+  ],
+  "Main/AngelScript/source/as_debug.h": [
+    "as_config.h",
+    "as_string.h",
+    "as_map.h",
+    "as_string_util.h"
+  ],
+  "Main/AngelScript/source/as_gc.cpp": [
+    "as_gc.h",
+    "as_scriptengine.h",
+    "as_scriptobject.h",
+    "as_texts.h"
+  ],
+  "Main/AngelScript/source/as_gc.h": [
+    "as_config.h",
+    "as_array.h",
+    "as_map.h",
+    "as_thread.h"
+  ],
+  "Main/AngelScript/source/as_generic.cpp": [
+    "as_generic.h",
+    "as_scriptfunction.h",
+    "as_objecttype.h",
+    "as_scriptengine.h"
+  ],
+  "Main/AngelScript/source/as_generic.h": [
+    "as_config.h"
+  ],
+  "Main/AngelScript/source/as_globalproperty.cpp": [
+    "as_config.h",
+    "as_property.h",
+    "as_scriptengine.h"
+  ],
+  "Main/AngelScript/source/as_memory.cpp": [
+    "as_config.h",
+    "as_memory.h",
+    "as_scriptnode.h",
+    "as_bytecode.h"
+  ],
+  "Main/AngelScript/source/as_memory.h": [
+    "as_config.h",
+    "as_criticalsection.h",
+    "as_array.h"
+  ],
+  "Main/AngelScript/source/as_module.cpp": [
+    "as_config.h",
+    "as_module.h",
+    "as_builder.h",
+    "as_context.h",
+    "as_texts.h",
+    "as_debug.h",
+    "as_restore.h"
+  ],
+  "Main/AngelScript/source/as_module.h": [
+    "as_config.h",
+    "as_symboltable.h",
+    "as_atomic.h",
+    "as_string.h",
+    "as_array.h",
+    "as_datatype.h",
+    "as_scriptfunction.h",
+    "as_property.h"
+  ],
+  "Main/AngelScript/source/as_namespace.h": [
+    "as_string.h"
+  ],
+  "Main/AngelScript/source/as_objecttype.cpp": [
+    "as_config.h",
+    "as_objecttype.h",
+    "as_configgroup.h",
+    "as_scriptengine.h"
+  ],
+  "Main/AngelScript/source/as_objecttype.h": [
+    "as_property.h",
+    "as_array.h",
+    "as_scriptfunction.h",
+    "as_typeinfo.h"
+  ],
+  "Main/AngelScript/source/as_parser.cpp": [
+    "as_config.h",
+    "as_parser.h",
+    "as_tokendef.h",
+    "as_texts.h",
+    "as_debug.h"
+  ],
+  "Main/AngelScript/source/as_parser.h": [
+    "as_scriptnode.h",
+    "as_scriptcode.h",
+    "as_builder.h",
+    "as_tokenizer.h"
+  ],
+  "Main/AngelScript/source/as_property.h": [
+    "as_string.h",
+    "as_datatype.h",
+    "as_atomic.h",
+    "as_scriptfunction.h",
+    "as_symboltable.h"
+  ],
+  "Main/AngelScript/source/as_restore.cpp": [
+    "as_config.h",
+    "as_restore.h",
+    "as_bytecode.h",
+    "as_scriptobject.h",
+    "as_texts.h",
+    "as_debug.h"
+  ],
+  "Main/AngelScript/source/as_restore.h": [
+    "as_scriptengine.h",
+    "as_context.h",
+    "as_map.h"
+  ],
+  "Main/AngelScript/source/as_scriptcode.cpp": [
+    "as_config.h",
+    "as_scriptcode.h"
+  ],
+  "Main/AngelScript/source/as_scriptcode.h": [
+    "as_array.h",
+    "as_string.h"
+  ],
+  "Main/AngelScript/source/as_scriptengine.cpp": [
+    "as_config.h",
+    "as_scriptengine.h",
+    "as_builder.h",
+    "as_context.h",
+    "as_string_util.h",
+    "as_tokenizer.h",
+    "as_texts.h",
+    "as_module.h",
+    "as_callfunc.h",
+    "as_generic.h",
+    "as_scriptobject.h",
+    "as_compiler.h",
+    "as_bytecode.h",
+    "as_debug.h"
+  ],
+  "Main/AngelScript/source/as_scriptengine.h": [
+    "as_config.h",
+    "as_atomic.h",
+    "as_scriptfunction.h",
+    "as_array.h",
+    "as_datatype.h",
+    "as_objecttype.h",
+    "as_module.h",
+    "as_callfunc.h",
+    "as_configgroup.h",
+    "as_memory.h",
+    "as_gc.h",
+    "as_tokenizer.h"
+  ],
+  "Main/AngelScript/source/as_scriptfunction.cpp": [
+    "as_config.h",
+    "as_scriptfunction.h",
+    "as_tokendef.h",
+    "as_scriptengine.h",
+    "as_callfunc.h",
+    "as_bytecode.h",
+    "as_texts.h",
+    "as_scriptnode.h",
+    "as_builder.h",
+    "as_scriptcode.h"
+  ],
+  "Main/AngelScript/source/as_scriptfunction.h": [
+    "as_config.h",
+    "as_string.h",
+    "as_array.h",
+    "as_datatype.h",
+    "as_atomic.h"
+  ],
+  "Main/AngelScript/source/as_scriptnode.cpp": [
+    "as_scriptnode.h",
+    "as_scriptengine.h"
+  ],
+  "Main/AngelScript/source/as_scriptnode.h": [
+    "as_config.h",
+    "as_tokendef.h"
+  ],
+  "Main/AngelScript/source/as_scriptobject.cpp": [
+    "as_config.h",
+    "as_scriptengine.h",
+    "as_scriptobject.h",
+    "as_texts.h"
+  ],
+  "Main/AngelScript/source/as_scriptobject.h": [
+    "as_config.h",
+    "as_atomic.h"
+  ],
+  "Main/AngelScript/source/as_string.cpp": [
+    "as_config.h",
+    "as_string.h",
+    "as_string_util.h"
+  ],
+  "Main/AngelScript/source/as_string_util.cpp": [
+    "as_config.h",
+    "as_string.h",
+    "as_string_util.h"
+  ],
+  "Main/AngelScript/source/as_string_util.h": [
+    "as_config.h"
+  ],
+  "Main/AngelScript/source/as_symboltable.h": [
+    "as_config.h",
+    "as_memory.h",
+    "as_string.h",
+    "as_map.h",
+    "as_datatype.h",
+    "as_namespace.h"
+  ],
+  "Main/AngelScript/source/as_thread.cpp": [
+    "as_config.h",
+    "as_thread.h",
+    "as_atomic.h"
+  ],
+  "Main/AngelScript/source/as_thread.h": [
+    "as_config.h",
+    "as_string.h",
+    "as_array.h",
+    "as_map.h",
+    "as_criticalsection.h"
+  ],
+  "Main/AngelScript/source/as_tokendef.h": [
+    "as_config.h"
+  ],
+  "Main/AngelScript/source/as_tokenizer.cpp": [
+    "as_config.h",
+    "as_scriptengine.h",
+    "as_tokenizer.h",
+    "as_tokendef.h"
+  ],
+  "Main/AngelScript/source/as_tokenizer.h": [
+    "as_config.h",
+    "as_tokendef.h",
+    "as_map.h",
+    "as_string.h"
+  ],
+  "Main/AngelScript/source/as_typeinfo.cpp": [
+    "as_config.h",
+    "as_typeinfo.h",
+    "as_scriptengine.h"
+  ],
+  "Main/AngelScript/source/as_typeinfo.h": [
+    "as_config.h",
+    "as_string.h",
+    "as_atomic.h",
+    "as_datatype.h"
+  ],
+  "Main/AngelScript/source/as_variablescope.cpp": [
+    "as_config.h",
+    "as_variablescope.h"
+  ],
+  "Main/AngelScript/source/as_variablescope.h": [
+    "as_config.h",
+    "as_array.h",
+    "as_string.h",
+    "as_datatype.h"
+  ],
+  "Main/AngelScript/weakref/weakref.cpp": [
+    "weakref.h"
+  ],
+  "Main/CPPFeature/Feature.cpp": [
+    "Feature.h"
+  ],
+  "Main/Test/Test.cpp": [
+    "Test.h"
+  ],
+  "Transfer/src/ChildObject.cpp": [
+    "ChildObject.h"
+  ],
+  "Transfer/src/ChildObject.h": [
+    "TransferBase.h",
+    "Module.h",
+    "Objects/BaseObject.h"
+  ],
+  "Transfer/src/TransferBase.cpp": [
+    "TransferBase.h"
+  ],
+  "Transfer/src/TransferBase.h": [
+    "TransferUtility.h",
+    "Module.h",
+    "../../Main/Test/Test.h"
+  ],
+  "Transfer/src/Objects/BaseObject.cpp": [
+    "BaseObject.h"
+  ],
+  "Transfer/src/Objects/BaseObject.h": [
+    "../Module.h",
+    "../TransferBase.h"
+  ],
+  "Transfer/src/Objects/ChildObject.cpp": [
+    "ChildObject.h"
+  ],
+  "Transfer/src/Objects/ChildObject.h": [
+    "../Module.h",
+    "../TransferBase.h"
+  ]
+}

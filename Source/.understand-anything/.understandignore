@@ -1,0 +1,6 @@
+# .understandignore
+# Patterns for files/dirs to exclude from analysis
+#
+# --- Suggested exclusions for this C++ project ---
+
+# Main/AngelScript/   (third-party embedded library)
