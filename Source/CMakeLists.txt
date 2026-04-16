@@ -19,6 +19,7 @@ add_subdirectory(Core)
 add_subdirectory(Algorithm)
 add_subdirectory(DirectX12)
 add_subdirectory(Main)
+add_subdirectory(ConsoleMain)
 message("CMAKE_BINARY_DIR = ${CMAKE_BINARY_DIR};  CMAKE_ARCHIVE_OUTPUT_DIRECTORY = ${}")
 
 #target_link_libraries(Main Transfer)

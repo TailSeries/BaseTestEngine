@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m json.tool \"F:/WorkSpace/BaseTestEngine/Source/.understand-anything/intermediate/scan-result.json\")",
+      "Bash(node:*)",
+      "Bash(python:*)",
+      "Bash(timeout 12 bash -c 'GRAPH_DIR='\\\\''F:/WorkSpace/BaseTestEngine/Source'\\\\'' node '\\\\''__TRACKED_VAR__'\\\\'' run dev -- --host 127.0.0.1')"
+    ]
+  },
+  "enabledPlugins": {
+    "understand-anything@understand-anything": true
+  }
+}
