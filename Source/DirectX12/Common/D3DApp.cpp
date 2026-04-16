@@ -421,6 +421,12 @@ void D3DApp::QueryDescriptorSize()
 	MCBVSRVUAVDescriptorSize = MD3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
+float D3DApp::AspectRatio()const
+{
+	return static_cast<float>(MClientWidth) / MClientHeight;
+}
+
+
 void D3DApp::CheckMSAASupportLevel()
 {
 #if defined(DEBUG) || defined(_DEBUG)

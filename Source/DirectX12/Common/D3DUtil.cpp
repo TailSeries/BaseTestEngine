@@ -23,6 +23,14 @@ std::string DxException::ToString()const
 }
 #pragma endregion DXDebug
 
+std::wstring D3DUtil::ToWString(const std::string& str)
+{
+    int size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);
+    std::wstring wstr(size, 0);
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, &wstr[0], size);
+    return wstr;
+}
+
 Microsoft::WRL::ComPtr<ID3D12Resource> D3DUtil::CreateDefaultBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const void* initData, uint64 byteSize, Microsoft::WRL::ComPtr<ID3D12Resource>& uploadBuffer)
 {
     Microsoft::WRL::ComPtr<ID3D12Resource> DefaultBuffer;
@@ -50,6 +58,61 @@ Microsoft::WRL::ComPtr<ID3D12Resource> D3DUtil::CreateDefaultBuffer(ID3D12Device
     cmdList->ResourceBarrier(1, &DefaultBufferCopyDestBaarrierToCommon);
 	return DefaultBuffer;
 }
+
+
+Microsoft::WRL::ComPtr<ID3DBlob> D3DUtil::CompileShader(const std::string& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint, const std::string& target)
+{
+    UINT compileFlags = 0;
+#if defined(DEBUG) || defined(_DEBUG)  
+    compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+
+    HRESULT hr = S_OK;
+    std::wstring wfile = ToWString(filename);
+    Microsoft::WRL::ComPtr<ID3DBlob> byteCode = nullptr;
+    Microsoft::WRL::ComPtr<ID3DBlob> errors;
+
+    /*
+    * 两个标记位参数的解释：
+    *   6. Flags1 - 编译标志1
+  UINT Flags1
+  - 作用：控制编译行为的标志位组合（按位或）
+  - 常用标志：
+  // 调试相关
+  D3DCOMPILE_DEBUG              // 生成调试信息
+  D3DCOMPILE_SKIP_VALIDATION    // 跳过验证（用于调试）
+  D3DCOMPILE_SKIP_OPTIMIZATION  // 跳过优化（用于调试）
+
+  // 优化级别
+  D3DCOMPILE_OPTIMIZATION_LEVEL0  // 优化级别0（调试）
+  D3DCOMPILE_OPTIMIZATION_LEVEL1  // 优化级别1
+  D3DCOMPILE_OPTIMIZATION_LEVEL2  // 优化级别2
+  D3DCOMPILE_OPTIMIZATION_LEVEL3  // 优化级别3（最高）
+
+  // 其他
+  D3DCOMPILE_WARNINGS_ARE_ERRORS  // 警告视为错误
+  D3DCOMPILE_PACK_MATRIX_ROW_MAJOR  // 行优先矩阵布局
+  D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR  // 列优先矩阵布局（默认）
+
+  7. Flags2 - 编译标志2（效果标志）
+
+  UINT Flags2
+  - 作用：主要用于效果框架（Effects framework），通常设为 0
+  - 常用值：
+    - 0：普通着色器编译
+    - D3DCOMPILE_EFFECT_CHILD_EFFECT：效果文件中的子效果
+    */
+    hr = D3DCompileFromFile(wfile.c_str(), defines, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+        entrypoint.c_str(), target.c_str(), compileFlags, 0, &byteCode, &errors);
+
+    if (errors != nullptr)
+        OutputDebugStringA((char*)errors->GetBufferPointer());
+
+    ThrowIfFailed(hr);
+
+    return byteCode;
+}
+
 
 D3D12_VERTEX_BUFFER_VIEW MeshGeometry::VertexBufferView() const
 {

@@ -83,6 +83,7 @@ public:
 class D3DUtil
 {
 public:
+    static std::wstring ToWString(const std::string& str);
 
 	/**
      * 创建的时候就将初始化数据initdata放进默认堆中，然后返回默认堆，最后一个参数返回上传堆
@@ -92,8 +93,31 @@ public:
      * @param byteSize 
      * @param uploadBuffer 
      * @return 
+     * 关键理解点
+
+  1. “立即”复制到上传堆：是的，UpdateSubresources 内部会通过 Map/memcpy 将 initData 复制到上传堆（因为上传堆支持 CPU 写入）。
+  2. “延迟”复制到默认堆：复制到默认堆的命令只是被记录到 cmdList 中，需要调用 ExecuteCommandLists 后 GPU 才会执行。
+  3. 为什么这样设计：
+    - 批量提交命令，减少 CPU-GPU 同步开销。
+    - 允许在单个命令列表中记录多个资源上传命令，一次性提交。
+    - 符合 DirectX12 的显式控制设计哲学。
+  4. 上传堆的生命周期：
+    - 在 CreateDefaultBuffer 中，上传堆通过 uploadBuffer 参数返回。
+    - 在 MeshGeometry 中保存为 VertexBufferUploader/IndexBufferUploader。
+    - 复制完成后不能立即释放，因为 GPU 可能还在读取（需要同步）。
+    - 通常在确定 GPU 使用完成后才释放（如帧结束后）。
+
+  所以，你的理解是对的：数据“立即”进入了上传堆（CPU 可访问），但进入默认堆（GPU 专用）是延迟的，需要命令列表执行后才会发生。
      */
     static Microsoft::WRL::ComPtr<ID3D12Resource> CreateDefaultBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const void* initData, uint64 byteSize, Microsoft::WRL::ComPtr<ID3D12Resource>& uploadBuffer);
+
+
+    static UINT CalcConstantBufferByteSize(UINT byteSize)
+    {
+        return (byteSize + 255) & ~255;
+    }
+
+    static  Microsoft::WRL::ComPtr<ID3DBlob> CompileShader(const std::string& filename, const D3D_SHADER_MACRO* defines, const std::string& entrypoint, const std::string& target);
 
 };
 

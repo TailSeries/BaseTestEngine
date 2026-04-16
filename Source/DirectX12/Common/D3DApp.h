@@ -39,6 +39,8 @@ protected:
 	ID3D12Resource* CurrentBackBuffer() const;
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView()const;
 	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView()const;
+
+	float AspectRatio() const;
 private:
 
 	//0 初始化dx12相关的debug信息
@@ -81,7 +83,7 @@ private:
 
 
 
-private:
+protected:
 	static D3DApp* MApp;
 	HINSTANCE MhAppInst{nullptr};
 	HWND MhMainWnd{ nullptr };
