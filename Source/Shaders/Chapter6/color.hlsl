@@ -6,7 +6,7 @@ cbuffer cbPerObject : register(b0)
 struct VertexIn
 {
     float3 PosL : POSITION;
-    float4 Color : COLOR[n];
+    float4 Color : COLOR;
 };
 
 struct VertexOut
