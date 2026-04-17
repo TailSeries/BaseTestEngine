@@ -53,8 +53,8 @@ int main()
 	//QuickSort(arr, 0, arr.size() - 1);
 	int left = 0;
 	int right = arr.size() - 1;
-	TribleQuickSort(arr, left, right);
-
+	//TribleQuickSort(arr, left, right);
+	HeapSort(arr);
 
 	return 0;
 }

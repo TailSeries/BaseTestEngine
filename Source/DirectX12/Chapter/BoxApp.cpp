@@ -210,8 +210,8 @@ void BoxApp::BuildPSO()
     ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
     psoDesc.InputLayout = { InputLayout.data(), (UINT)InputLayout.size() };
     psoDesc.pRootSignature = mRootSignature.Get();
-    psoDesc.VS = {reinterpret_cast<BYTE*>(MvsByteCode->GetBufferPointer())};
-    psoDesc.PS = {reinterpret_cast<BYTE*>(MpsByteCode->GetBufferPointer())};
+    psoDesc.VS = {reinterpret_cast<BYTE*>(MvsByteCode->GetBufferPointer()), MvsByteCode->GetBufferSize()};
+    psoDesc.PS = {reinterpret_cast<BYTE*>(MpsByteCode->GetBufferPointer()), MpsByteCode->GetBufferSize()};
 
     /*光栅化状态
     *   - 使用默认值：

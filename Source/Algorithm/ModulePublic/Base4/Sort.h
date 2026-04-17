@@ -278,10 +278,14 @@ void TribleQuickSort(std::vector<int>& arr, int& left, int& right)
 /*
 * 小顶堆示例
 * 关键：数组下标和堆节点的联系
-*	// 当前节点 i
-left  = 2*i + 1
-right = 2*i + 2
-parent = (i - 1) / 2
+*	1.当前节点 i
+		left  = 2*i + 1
+		right = 2*i + 2
+		parent = (i - 1) / 2
+	2.堆的特点:以一个小顶堆为例，每个子树的顶点都是最小值。
+	3.不限于二叉堆，甚至也可以三叉，四叉
+	4.二叉堆的情况下，我们只需要遍历一半的元素。因为对于二叉堆，那一半的元素其实看做叶子结点，单节点其实是天然的ok的堆。
+
 */
 // 让k上浮到合适位置
 void Swim(std::vector<int>& arr, int k)
@@ -295,38 +299,102 @@ void Swim(std::vector<int>& arr, int k)
 	}
 }
 
-//private void sink(int k)
-//{
-//	while (2 * k <= N
-//		{
-//		int j = 2 * k;
-//		if (j < N && less(j, j + 1)) j++;
-//		if (!less(k, j)) break;
-//		exch(k, j);
-//		k = j;
-//		}
-//}
+
 
 void Sink(std::vector<int>& arr, int k)
 {
 	int leftChild = k * 2 + 1;
 	int rightChild = k * 2 + 2;
-
-	while ()
+	while (leftChild < arr.size() || rightChild < arr.size())
 	{
-		if (arr[k] > arr[leftChild])
+		int toBeSwapIndex = leftChild;
+		if (rightChild < arr.size()) 
 		{
-			std::swap(arr[k], arr[leftChild]);
+			// 右子节点也在, 好处谁更小
+			if (arr[rightChild] < arr[leftChild])
+			{
+				toBeSwapIndex = rightChild;
+			}
+			else
+			{
+				toBeSwapIndex = leftChild;
+			}
 		}
 
-		if (arr[k] > arr[rightChild])
+		if (arr[k] > arr[toBeSwapIndex])
 		{
-			std::swap(arr[k], arr[rightChild]);
+			std::swap(arr[k], arr[toBeSwapIndex]);
 		}
+		k = toBeSwapIndex;
+		leftChild = k * 2 + 1;
+		rightChild = k * 2 + 2;
+	}
+}
+/*
+* 每次往堆里构建一个新节点的前提是堆里已有的节点，已经组成一个有序堆
+* 因此，我们顺序遍历用上浮 或者 逆序遍历用下沉，都可以原地构建一个有序堆。其中顺序遍历上浮需要遍历所有节点，但是逆序遍历只要一半就可以了
+* 上浮的方式构建堆，复杂度为nlogn 但是下沉的方式构建堆，工作量每层只有上一层的一半所以复杂度反而是n
+*/
+void BuildHeap(std::vector<int>& arr)
+{
+
+	int N = arr.size() / 2;
+	for (int i = N; i >= 0; i--)
+	{
+		Sink(arr, i);
+	}
+}
+
+/*
+* heapsort：
+*/
+
+void Sink(std::vector<int>& arr, int k, int tail)
+{
+	int leftChild = k * 2 + 1;
+	int rightChild = k * 2 + 2;
+	while (leftChild <= tail || rightChild <= tail)
+	{
+		int toBeSwapIndex = leftChild;
+		if (rightChild <= tail)
+		{
+			// 右子节点也在, 好处谁更小
+			if (arr[rightChild] < arr[leftChild])
+			{
+				toBeSwapIndex = rightChild;
+			}
+			else
+			{
+				toBeSwapIndex = leftChild;
+			}
+		}
+
+		if (arr[k] > arr[toBeSwapIndex])
+		{
+			std::swap(arr[k], arr[toBeSwapIndex]);
+		}
+		k = toBeSwapIndex;
+		leftChild = k * 2 + 1;
+		rightChild = k * 2 + 2;
+	}
+}
+void HeapSort(std::vector<int>& arr)
+{
+	int N = arr.size() / 2;
+	int Tail = arr.size() - 1;
+	for (int i = N; i >= 0; i--)
+	{
+		Sink(arr, i, Tail);
 	}
 
+	for (int i = 0; i <= Tail; )
+	{
+		std::swap(arr[0], arr[Tail]);
+		Tail--;
+		Sink(arr, i, Tail);
+	}
 
-
+	std::reverse(arr.begin(), arr.end());
 }
 
 
