@@ -276,14 +276,55 @@ void TribleQuickSort(std::vector<int>& arr, int& left, int& right)
 
 
 /*
+* 小顶堆示例
 * 关键：数组下标和堆节点的联系
 *	// 当前节点 i
 left  = 2*i + 1
 right = 2*i + 2
 parent = (i - 1) / 2
 */
-void Sink(std::vector<int>& arr)
+// 让k上浮到合适位置
+void Swim(std::vector<int>& arr, int k)
 {
+	int parentIndex = (k - 1) / 2;
+	while (parentIndex >= 0 && arr[k] < arr[parentIndex])
+	{
+		std::swap(arr[k], arr[parentIndex]);
+		k = parentIndex;
+		parentIndex = (k - 1) / 2;
+	}
+}
+
+//private void sink(int k)
+//{
+//	while (2 * k <= N
+//		{
+//		int j = 2 * k;
+//		if (j < N && less(j, j + 1)) j++;
+//		if (!less(k, j)) break;
+//		exch(k, j);
+//		k = j;
+//		}
+//}
+
+void Sink(std::vector<int>& arr, int k)
+{
+	int leftChild = k * 2 + 1;
+	int rightChild = k * 2 + 2;
+
+	while ()
+	{
+		if (arr[k] > arr[leftChild])
+		{
+			std::swap(arr[k], arr[leftChild]);
+		}
+
+		if (arr[k] > arr[rightChild])
+		{
+			std::swap(arr[k], arr[rightChild]);
+		}
+	}
+
 
 
 }
