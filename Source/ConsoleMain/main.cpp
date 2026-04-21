@@ -55,6 +55,8 @@ int main()
 	int right = arr.size() - 1;
 	//TribleQuickSort(arr, left, right);
 	HeapSort(arr);
-
+	int index = Rank(3, arr, 0, arr.size() - 1);
+	index = Rank(6, arr, 0, arr.size() - 1);
+	int errindex = Rank(100, arr, 0, arr.size() - 1);
 	return 0;
 }

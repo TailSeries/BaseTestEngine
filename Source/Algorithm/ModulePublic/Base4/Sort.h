@@ -397,5 +397,30 @@ void HeapSort(std::vector<int>& arr)
 	std::reverse(arr.begin(), arr.end());
 }
 
+/*
+* 普通队列  FIFO：Map + 固定size的数组实现，支持dq[i]的随机访问
+* 优先队列 其实就是大顶堆
+*/
+
+/*
+* 二分查找
+*/
+int Rank(int value, std::vector<int>& arr, int lo, int hi)
+{
+	if (lo > hi) return -1;
+	
+	int mid = (lo + hi) / 2;
+	if (arr[mid] == value) return mid;
+	if (arr[mid] < value)
+	{
+		return Rank(value, arr, mid + 1, hi);
+	}
+	if (arr[mid] > value)
+	{
+		return Rank(value, arr, lo, mid - 1);
+	}
+	return -1;
+}
+
 
 
