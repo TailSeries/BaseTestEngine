@@ -49,14 +49,22 @@ void func_by_ref(const int& typeId)
 
 int main()
 {
+	SetConsoleOutputCP(CP_UTF8);
+
 	std::vector<int> arr{ 0, 2, 1, 0, 3, 5, 6, 7, 7, 6, 8, 5 ,6 };
-	//QuickSort(arr, 0, arr.size() - 1);
-	int left = 0;
-	int right = arr.size() - 1;
-	//TribleQuickSort(arr, left, right);
-	HeapSort(arr);
-	int index = Rank(3, arr, 0, arr.size() - 1);
-	index = Rank(6, arr, 0, arr.size() - 1);
-	int errindex = Rank(100, arr, 0, arr.size() - 1);
+
+	BSTNode* root = PutBykey(nullptr, 0, 0);
+	for (auto& itoa : arr)
+	{
+		BSTNode* Leaf = PutBykey(root, itoa, itoa);
+	}
+
+	std::vector<std::vector<int>> adj
+	{
+		{0, },
+	
+	};
+
+
 	return 0;
 }

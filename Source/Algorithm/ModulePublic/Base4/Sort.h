@@ -1,7 +1,10 @@
 #pragma once
 #include <cstdio>
+#include <iostream>
+#include <string>
 #include <vector>
 #include <algorithm>
+#include <stack>
 
 #include "Module.h"
 class ALGOMODULE TestClass
@@ -421,6 +424,259 @@ int Rank(int value, std::vector<int>& arr, int lo, int hi)
 	}
 	return -1;
 }
+/*
+* 二叉查找树，左 < 中 < 右。注意这跟上面的小顶堆有本质的不同，小顶堆的父节点用于大于子节点，左右子节点的大小则无所谓。
+* :事实上不太可能直接把一个数组弄成二叉查找树，数组一旦有序，BST直接退化成一条单链结构，这没意义。
+* ：缺点对于顺序结构这是不平衡的
+*/
+
+struct BSTNode
+{
+	BSTNode* Left;
+	BSTNode* Right;
+	int key;
+	int value;
+	int N;
+};
+
+BSTNode* GetByKey(BSTNode* root, int inKey)
+{
+	if (root == nullptr) return nullptr;
+
+	if (inKey == root->key)
+	{
+		return root;
+	}
+	if (inKey < root->key)
+	{
+		return GetByKey(root->Left, inKey);
+	}
+	else
+	{
+		return GetByKey(root->Right, inKey);
+	}
+
+}
+
+BSTNode* PutBykey(BSTNode* root, int key, int value)
+{
+	if (root == nullptr)
+	{
+		return new BSTNode(nullptr, nullptr, key, value, 1);
+	}
+	if (key == root->key)
+	{
+		root->value = value;
+		return root;
+	}
+	else if (key < root->key)
+	{
+		BSTNode* leaf = PutBykey(root->Left, key, value);
+		if (root->Left == nullptr)
+		{
+			root->Left = leaf;
+		}
+		root->N++;
+		return leaf;
+	}
+	else
+	{
+		BSTNode* leaf = PutBykey(root->Right, key, value);
+		if (root->Right == nullptr)
+		{
+			root->Right = leaf;
+		}
+		root->N++;
+		return leaf;
+	}
+
+	
+}
+
+void BST()
+{
+
+
+
+}
+
+inline void PrintBSTImpl(BSTNode* node, const std::string& prefix, bool isLeft)
+{
+    if (!node) return;
+    std::cout << prefix << (isLeft ? "\xe2\x94\x9c\xe2\x94\x80\xe2\x94\x80 " : "\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80 ") << node->key << "\n";
+    PrintBSTImpl(node->Left,  prefix + (isLeft ? "\xe2\x94\x82   " : "    "), true);
+    PrintBSTImpl(node->Right, prefix + (isLeft ? "\xe2\x94\x82   " : "    "), false);
+}
+
+inline void PrintBST(BSTNode* root)
+{
+    if (!root) { std::cout << "(empty)\n"; return; }
+    std::cout << root->key << "\n";
+    PrintBSTImpl(root->Left,  "", true);
+    PrintBSTImpl(root->Right, "", false);
+}
+
+
+
+struct AVLBSTNode
+{
+	AVLBSTNode* Left;
+	AVLBSTNode* Right;
+	int key;
+	int value;
+	int height;
+};
+/*
+* 操作AVL的平衡：
+* 关键点： 
+	每次有新的节点进入就要重新平衡，而单次平衡的树高度，最大刚好就是2
+	左旋与右旋的本质，就是先把三个节点弄成递增/递减的单链，然后把中间节点抽出来作为个根节点。
+	这种做法改变树的平衡性，但不会破坏中序遍历的遍历结果。这一点很重要，对于红黑树也是这样的。反过来思考：如果我不得不将一颗平衡树改的不平衡的情况下，我中序遍历的结果仍然是一样的。
+* 
+*/
+
+/*
+* hash表，拉链法
+*/
+
+
+/*
+* 图
+* 连通图：任意节点互联互通，树可以认为是一副无环连通图。
+*/
+
+using Bag = std::vector<int>;
+struct Graph
+{
+	int V;
+	int E;
+	std::vector<Bag> adj;
+	Graph(int numv)
+		:V(numv)
+	{
+		adj.resize(numv);
+	}
+
+	void AddEdge(int v, int w)
+	{
+		adj[v].push_back(w); 
+		adj[w].push_back(v);
+		E++;
+	}
+
+	Bag GetAdj(int v)
+	{
+		return adj[v];
+	}
+
+
+};
+
+/*
+* 所有点的度数之和 = 边数 × 2
+* 度数，有多少边就是多少度
+*/
+int GetDegree(Graph& G, int v)
+{
+	return G.adj[v].size();
+}
+
+int MaxDegree(Graph& G)
+{
+	int maxDegress = 0;
+	for (int i = 0; i < G.adj.size(); i++)
+	{
+		int curDegree = GetDegree(G, i);
+		maxDegress = curDegree > maxDegress ? curDegree : maxDegress;
+	}
+	return maxDegress;
+}
+
+int AvgDegree(Graph& G)
+{
+	return 2*G.E / G.V;
+}
+
+int NumSelfLoops(Graph& G)
+{
+	int count = 0;
+	for (int i = 0; i < G.adj.size(); i++)
+	{
+		auto& bag = G.adj[i];
+		for (int& j : bag)
+		{
+			if (j == i)
+			{
+				count++;
+			}
+		}
+	}
+	return count / 2;
+}
+
+
+/*
+* DFS
+* 关键：连通图里面，DFS一定能访问到所有的节点，但不一定能访问到所有的边。 
+*/
+struct DFSTree
+{
+	std::vector<bool> marked; // 记录所有和v连通的点，包括自己，避免走重复节点
+	int count; // 和s连通的点的数量，包括自己。
+	DFSTree(Graph& G, int S)
+	{
+		s = S;
+		marked.resize(G.V);
+		DFS(G, s);
+	}
+
+	void DFS(Graph& G, int v)
+	{
+		marked[v] = true;
+		count++;
+		std::vector<int>& bag = G.adj[v];
+		for (int next : bag)
+		{
+			if (!marked[next])
+			{
+				edgeTo[next] = v;
+				DFS(G, next);
+			}
+		}
+	}
+
+	/*
+		*单点路径问题：从s 到 p是否存在一条指定路径
+		*marked 保证了可达性
+		* edgeTo 在所有已知搜索树中，记录当前顶点最后可由谁到达
+	*/
+	std::vector<int> edgeTo;// 已知搜索树中，记录当前顶点最后可由谁到达
+	int s;
+	bool HasPathTo(int v)
+	{
+		return marked[v];
+	}
+
+	std::vector<int> GetPath(int v)
+	{
+		if (!HasPathTo(v)) return {};
+		std::vector<int> result;
+		int start = v;
+		result.push_back(start);
+		while (edgeTo[start] != s)
+		{
+			start = edgeTo[start];
+			result.push_back(start);
+		}
+
+		result.push_back(s);
+		std::reverse(result.begin(), result.end());
+		return result;
+	}
+};
+
+
+
 
 
 
