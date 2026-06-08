@@ -627,6 +627,7 @@ struct DFSTree
 	{
 		s = S;
 		marked.resize(G.V);
+		edgeTo.resize(G.V);
 		DFS(G, s);
 	}
 
@@ -648,7 +649,7 @@ struct DFSTree
 	/*
 		*单点路径问题：从s 到 p是否存在一条指定路径
 		*marked 保证了可达性
-		* edgeTo 在所有已知搜索树中，记录当前顶点最后可由谁到达
+		* edgeTo 在所有已知搜索树中，记录当前顶点最后可由谁到达.最终edgeTo。最终edgeTo是一个包含了所有节点的连通子树
 	*/
 	std::vector<int> edgeTo;// 已知搜索树中，记录当前顶点最后可由谁到达
 	int s;
@@ -669,6 +670,66 @@ struct DFSTree
 			result.push_back(start);
 		}
 
+		result.push_back(s);
+		std::reverse(result.begin(), result.end());
+		return result;
+	}
+};
+
+/*
+* 以 s 为起点的话，edgeTo 将构成一个最小生成树，注意edgeTo[s] 其实应该是一份无效数据
+*/
+struct BFSTree 
+{
+	std::vector<int> edgeTo;
+	std::vector<bool> marked;
+	int s;
+	BFSTree(Graph& G, int Source)
+	{
+		s = Source;
+		marked.resize(G.V);
+		edgeTo.resize(G.V);
+		BFS(G, s);
+	}
+
+	void BFS(Graph& G, int v)
+	{
+		std::deque<int> queues;
+		queues.push_back(v);
+		marked[v] = true;
+		while (queues.size())
+		{
+			int p = queues.front();
+			queues.pop_front();
+			std::vector<int>& nexts = G.adj[p];
+			for (int i = 0; i < nexts.size(); i++)
+			{
+				if (!marked[nexts[i]])
+				{
+					marked[nexts[i]] = true;
+					edgeTo[nexts[i]] = p;
+					queues.push_back(nexts[i]);
+				}
+			}
+		}
+	}
+
+	bool HasPathTo(int v)
+	{
+		return marked[v];
+	}
+
+	std::vector<int> GetPath(int v)
+	{
+		if (!HasPathTo(v)) return {};
+		std::vector<int> result;
+		int target = v;
+		result.push_back(target);
+		while (edgeTo[target] != s)
+		{
+			target = edgeTo[target];
+			result.push_back(target);
+		}
 		result.push_back(s);
 		std::reverse(result.begin(), result.end());
 		return result;

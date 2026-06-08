@@ -44,11 +44,14 @@ void func_by_ref(const int& typeId)
 	int a = typeId * 2;
 	// 编译器生成: mov eax, [rdx] (把 rdx 当指针解引用)
 }
+#include "Foo.hpp"
+#include "Global.hpp"
 
-
+extern Foo GFoo2;
 
 int main()
 {
+	int value = GFoo.a;
 	SetConsoleOutputCP(CP_UTF8);
 
 	std::vector<int> arr{ 0, 2, 1, 0, 3, 5, 6, 7, 7, 6, 8, 5 ,6 };
@@ -61,10 +64,31 @@ int main()
 
 	std::vector<std::vector<int>> adj
 	{
-		{0, },
-	
+		{2, 1, 5},
+		{0, 2},
+		{0 ,1, 3, 4},
+		{5,4,2},
+		{3,2},
+		{3, 0}
 	};
+	Graph G(6);
+	for (int i = 0; i < adj.size(); i++)
+	{
+		for(int& j :adj[i])
+		G.AddEdge(i, j);
+	}
+	G.adj = adj;
+	//DFSTree dfsTree(G, 1);
+	//bool result =  dfsTree.HasPathTo(0);
+	//result = dfsTree.HasPathTo(4);
+	//auto resultpath = dfsTree.GetPath(5);
+
+	BFSTree bfsTree(G, 1);
+	bool result = bfsTree.HasPathTo(0);
+	result = bfsTree.HasPathTo(4);
+	auto resultpath = bfsTree.GetPath(5);
 
 
 	return 0;
 }
+#include "TestGFoo.hpp"
