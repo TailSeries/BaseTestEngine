@@ -4,6 +4,7 @@
 #include <timeapi.h>
 #include <vector>
 #include "Base4/Sort.h"
+#include "LeetCode/LeetCode.h"
 
 template<typename OutT, typename InT>
 FORCEINLINE OutT value_as(InT InValue)
@@ -46,7 +47,7 @@ void func_by_ref(const int& typeId)
 }
 #include "Foo.hpp"
 #include "Global.hpp"
-
+#include <unordered_map>
 extern Foo GFoo2;
 
 int main()
@@ -88,7 +89,9 @@ int main()
 	result = bfsTree.HasPathTo(4);
 	auto resultpath = bfsTree.GetPath(5);
 
-
+	Solution s;
+	std::string strtest = "cbacbacbaaabc";
+	s.lengthOfLongestSubstring(strtest);
 	return 0;
 }
 #include "TestGFoo.hpp"
