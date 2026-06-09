@@ -50,6 +50,21 @@ void func_by_ref(const int& typeId)
 #include <unordered_map>
 extern Foo GFoo2;
 
+double GetDouble()
+{
+	int a = 1;
+	int b = 3;
+	std::vector<int> temp{ b };
+	if (0)
+	{
+		return b / 2.0; // 1.5
+	}
+	else
+	{
+		return  temp[0] / 2.0; //1.0
+	}
+};
+
 int main()
 {
 	int value = GFoo.a;
@@ -90,8 +105,11 @@ int main()
 	auto resultpath = bfsTree.GetPath(5);
 
 	Solution s;
-	std::string strtest = "cbacbacbaaabc";
-	s.lengthOfLongestSubstring(strtest);
+
+	auto resultsvalue = s.findMedianSortedArrays({ 1,3 },{2});
+	auto doublev = GetDouble();
+	std::printf("temp test for console main\n");
+	system("pause");
 	return 0;
 }
 #include "TestGFoo.hpp"

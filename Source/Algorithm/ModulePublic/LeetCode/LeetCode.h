@@ -86,4 +86,109 @@ public:
 		}
 		return maxLength;
 	}
+
+	/*
+	* 4. https://leetcode.cn/problems/median-of-two-sorted-arrays/description/
+	* --注意返回值这里要直接/2.0
+	* -- 使用归并注意归并判while (l1 < nums1.size() && (l2 == nums2.size() || nums1[l1] <= nums2[l2]))里，
+	*	第一，这里我希望在一次loop里归并完毕，因此这里额外处理(l2 == nums2.size()的情况，
+	*	第二，l2 == nums2.size()要放在前面进行判断，以免出现l2 == nums2.size()还要去访问nums2[l2]的情况
+	*	但是这种时间复杂度应该是o(m + n)
+	* --
+	*/
+	double findMedianSortedArrays(std::vector<int> nums1, std::vector<int> nums2) 
+	{
+		
+		{
+			std::vector<int> temp;
+			int l1 = 0;
+			int l2 = 0;
+			int p = 0;
+			while (l1 < nums1.size() || l2 < nums2.size())
+			{
+				while (l1 < nums1.size() && (l2 == nums2.size() || nums1[l1] <= nums2[l2]))
+				{
+					temp.push_back(nums1[l1]);
+					l1++;
+				}
+
+				while (l2 < nums2.size() && (l1 == nums1.size() || nums2[l2] < nums1[l1]))
+				{
+					temp.push_back(nums2[l2]);
+					l2++;
+				}
+			}
+
+			int midIndex = temp.size() / 2;
+			return (temp.size() % 2 == 0) ? (temp[midIndex - 1] + temp[midIndex]) / 2.0 : (temp[midIndex]);
+		}
+
+
+		{
+			int l1 = 0;
+			int l2 = 0;
+			int midIndex = (nums1.size() + nums2.size()) / 2;
+			int midIndex2 = ((nums1.size() + nums2.size()) % 2 == 0) ? midIndex : (midIndex + 1);
+			int p = 0;
+			while (p < nums1.size() || p < nums2.size())
+			{
+				while (l1 < nums1.size() && nums1[l1] <= nums2[l2])
+				{
+					l1++;
+					if (l1 == midIndex)
+					{
+						// 到达中位数节点
+						int value1 = nums1[l1];
+						int value2 = value1;
+						if (l1 == nums1.size() - 1)
+						{
+							value2 = nums2[l2];
+						}
+						else
+						{
+							if (nums1[l1 + 1] <= nums2[l2])
+							{
+								value2 = nums1[l1 + 1];
+							}
+							else
+							{
+								value2 = nums2[l2];
+							}
+						}
+						return (value1 + value2) / 2.0;
+					
+					}
+				}
+
+				while (l2 < nums2.size() && nums2[l2] < nums1[l1])
+				{
+					l2++;
+					if (l2 == midIndex)
+					{
+						int value1 = nums2[l2];
+						int value2 = value1;
+						if (l2 == nums2.size() - 1)
+						{
+							value2 = nums1[l1];
+						}
+						else
+						{
+							if (nums2[l2 + 1] < nums1[l1])
+							{
+								value2 = nums2[l2 + 1];
+							}
+							else
+							{
+								value2 = nums1[l1];
+							}
+						}
+						return (value1 + value2) / 2.0;
+					}
+				}
+
+				p++;
+			}
+			return 0;
+		}
+	}
 };
