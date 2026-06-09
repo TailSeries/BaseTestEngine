@@ -40,13 +40,6 @@ public:
 	void BuildBoxGeometry();
 	void BuildPSO();
 
-
-
-
-private:
-	//Ìî³ä¶¥µã²¼¾Ö
-	void FillInputLayout();
-
 private:
 	virtual void OnResize() override;
 	virtual void Update(const GameTimer& gt) override;
