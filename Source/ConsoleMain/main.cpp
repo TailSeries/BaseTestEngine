@@ -4,6 +4,7 @@
 #include <timeapi.h>
 #include <vector>
 #include "Base4/Sort.h"
+#include "LeetCode/LeetCode.h"
 
 template<typename OutT, typename InT>
 FORCEINLINE OutT value_as(InT InValue)
@@ -44,17 +45,71 @@ void func_by_ref(const int& typeId)
 	int a = typeId * 2;
 	// 编译器生成: mov eax, [rdx] (把 rdx 当指针解引用)
 }
+#include "Foo.hpp"
+#include "Global.hpp"
+#include <unordered_map>
+extern Foo GFoo2;
 
-
+double GetDouble()
+{
+	int a = 1;
+	int b = 3;
+	std::vector<int> temp{ b };
+	if (0)
+	{
+		return b / 2.0; // 1.5
+	}
+	else
+	{
+		return  temp[0] / 2.0; //1.0
+	}
+};
 
 int main()
 {
+	int value = GFoo.a;
+	SetConsoleOutputCP(CP_UTF8);
+
 	std::vector<int> arr{ 0, 2, 1, 0, 3, 5, 6, 7, 7, 6, 8, 5 ,6 };
-	//QuickSort(arr, 0, arr.size() - 1);
-	int left = 0;
-	int right = arr.size() - 1;
-	TribleQuickSort(arr, left, right);
 
+	BSTNode* root = PutBykey(nullptr, 0, 0);
+	for (auto& itoa : arr)
+	{
+		BSTNode* Leaf = PutBykey(root, itoa, itoa);
+	}
 
+	std::vector<std::vector<int>> adj
+	{
+		{2, 1, 5},
+		{0, 2},
+		{0 ,1, 3, 4},
+		{5,4,2},
+		{3,2},
+		{3, 0}
+	};
+	Graph G(6);
+	for (int i = 0; i < adj.size(); i++)
+	{
+		for(int& j :adj[i])
+		G.AddEdge(i, j);
+	}
+	G.adj = adj;
+	//DFSTree dfsTree(G, 1);
+	//bool result =  dfsTree.HasPathTo(0);
+	//result = dfsTree.HasPathTo(4);
+	//auto resultpath = dfsTree.GetPath(5);
+
+	BFSTree bfsTree(G, 1);
+	bool result = bfsTree.HasPathTo(0);
+	result = bfsTree.HasPathTo(4);
+	auto resultpath = bfsTree.GetPath(5);
+
+	Solution s;
+
+	auto resultsvalue = s.findMedianSortedArrays({ 1,3 },{2});
+	auto doublev = GetDouble();
+	std::printf("temp test for console main\n");
+	system("pause");
 	return 0;
 }
+#include "TestGFoo.hpp"
