@@ -65,8 +65,109 @@ double GetDouble()
 	}
 };
 
+template<typename T>
+struct TAutoDereference
+{
+	T* Ptr;
+
+	TAutoDereference(T* InPtr)
+		: Ptr(InPtr)
+	{}
+
+	TAutoDereference(void* InPtr)
+		: Ptr((T*)InPtr)
+	{}
+
+
+	//[juhuangjie] 对应const * 情况
+	TAutoDereference(const void* InPtr)
+		: Ptr((T*)InPtr)
+	{}
+
+
+	TAutoDereference(const T& InPtr)
+		: Ptr((T*)&InPtr)
+	{}
+
+	TAutoDereference(T& InPtr)
+		: Ptr(&InPtr)
+	{}
+
+	FORCEINLINE operator T& ()
+	{
+		return *Ptr;
+	}
+
+	FORCEINLINE operator T* ()
+	{
+		return Ptr;
+	}
+
+	FORCEINLINE operator void* ()
+	{
+		return Ptr;
+	}
+};
+
+class Test002569
+{
+public:
+	int a = 10;
+};
+
+template<typename T>
+void OpAssignValue_Template(void* ValuePtr)
+{
+	 auto it = *(T*)ValuePtr;
+}
+
+
+
+template<typename T>
+struct TestTemplate001 {};
+template<typename T1>
+struct TestTemplate001<std::vector<T1>>
+{
+	
+};
+
+struct my_struct
+{
+	my_struct(bool value)
+	{
+		std::printf("sjdoifauaosidhf sadf\n");
+	}
+};
+
+struct FEventReply
+{
+
+
+public:
+
+	FEventReply(bool IsHandled = false)
+		: NativeReply(IsHandled ? -1:1)
+	{
+		std::printf("FEventReply(bool IsHandled = false)");
+	}
+	int NativeReply = 120;
+};
+
+
+void Testshfiod(bool a = false)
+{
+	std::printf("void Test564(bool a = false)");
+}
+
+void Testshfiod(const FEventReply& av)
+{
+	std::printf("void Test564(FEventReply* a = nullptr)");
+}
+
 int main()
 {
+
+	TestTemplate001<int> vsdiou;
 	int value = GFoo.a;
 	SetConsoleOutputCP(CP_UTF8);
 
@@ -105,11 +206,29 @@ int main()
 	auto resultpath = bfsTree.GetPath(5);
 
 	Solution s;
+	std::vector<int> nums = { 1000000000,1000000000,1000000000,1000000000 };
+	s.fourSum(nums, 0);
 
-	auto resultsvalue = s.findMedianSortedArrays({ 1,3 },{2});
-	auto doublev = GetDouble();
-	std::printf("temp test for console main\n");
-	system("pause");
+	int listNum = 4;
+	std::vector<Solution::ListNode> listnodes(listNum);
+	std::vector<Solution::ListNode*> listnodePtrs(listNum);
+	for (int i = 0; i < listNum;i++)
+	{
+		listnodes[i].val = i + 1;
+		listnodePtrs[i] = &listnodes[i];
+	}
+	for (int i = 0; i < listNum - 1; i++)
+	{
+		listnodePtrs[i]->next = listnodePtrs[i + 1];
+	}
+
+	//s.removeNthFromEnd(listnodePtrs[0], 2);
+
+
+	//s.generateParenthesis(3);
+
+	s.swapPairs(listnodePtrs[0]);
+
 	return 0;
 }
 #include "TestGFoo.hpp"
