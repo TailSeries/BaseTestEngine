@@ -188,6 +188,7 @@ void BoxApp::BuildBoxGeometry()
     ThrowIfFailed(D3DCreateBlob(iByteSize, &mBoxGeo->IndexBufferCPU));
     CopyMemory(mBoxGeo->IndexBufferCPU->GetBufferPointer(), indices.data(), iByteSize);
 
+    // 注意这里创建的时候就把上传堆的顶点拷贝到默认堆里了
     mBoxGeo->VertexBufferGPU = D3DUtil::CreateDefaultBuffer(MD3dDevice.Get(), MCommandList.Get(), vertices.data(), vByteSize, mBoxGeo->VertexBufferUploader);
 
     mBoxGeo->IndexBufferGPU = D3DUtil::CreateDefaultBuffer(MD3dDevice.Get(), MCommandList.Get(), indices.data(), iByteSize, mBoxGeo->IndexBufferUploader);
@@ -249,12 +250,6 @@ void BoxApp::BuildPSO()
     psoDesc.SampleDesc.Quality = M4xMsaaState ? (M4xMSAAQuality - 1) : 0;
 
     ThrowIfFailed(MD3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&mPSO)));
-}
-
-void BoxApp::FillInputLayout()
-{
-
-
 }
 
 void BoxApp::OnResize()
