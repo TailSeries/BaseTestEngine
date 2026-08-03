@@ -43,13 +43,14 @@
 3. [核心概念一：帧资源 FrameResource](#73-核心概念一帧资源-frameresource)
 4. [核心概念二：渲染项 RenderItem 与脏标记](#74-核心概念二渲染项-renderitem-与脏标记)
 5. [核心概念三：常量缓冲区结构](#75-核心概念三常量缓冲区结构)
-6. [核心概念四：根签名、描述符堆与 CBV](#76-核心概念四根签名描述符堆与-cbv)
-7. [示例一：Shapes（多形状静态场景）](#77-示例一shapes多形状静态场景)
-8. [示例二：LandAndWaves（地形 + 水波动态场景）](#78-示例二landandwaves地形--水波动态场景)
-9. [着色器 color.hlsl](#79-着色器-colorhlsl)
-10. [CPU/GPU 同步与帧循环机制](#710-cpugpu-同步与帧循环机制)
-11. [Shapes vs LandAndWaves 对比](#711-shapes-vs-landandwaves-对比)
-12. [关键知识点总结](#712-关键知识点总结)
+6. [核心概念四：顶点输入系统与硬件取数链路](#76-核心概念四顶点输入系统与硬件取数链路)
+7. [核心概念五：根签名、描述符堆与 CBV](#77-核心概念五根签名描述符堆与-cbv)
+8. [示例一：Shapes（多形状静态场景）](#78-示例一shapes多形状静态场景)
+9. [示例二：LandAndWaves（地形 + 水波动态场景）](#79-示例二landandwaves地形--水波动态场景)
+10. [着色器 color.hlsl](#710-着色器-colorhlsl)
+11. [CPU/GPU 同步与帧循环机制](#711-cpugpu-同步与帧循环机制)
+12. [Shapes vs LandAndWaves 对比](#712-shapes-vs-landandwaves-对比)
+13. [关键知识点总结](#713-关键知识点总结)
 
 ---
 
@@ -314,11 +315,111 @@ struct Vertex {
 
 ---
 
-## 7.6 核心概念四：根签名、描述符堆与 CBV
+## 7.6 核心概念四：顶点输入系统与硬件取数链路
+
+> 本节内容由学习讨论整理，聚焦 **InputSlot / SemanticIndex / InputLayout / Vertex Fetch 的硬件链路** —— 理解顶点数据如何从内存"流式"流入可变输入寄存器供着色器消费。这是 D3D12 与 CPU 取数方式的本质差异所在。
+
+### 7.6.1 输入布局两个维度的分工：SemanticIndex vs InputSlot
+
+`D3D12_INPUT_ELEMENT_DESC` 的每一行描述一个顶点属性，其中两个字段容易混淆：
+
+```cpp
+{ "POSITION", 0, R32G32B32_FLOAT,     0, 0,  PER_VERTEX_DATA, 0 },  // 位置：3×float
+{ "COLOR",    0, R32G32B32A32_FLOAT,  0, 12, PER_VERTEX_DATA, 0 },  // 颜色：4×float
+```
+
+| 字段 | POSITION 行 | COLOR 行 | 职责 |
+|------|-------------|----------|------|
+| `SemanticName` | `"POSITION"` | `"COLOR"` | **属性叫什么**（逻辑命名，须与 shader 的 `: POSITION`/`: COLOR` 语义一致） |
+| `SemanticIndex` | `0` | `0` | **同名语义里的第几个**（如 `POSITION0` / `POSITION1` 分别是位置/上一帧位置） |
+| `Format` | `R32G32B32_FLOAT` | `R32G32B32A32_FLOAT` | 内存里每个属性占多少字节、如何解码 |
+| `InputSlot` | `0` | `0` | **从第几块顶点缓冲读**（物理绑定，对应 `IASetVertexBuffers(N,...)`） |
+| `AlignedByteOffset` | `0` | `12` | 属性在顶点内的字节偏移（POSITION 12B + COLOR 16B = 28B/顶点） |
+| `InputSlotClass` | `PER_VERTEX_DATA` | `PER_VERTEX_DATA` | 每顶点 或 每实例 |
+| `InstanceDataStepRate` | `0` | `0` | 实例数据时每 N 个实例取一次 |
+
+**核心结论**：
+- **SemanticIndex 管"哪个属性"**（逻辑/命名）→ 它对应 **可变输入寄存器（input register）** 的编号，决定 IA 取到的数据"路由给哪个寄存器"。
+- **InputSlot 管"从哪块内存读"**（物理/绑定）→ 它是 **顶点获取器（Vertex Fetch）访问缓冲的物理通道**。
+- 两个维度正交：一个属性叫什么名字，与它放在哪块内存里，是两件事。**单顶点缓冲时看似冗余，一旦用到多缓冲/实例化就缺一不可。**
+
+### 7.6.2 为什么 GPU 需要显式声明"取数方式"（而 CPU 不需要）
+
+**CPU 是"取址引擎"**：一切皆地址，取数方式编码在指令里。
+```asm
+MOV RAX, [RCX+8]   // 一条指令：指定地址即可，读几个字节由指令决定
+```
+CPU 上不存在"这块内存要怎么读"——地址任意、方式由指令决定。
+
+**GPU 是"取数引擎"（流式）**：数万顶点逐个流入着色器，取数必须**批量、一致、可预测**。
+- 若每个线程独立寻址，就退化成 CPU，吞吐量全毁。
+- 所以取数"形状"必须共享（同一布局 + stride），只留"取哪个位置"由线程索引决定。
+- **没有 InputLayout，Vertex Fetch 完全不知道从一块内存里怎么提取下一个顶点。**
+
+> **类比**：CPU 开 100 个程序各读一个数组不同位置，可以各写各的寻址；GPU 是 100 万个线程跑同一个着色器，必须把"取数的共性"（布局/stride）和"取哪个的差异"（线程索引 / 实例索引 / 常量缓冲）分开设计。
+
+### 7.6.3 硬件链路：从内存到可变输入寄存器
+
+```
+CPU 顶点缓冲 ─IASetVertexBuffers(slot,1,&view)─→ InputSlot N
+                                                      │
+                                         InputAssembler (内含 Vertex Fetch)
+                                                  │  按 InputLayout 逐字段取数
+                                                  ▼
+                           可变输入寄存器[POSITION0 / COLOR0 ...]   ← SemanticIndex 对应槽位
+                                                  │
+                                                  ▼
+                                         ALU（顶点着色器执行）
+```
+
+关键点：
+1. **`BufferLocation` 就是 CPU 侧普通虚拟地址**（D3D12 资源就是一块带地址的内存）——"地址是地址、无差别"的直觉在 GPU 同样成立。
+2. **区别只在取数方式**：GPU 拿到地址后必须按 InputLayout 声明的 stride/offset/format **流式**取，而不是任意寻址。
+3. **Vertex Fetch 知道喂给哪个寄存器**，靠两条信息锁定：
+   - 语义名 + 索引 → 映射到可变输入寄存器的固定槽位（shader 编译时确定）
+   - `InputSlot` + `AlignedByteOffset` + `Format` → 算出确切地址并解码
+
+取数微操作（以 POSITION 为例）：
+```
+源缓冲   = slot 0 绑定的顶点缓冲
+顶点地址 = BufferLocation + (顶点索引 × stride 28B) + 字段偏移 0
+读 12B   = 按 R32G32B32_FLOAT 解码为 (x, y, z)
+写入     = 可变输入寄存器[POSITION0 对应的槽位]
+```
+
+### 7.6.4 为什么 InputLayout 属于 PSO，而不是每次 draw 传递
+
+- **DX11**：InputLayout 每次 draw 绑定，驱动现场验证语义、重新配置取数单元 → 每次都有 CPU 开销。
+- **D3D12**：InputLayout 是 **PSO 创建时的组成部分**（`psoDesc.InputLayout`），被"烤"进取数单元的硬件状态。draw 时只做最便宜的 `IASetVertexBuffers` 换缓冲地址。
+
+这就是"**配置时固化、运行时高效**"——取数形状固定在管线里，draw 循环只换数据源。
+
+### 7.6.5 与常量缓冲的配合（每物体/每帧差异化的完整方案）
+
+```
+InputSlot + InputLayout：几何形状（所有物体共享取数）
+constant buffer（ObjectCB）：每个物体一个 gWorld（变换差异）
+  物体 A 的顶点 → posW = PosL · gWorld_A
+  物体 B 的顶点 → posW = PosL · gWorld_B
+```
+
+三个维度叠加，一个着色器 + 一组绑定 + 索引，就能并行处理数万个"读不同数据"的线程：
+
+| 维度 | 谁负责 | 本质 |
+|------|--------|------|
+| **取哪块** | InputSlot + InputLayout | 共享的取数形状（共性） |
+| **取哪个** | 线程索引 / 实例索引 | 每线程不同（差异） |
+| **怎么用** | constant buffer / root argument | 每物体、每帧不同（差异） |
+
+**一句话**：SemanticIndex 管"哪个属性/寄存器"，InputSlot 管"从哪块内存读"。GPU 是"共享代码 + 差异化数据"的并发机器，InputSlot 是共享的取数通道、常量缓冲是差异化的变换参数——两者配合，是并发机器解决"海量差异化"的必然选择。
+
+---
+
+## 7.7 核心概念五：根签名、描述符堆与 CBV
 
 本章两个示例的**最大差异**在于常量缓冲如何绑定到着色器。
 
-### 7.6.1 方式 A：描述符表 + 描述符堆（Shapes 用）
+### 7.7.1 方式 A：描述符表 + 描述符堆（Shapes 用）
 
 **根签名**（`Shapes::BuildRootSignature`）：
 
@@ -349,7 +450,7 @@ slotRootParameter[1].InitAsDescriptorTable(1, &cbvTable1);  // pass CBV（表）
 
 > 描述符表方式开销较大（每个物体一个描述符，且要维护堆），但更灵活，是后续纹理/SRV 的通用方式。
 
-### 7.6.2 方式 B：根描述符（root descriptor）（LandAndWaves 用）
+### 7.7.2 方式 B：根描述符（root descriptor）（LandAndWaves 用）
 
 **根签名**（`LandAndWaves::BuildRootSignature`）：
 
@@ -371,15 +472,15 @@ cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
 
 ---
 
-## 7.7 示例一：Shapes（多形状静态场景）
+## 7.8 示例一：Shapes（多形状静态场景）
 
-### 7.7.1 场景内容
+### 7.8.1 场景内容
 
 地面网格上摆放：1 个放大盒子、1 个大网格地面、左右各 5 根圆柱 + 5 个球体（共 20 个柱+球）。几何体颜色固定：盒子暗绿、地面森林绿、球体深红、圆柱钢蓝。
 
 按键：按住 `1` 键切换线框模式。
 
-### 7.7.2 几何体构建（BuildShapeGeometry）
+### 7.8.2 几何体构建（BuildShapeGeometry）
 
 **关键技巧：合并几何体到单一大缓冲**
 
@@ -400,7 +501,7 @@ auto cylinder = geoGen.CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
 
 好处：减少顶点/索引缓冲数量，减少 `IASetVertexBuffers` 调用。
 
-### 7.7.3 渲染项构建（BuildRenderItems）
+### 7.8.3 渲染项构建（BuildRenderItems）
 
 每个物体创建一个 `RenderItem`，分配 `ObjCBIndex`，绑定到 `shapeGeo` 的对应子网格：
 
@@ -412,7 +513,7 @@ boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs["box"].BaseVertexLocation
 
 循环 5 次生成左右圆柱与球体，世界矩阵用 `XMMatrixTranslation` 定位。最后全部归入 `mOpaqueRitems`。
 
-### 7.7.4 PSO 构建（BuildPSOs）
+### 7.8.4 PSO 构建（BuildPSOs）
 
 创建两个 PSO：
 - `opaque`：实体填充（注意：源码 `ShapesApp.cpp:671` 给 `opaque` 也设了 `FillMode = WIREFRAME`，与命名语义不符，疑似遗留 —— 实测时留意）
@@ -420,7 +521,7 @@ boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs["box"].BaseVertexLocation
 
 PSO 完整字段：input layout、root signature、VS/PS、光栅化/混合/深度模板状态、采样数、RTV/DSV 格式、拓扑类型。
 
-### 7.7.5 主循环
+### 7.8.5 主循环
 
 ```
 Initialize():
@@ -440,7 +541,7 @@ Draw():
   → 屏障(RENDER_TARGET→PRESENT) → Close → Execute → Present → Signal 围栏
 ```
 
-### 7.7.6 相机（轨道相机）
+### 7.8.6 相机（轨道相机）
 
 球坐标（mTheta, mPhi, mRadius）转笛卡尔，`XMMatrixLookAtLH` 朝原点。鼠标：
 - 左键拖：改 theta/phi（绕转）
@@ -448,19 +549,19 @@ Draw():
 
 ---
 
-## 7.8 示例二：LandAndWaves（地形 + 水波动态场景）
+## 7.9 示例二：LandAndWaves（地形 + 水波动态场景）
 
-### 7.8.1 场景内容
+### 7.9.1 场景内容
 
 程序化生成的丘陵地形（160×160，50×50 网格，按高度函数起伏），顶点按高度着色（沙滩→草地→深绿→棕土→雪顶）；其上覆盖一片水波面（128×128 顶点网格），每 0.25 秒随机扰动产生波纹，CPU 端做波动方程数值积分，逐帧更新顶点缓冲。
 
 按键：按住 `1` 切换线框。
 
-### 7.8.2 常量缓冲绑定：根描述符方式
+### 7.9.2 常量缓冲绑定：根描述符方式
 
-见 [7.6.2](#762-方式-b根描述符root-descriptorlandandwaves-用)。比 Shapes 简洁：无需 `BuildDescriptorHeaps` / `BuildConstantBufferViews`，根签名直接两个 root CBV。
+见 [7.7.2](#772-方式-b根描述符root-descriptorlandandwaves-用)。比 Shapes 简洁：无需 `BuildDescriptorHeaps` / `BuildConstantBufferViews`，根签名直接两个 root CBV。
 
-### 7.8.3 地形几何（BuildLandGeometry）
+### 7.9.3 地形几何（BuildLandGeometry）
 
 ```cpp
 auto grid = geoGen.CreateGrid(160.0f, 160.0f, 50, 50);
@@ -480,13 +581,13 @@ float GetHillsHeight(float x, float z) {
 
 另有 `GetHillsNormal`（解析偏导数 `n = (-df/dx, 1, -df/dz)` 归一化），本章虽定义但着色器未用（无光照）。
 
-### 7.8.4 水波几何（BuildWavesGeometryBuffers）
+### 7.9.4 水波几何（BuildWavesGeometryBuffers）
 
 - **顶点缓冲初始为空**（`VertexBufferCPU = nullptr; VertexBufferGPU = nullptr;`），因为每帧由 `WavesVB` 动态填充
 - 索引缓冲**静态**：按网格四边形拆成两个三角形，预生成所有索引
 - 顶点格式 `R16_UINT`（断言顶点数 < 65535）
 
-### 7.8.5 水波模拟类（Waves.h/.cpp）
+### 7.9.5 水波模拟类（Waves.h/.cpp）
 
 CPU 端实现二维波动方程的有限差分数值积分。
 
@@ -512,7 +613,7 @@ mK3 = (2*e) / d;
 
 扰动（`Disturb(i, j, magnitude)`）：给中心及四邻顶点叠加高度。
 
-### 7.8.6 动态顶点缓冲更新（UpdateWaves）
+### 7.9.6 动态顶点缓冲更新（UpdateWaves）
 
 ```cpp
 // 每 0.25s 随机扰动一个内部点
@@ -532,7 +633,7 @@ mWavesRitem->Geo->VertexBufferGPU = currWavesVB->Resource();
 
 > 这是"每帧一个动态上传顶点缓冲"的标准做法 —— 配合 FrameResource 三缓冲，CPU 写第 k+3 帧的 VB 时不会干扰 GPU 读第 k 帧的 VB。`VertexBufferView()` 会读取当前 `VertexBufferGPU`，所以每帧自然绑定到正确的帧缓冲。
 
-### 7.8.7 渲染项
+### 7.9.7 渲染项
 
 ```cpp
 auto wavesRitem = ...;  // waterGeo，ObjCBIndex=0
@@ -544,7 +645,7 @@ auto gridRitem  = ...;  // landGeo， ObjCBIndex=1
 
 ---
 
-## 7.9 着色器 color.hlsl
+## 7.10 着色器 color.hlsl
 
 两个项目的 `color.hlsl` **完全相同**。
 
@@ -574,9 +675,9 @@ float4 PS(VertexOut pin) : SV_Target {
 
 ---
 
-## 7.10 CPU/GPU 同步与帧循环机制
+## 7.11 CPU/GPU 同步与帧循环机制
 
-### 7.10.1 围栏（Fence）机制
+### 7.11.1 围栏（Fence）机制
 
 基类提供 `mFence` + `mCurrentFence` + `FlushCommandQueue()`。每帧 Draw 末尾：
 
@@ -585,7 +686,7 @@ mCurrFrameResource->Fence = ++mCurrentFence;            // 给该帧资源打围
 mCommandQueue->Signal(mFence.Get(), mCurrentFence);    // GPU 完成到此才把完成值推到 mCurrentFence
 ```
 
-### 7.10.2 帧资源等待
+### 7.11.2 帧资源等待
 
 Update 开头，切换到下一帧资源前，检查该帧资源是否还被 GPU 占用：
 
@@ -604,7 +705,7 @@ if (mCurrFrameResource->Fence != 0 && mFence->GetCompletedValue() < mCurrFrameRe
 
 > 三缓冲的意义：CPU 最多领先 GPU 3 帧。若 GPU 跟得上，CPU 几乎不等；若 GPU 慢，CPU 在第 4 帧被迫等 GPU 释放第 1 帧的资源。这是显式同步的标准节奏控制。
 
-### 7.10.3 完整一帧时序
+### 7.11.3 完整一帧时序
 
 ```
 [CPU] Update(切帧资源→等围栏→写CB→更新Waves)
@@ -616,7 +717,7 @@ if (mCurrFrameResource->Fence != 0 && mFence->GetCompletedValue() < mCurrFrameRe
 
 ---
 
-## 7.11 Shapes vs LandAndWaves 对比
+## 7.12 Shapes vs LandAndWaves 对比
 
 | 维度 | Shapes | LandAndWaves |
 |------|--------|--------------|
@@ -640,9 +741,9 @@ if (mCurrFrameResource->Fence != 0 && mFence->GetCompletedValue() < mCurrFrameRe
 
 ---
 
-## 7.12 关键知识点总结
+## 7.13 关键知识点总结
 
-### 7.12.1 设计模式
+### 7.13.1 设计模式
 
 1. **FrameResource 环形缓冲**：N=3 缓冲解耦 CPU/GPU，每帧独立命令分配器 + 常量缓冲（+ 动态 VB）
 2. **脏标记（NumFramesDirty）**：只把变化的数据传播到在途的各帧副本，避免全量重写
@@ -650,38 +751,38 @@ if (mCurrFrameResource->Fence != 0 && mFence->GetCompletedValue() < mCurrFrameRe
 4. **渲染项分层**：按 PSO/透明度分组，减少状态切换
 5. **大缓冲 + 子网格**：多种几何拼进单一大顶点/索引缓冲，`SubmeshGeometry` 描述区域
 
-### 7.12.2 常量缓冲规则
+### 7.13.2 常量缓冲规则
 
 - 常量缓冲元素 **256 字节对齐**（`CalcConstantBufferByteSize`）
 - HLSL `cbuffer` 成员有严苛对齐规则，`float3` 后通常需 padding
 - DirectXMath 行主序 → HLSL 列主序，上传前 `XMMatrixTranspose`
 - 上传缓冲 `Map` 持久映射，`CopyData` 仅 memcpy，同步靠 FrameResource
 
-### 7.12.3 根签名两种 CBV 方式
+### 7.13.3 根签名两种 CBV 方式
 
 - **描述符表**：灵活，支持堆，适合纹理/SRV；需维护描述符堆与 CBV 创建
 - **根描述符**：直接传 GPU 虚拟地址，无需堆，代码简；占根签名代价高，无越界保护
 
-### 7.12.4 动态顶点缓冲
+### 7.13.4 动态顶点缓冲
 
 - 用 `UploadBuffer<Vertex>`（`isConstantBuffer=false`，元素按 sizeof 对齐而非 256）
 - 每帧资源持有一个，CPU 写当前帧、GPU 读在途帧互不干扰
 - 每帧把渲染项的 `VertexBufferGPU` 指针指向当前帧缓冲
 
-### 7.12.5 命令录制与提交流程
+### 7.13.5 命令录制与提交流程
 
 ```
 Reset(分配器) → Reset(命令列表, PSO) → 录制(屏障/清理/绑定/绘制/屏障) → Close
 → ExecuteCommandLists → Present → Signal(围栏)
 ```
 
-### 7.12.6 CPU/GPU 同步
+### 7.13.6 CPU/GPU 同步
 
 - 围栏值标记帧资源完成点
 - 切换帧资源前检查 `GetCompletedValue < FrameResource.Fence` → 必要阻塞等待
 - 三缓冲 = CPU 最多领先 GPU 3 帧
 
-### 7.12.7 本章未涉及（后续章节）
+### 7.13.7 本章未涉及（后续章节）
 
 - 光照与材质（本章像素直接输出颜色）
 - 纹理贴图（本章顶点颜色）
@@ -690,7 +791,7 @@ Reset(分配器) → Reset(命令列表, PSO) → 录制(屏障/清理/绑定/�
 
 ---
 
-## 7.13 源码文件清单与行数
+## 7.14 源码文件清单与行数
 
 | 文件 | 行数 | 作用 |
 |------|------|------|
