@@ -191,8 +191,8 @@ int main()
 	Graph G(6);
 	for (int i = 0; i < adj.size(); i++)
 	{
-		for(int& j :adj[i])
-		G.AddEdge(i, j);
+		for (int& j : adj[i])
+			G.AddEdge(i, j);
 	}
 	G.adj = adj;
 	//DFSTree dfsTree(G, 1);
@@ -212,7 +212,7 @@ int main()
 	int listNum = 4;
 	std::vector<Solution::ListNode> listnodes(listNum);
 	std::vector<Solution::ListNode*> listnodePtrs(listNum);
-	for (int i = 0; i < listNum;i++)
+	for (int i = 0; i < listNum; i++)
 	{
 		listnodes[i].val = i + 1;
 		listnodePtrs[i] = &listnodes[i];
@@ -226,8 +226,22 @@ int main()
 
 
 	//s.generateParenthesis(3);
+	s.strStr("mississippi", "issip");
 
-	s.swapPairs(listnodePtrs[0]);
+	std::string testiosayd = "barfoothefoobarman";
+	std::vector<std::string> testuiwords = {"foo", "bar"};
+	s.findSubstring(testiosayd, testuiwords);
+
+	int wordLen = 4;
+	int resudsf = 0;
+	for (int i = 0; i < wordLen; i++) {
+
+		for (int j = i; j + wordLen <= 100; j += wordLen)
+		{
+			resudsf++;
+		}
+	}
+
 
 	return 0;
 }
