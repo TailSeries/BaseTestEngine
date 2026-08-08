@@ -2,60 +2,59 @@
 #include "Common/D3DUtil.h"
 #include "Common/MathHelper.h"
 #include "Common/UploadBuffer.h"
+
+/*
+ * 帧资源
+ */
+
+/*
+ * 位置信息，矩阵 
+ */
 struct ObjectConstants
 {
 	DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
 };
 
-
+// 当前这个渲染流里需要放在常量缓冲区的部分
 struct PassConstants
 {
-    // 总大小：384 + 16 + 16 + 16 = 432 字节，经 CalcConstantBufferByteSize 对齐后实际分配 512 字节（256的倍数）。
-
-    DirectX::XMFLOAT4X4 View = MathHelper::Identity4x4();        // 64 bytes
-    DirectX::XMFLOAT4X4 InvView = MathHelper::Identity4x4();     // 64 bytes
-    DirectX::XMFLOAT4X4 Proj = MathHelper::Identity4x4();        // 64 bytes
-    DirectX::XMFLOAT4X4 InvProj = MathHelper::Identity4x4();     // 64 bytes
-    DirectX::XMFLOAT4X4 ViewProj = MathHelper::Identity4x4();    // 64 bytes
-    DirectX::XMFLOAT4X4 InvViewProj = MathHelper::Identity4x4(); // 64 bytes  → 合计 384 bytes
-
-    DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f }; // 12 bytes
-    float cbPerObjectPad1 = 0.0f; //  4 bytes   → 填充到16字节边界
-
-    DirectX::XMFLOAT2 RenderTargetSize = { 0.0f, 0.0f };   // 8 bytes
-    DirectX::XMFLOAT2 InvRenderTargetSize = { 0.0f, 0.0f };  // 8 bytes   → 合计 16 bytes
-    float NearZ = 0.0f;      // 4 bytes
-    float FarZ = 0.0f;       // 4 bytes
-    float TotalTime = 0.0f;  // 4 bytes
-    float DeltaTime = 0.0f;  // 4 bytes  → 合计 16 bytes
+    DirectX::XMFLOAT4X4 View = MathHelper::Identity4x4(); //视图矩阵：把世界坐标变换到摄像机空间（Camera Space）。摄像机在原点、看向 -Z。
+    DirectX::XMFLOAT4X4 InvView = MathHelper::Identity4x4();  //View 的逆：摄像机空间 → 世界空间。主要用来做从相机空间重建世界坐标（比如算 view ray 方向、做后处理/SSAO 时需要）。注意它不是把模型放回原位用的，那是 gWorld 的逆
+    DirectX::XMFLOAT4X4 Proj = MathHelper::Identity4x4(); //  投影矩阵：摄像机空间 → 齐次裁剪空间（clip space）。包含了 FOV、宽高比、Near/Far。
+    DirectX::XMFLOAT4X4 InvProj = MathHelper::Identity4x4();
+    DirectX::XMFLOAT4X4 ViewProj = MathHelper::Identity4x4();
+    DirectX::XMFLOAT4X4 InvViewProj = MathHelper::Identity4x4(); // ViewProj 的逆：裁剪空间 → 世界空间。最常用场景是从深度重建世界坐标（InvViewProj 对屏幕坐标和 depth  进行反投影）
+    DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f }; // 摄像机世界坐标位置。光照、雾、视线方向都要用到，所以每个 pass 都传下来，省得每个像素再求逆。
+    float cbPerObjectPad1 = 0.0f; //  对齐填充（padding）。XMFLOAT3 是 12 字节，HLSL 里 float3 对齐到 16 字节，所以补 4 字节让后面  RenderTargetSize 对齐到 16 字节边界。这只是 C++ 侧对齐 HLSL 的产物，shader  里没有任何逻辑用它。
+    DirectX::XMFLOAT2 RenderTargetSize = { 0.0f, 0.0f };//当前渲染目标（swap chain back buffer / depth buffer）的像素尺寸，如 {1280, 720}。
+    DirectX::XMFLOAT2 InvRenderTargetSize = { 0.0f, 0.0f }; // 尺寸的倒数 {1/1280, 1/720}。一个像素对应的 UV 增量，几乎等于 "texel  size"，是全屏后处理（全屏 quad 遍历相邻像素、模糊、Sobel 边缘检测）的标准工具
+    float NearZ = 0.0f;
+    float FarZ = 0.0f;
+    float TotalTime = 0.0f;
+    float DeltaTime = 0.0f;
 };
-
-
-struct Vertex
-{
-    DirectX::XMFLOAT3 Pos;
-    DirectX::XMFLOAT4 Color;
-};
-
 
 
 
 struct FrameResource
 {
+public:
+	FrameResource(ID3D12Device* device, UINT passCount, UINT objectCount);
+	FrameResource(const FrameResource& rhs) = delete;
+	FrameResource& operator=(const FrameResource& rhs) = delete;
+	~FrameResource();
 
-    FrameResource(ID3D12Device* device, UINT passCount, UINT objectCount, UINT waveVertCount);
-    FrameResource(const FrameResource& rhs) = delete;
-    FrameResource& operator=(const FrameResource& rhs) = delete;
-    ~FrameResource();
 
-	// GPU执行命令期间不能Reset Allocator，所以每个帧资源需要独立的Allocator，CPU可以在新一帧Reset自己的Allocator
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CmdListAlloc;
-    // GPU可能还在读取上一帧的PassCB数据，CPU不能覆盖它。三帧各自独立，CPU写当前帧的CB，GPU读上一帧的CB
-    std::unique_ptr<UploadBuffer<PassConstants>> PassCB = nullptr;
-    std::unique_ptr<UploadBuffer<ObjectConstants>> ObjectCB = nullptr;
-    // 水波顶点数据每帧变化，GPU可能在读上一帧的顶点数据。三帧各自有独立VB，避免覆盖冲突 
-    std::unique_ptr<UploadBuffer<Vertex>> WavesVB = nullptr;
-    // CPU轮询到此帧资源时，检查 mFence->GetCompletedValue() < Fence，如果GPU还没完成就阻塞等待
-    uint64 Fence;
 
+	std::unique_ptr<UploadBuffer<PassConstants>> PassCB = nullptr;
+	std::unique_ptr<UploadBuffer<ObjectConstants>> ObjectCB = nullptr;
+	UINT64 Fence = 0;
 };
+
+
+
+
+
+
+

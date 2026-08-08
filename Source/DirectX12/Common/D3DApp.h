@@ -85,8 +85,8 @@ private:
 
 protected:
 	static D3DApp* MApp;
-	HINSTANCE MhAppInst{nullptr};
-	HWND MhMainWnd{ nullptr };
+	HINSTANCE MhAppInst{nullptr}; // 应用程序实例句柄
+	HWND MhMainWnd{ nullptr }; //主窗口句柄
 	bool      mAppPaused = false;  // is the application paused?
 	bool      mMinimized = false;  // is the application minimized?
 	bool      mMaximized = false;  // is the application maximized?

@@ -4,9 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**BaseTestEngine** is a Windows C++20 learning/experimental project for engine development practice. It consists of five active CMake modules (Transfer is commented out) built with MSVC and Ninja.
+**BaseTestEngine** is a personal **engine-rendering research** project (Windows C++20). The author works in an Unreal Engine team; this codebase is the practice ground for learning DirectX 12 and real-time rendering — each feature is mapped back against UE's engine source to understand "why" behind the "how". The `DirectX12` and `Main` modules are the primary vehicles for this; `Plan.md` (below) is the roadmap the code tracks.
+
+It consists of five active CMake modules (Transfer is commented out) built with MSVC and Ninja.
+
+**`Source/Plan.md` is the project's learning roadmap** (in Chinese): DX12 basics → Shadow/PBR/Deferred → TAA/AO/post-processing → Mini-renderer integration, running in parallel with UE module comparison and UE material/particle/animation skills. Read it for context on what the rendering code is building toward.
 
 ## Build Commands
+
+From the `Source/` directory (paths are relative to it). Ninja builds require running inside a **Visual Studio Developer environment** so `cl.exe` and the MSVC toolchain are on `PATH` (e.g. `VsDevCmd.bat -arch=x64` or the VS terminal).
 
 ```bash
 # Debug build
@@ -18,9 +24,11 @@ cmake -B "../out/build/x64-Release" -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build "../out/build/x64-Release"
 ```
 
-Output goes to `../out/bin/` (executables and DLLs).
+Alternative: `Source/CMakeSettings.json` configures the same two configurations (`x64-Debug`, `x64-Release`) for the **Visual Studio 18 2026 Win64** generator — open `Source/` in VS and build from the Configuration Manager. The `out/` directory at repo root holds all build output; the `out/build/x64-Debug/` tree is already generated from a prior configure.
 
-No automated test framework — tests are exercised by running `Main.exe` or `ConsoleMain.exe` directly.
+**Output** goes to `../out/bin/` (executables and DLLs). The CMake binary dir is set at repo level (`../out/build/...`), so always configure with `-B` pointing there rather than in-tree.
+
+**Running tests**: There is no automated test framework and no `ctest`/GoogleTest — the docs and `verify()` asserts are exercised by launching `Main.exe` (GUI, `/SUBSYSTEM:WINDOWS`) or `ConsoleMain.exe` (console) from `out/bin/`, and reading their stdout/logs. Any file under `Source/*/Test/` or `Source/*/CPPFeature/` is exercised this way.
 
 ## Architecture
 
@@ -58,11 +66,18 @@ Traits-based type-safe dispatch system. Re-enable by uncommenting in root `CMake
 - Dispatch flow: `object->redirectTransfer(transfer)` → `Transfer()` → `TransferDispatch()` via `TraitsType`.
 - Use `TRANSFERMODULE` macro.
 
+## Repo-root tooling (outside `Source/`)
+
+- `out/` — build artifacts (`out/build/<config>/` generated trees, `out/bin/` final outputs). Not source; regenerate rather than hand-edit.
+- `check-source.ps1` + `_create_task.bat` — a scheduled-task (Windows Task Scheduler) setup that auto-commits `Source/` changes on an interval and warns when the source tree is idle. Not part of the build; treat as dev-environment plumbing.
+
 ## Key Conventions
 
-- **DLL macros**: Each module has a `Module.h` (or `CoreModule.h`) defining its export macro. Building the DLL defines the `_LIBRARY` symbol; consumers get `dllimport` automatically.
+- **DLL macros**: Each module has a `Module.h` (or `CoreModule.h`) defining its export macro. Building the DLL defines the `_LIBRARY` symbol; consumers get `dllimport` automatically. The macros are `COREMODULE`, `ALGOMODULE`, `DXMODULE`, `TRANSFERMODULE`.
 - **Public vs. Private headers**: Algorithm and Transfer separate `ModulePublic/` (added to consumer include paths) from `ModulePrivate/` (internal only). Core and DirectX12 expose their full source directory as public.
+- **Include path convention**: Executables add `..` to their include path, enabling `#include "Algorithm/ModulePublic/..."` style includes.
+- **`Core.h` is the Core umbrella header**: `Core/Core.h` aggregates `CoreModule.h`, `GenericPlatform.h`, `NumericLimit.h`, `GenericPlatformProcess.h`, `BaseDefines.h`.
 - **Global defines**: `NOMINMAX`, `SYSTEM_WIN`, `PLATFORM_WIN` set project-wide. `_CRT_SECURE_NO_WARNINGS` set per-executable.
 - **`NONCOPYABLE(T)` macro**: Defined in `Core/Base/BaseDefines.h` — deletes copy/move constructors and assignment operators.
 - **`verify(expr)`**: Debug-aborting assertion macro in `Core/Base/BaseDefines.h`; logs to stderr in both Debug and Release (Release only logs, does not abort).
-- **Comments in Chinese**: Most inline documentation is written in Chinese.
+- **Comments in Chinese**: Most inline documentation is written in Chinese. Respond/match in kind when editing those files.
