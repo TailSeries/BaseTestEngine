@@ -15,7 +15,7 @@
 #include <unordered_map>
 
 #include "d3dx12.h"
-#include "../../Core/Base/GenericPlatform.h"
+
 
 #pragma region DXDebug
 inline void d3dSetDebugName(IDXGIObject* obj, const char* name)
@@ -109,7 +109,7 @@ public:
 
   所以，你的理解是对的：数据“立即”进入了上传堆（CPU 可访问），但进入默认堆（GPU 专用）是延迟的，需要命令列表执行后才会发生。
      */
-    static Microsoft::WRL::ComPtr<ID3D12Resource> CreateDefaultBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const void* initData, uint64 byteSize, Microsoft::WRL::ComPtr<ID3D12Resource>& uploadBuffer);
+    static Microsoft::WRL::ComPtr<ID3D12Resource> CreateDefaultBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const void* initData, UINT64 byteSize, Microsoft::WRL::ComPtr<ID3D12Resource>& uploadBuffer);
 
 
     static UINT CalcConstantBufferByteSize(UINT byteSize)

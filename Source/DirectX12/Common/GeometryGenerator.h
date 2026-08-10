@@ -44,6 +44,7 @@ namespace DirectX12
 
 			std::vector<uint16>& GetIndices16()
 			{
+				// 强转16位索引，实际上会漏掉65536开始的索引
 				if (mIndices16.empty())
 				{
 					mIndices16.resize(Indices32.size());

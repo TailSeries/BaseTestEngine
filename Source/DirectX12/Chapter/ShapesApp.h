@@ -1,11 +1,20 @@
 #pragma once
+#include <memory>
+#include <vector>
 #include "FrameReource.h"
 #include "Common/D3DApp.h"
 
-class  ShapesApp:public D3DApp
+class DXMODULE ShapesApp:public D3DApp
 {
 public:
-	constexpr int gNumFrameResources = 3;
+
+	struct Vertex
+	{
+		DirectX::XMFLOAT3 Pos;
+		DirectX::XMFLOAT4 Color;
+	};
+
+	static const int gNumFrameResources = 3;
 	/*
 	 * FrameResource[0]  FrameResource[1]  FrameResource[2]   <- CPU 和 GPU 之间的环形缓冲
 	  ├─ PassCB            ├─ PassCB            ├─ PassCB      （每帧一份）
@@ -25,7 +34,6 @@ public:
 		UINT StartIndexLocation = 0;
 		int BaseVertexLocation = 0;
 	};
-public:
 
 	ShapesApp(HINSTANCE hInstance);
 	ShapesApp(const ShapesApp& rhs) = delete;
@@ -34,7 +42,7 @@ public:
 
 	virtual bool Initialize()override;
 
-private:
+protected:
 	virtual void OnResize()override;
 	virtual void Update(const GameTimer& gt)override;
 	virtual void Draw(const GameTimer& gt)override;
@@ -42,7 +50,7 @@ private:
 	virtual void OnMouseDown(WPARAM btnState, int x, int y)override;
 	virtual void OnMouseUp(WPARAM btnState, int x, int y)override;
 	virtual void OnMouseMove(WPARAM btnState, int x, int y)override;
-
+private:
 	void OnKeyboardInput(const GameTimer& gt);
 
 
@@ -51,7 +59,7 @@ private:
 	void UpdateMainPassCB(const GameTimer& gt);
 
 	void BuildDescriptorHeaps();
-	void BuildConstantBufferView();
+	void BuildConstantBufferViews();
 	void BuildRootSignature();
 	void BuildShadersAndInputLayout();
 	void BuildShapeGeometry();
@@ -69,14 +77,16 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mCbvHeap = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mSrvHeap = nullptr;
 
+	// 可用于渲染的网格数据，
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> mGeometries;
+
 	std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3DBlob>> mShaders;
 	std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> mPSOs;
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> mInputLayout;
 	std::vector<std::unique_ptr<RenderItem>> mAllRitems;
 
-	std::vector<RenderItem*> mOpaqueRitms;
+	std::vector<RenderItem*> mOpaqueRitems;
 	PassConstants mMainPassCB;
 	UINT mPassCbvOffset = 0;
 

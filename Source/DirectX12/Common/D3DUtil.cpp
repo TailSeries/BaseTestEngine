@@ -31,7 +31,13 @@ std::wstring D3DUtil::ToWString(const std::string& str)
     return wstr;
 }
 
-Microsoft::WRL::ComPtr<ID3D12Resource> D3DUtil::CreateDefaultBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const void* initData, uint64 byteSize, Microsoft::WRL::ComPtr<ID3D12Resource>& uploadBuffer)
+// 注意这里的实际效果
+/*
+ *  1. CPU → upload heap：立即执行。Map + MemcpySubresource 是同步的 CPU 内存操作，命令一调用就拷贝完。
+	2. upload heap → default heap：只录命令。CopyBufferRegion 只是往命令列表里塞了一条"以后执行"的命令，GPU 还没跑。
+    关键在于 UpdateSubresources的实现，对于uploadbuffer直接用了map，但是对于defaultbuffer是cmdlist-copybufferregion
+ */
+Microsoft::WRL::ComPtr<ID3D12Resource> D3DUtil::CreateDefaultBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const void* initData, UINT64 byteSize, Microsoft::WRL::ComPtr<ID3D12Resource>& uploadBuffer)
 {
     Microsoft::WRL::ComPtr<ID3D12Resource> DefaultBuffer;
     CD3DX12_HEAP_PROPERTIES DefaultHeapProperty(D3D12_HEAP_TYPE_DEFAULT);
@@ -46,7 +52,7 @@ Microsoft::WRL::ComPtr<ID3D12Resource> D3DUtil::CreateDefaultBuffer(ID3D12Device
     ThrowIfFailed(device->CreateCommittedResource(&UploadHeapProperty, D3D12_HEAP_FLAG_NONE, &UploadBUfferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer)));
 
 
-    //将数据从cpu侧拷贝到上传堆，然后拷贝到默认堆
+    //将数据从cpu侧拷贝到上传堆，然后拷贝到默认堆, 
     D3D12_SUBRESOURCE_DATA SubResourceData = {};
     SubResourceData.pData = initData;
     SubResourceData.RowPitch = byteSize; // 数据总长度

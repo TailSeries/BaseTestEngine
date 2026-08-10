@@ -6,6 +6,8 @@
 #include "Common/MathHelper.h"
 #include "Common/UploadBuffer.h"
 #include <array>
+#include <memory>
+
 #include "ModulePublic/DXModule.h"
 
 
