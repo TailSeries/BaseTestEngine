@@ -67,7 +67,7 @@ public:
 
 	//求去掉平移影响之后的矩阵的逆转置矩阵
 	/*
-	 * 通常用在求法线逆转置的过程中，法线只要方向和位移没关系
+	 * 通常用在求法线逆转置矩阵的过程中，法线只要方向，和位移没关系
 	 */
 	static DirectX::XMMATRIX InverseTranspose(const DirectX::XMMATRIX& M)
 	{

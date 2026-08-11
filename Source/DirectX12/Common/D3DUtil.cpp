@@ -2,6 +2,7 @@
 #include <comdef.h>
 
 #include "Common/LogAssert.h"
+const int gNumFrameResources = 3;
 #pragma region DXDebug
 DxException::DxException(HRESULT hr, const std::string& functionName, const std::string& filename, int lineNumber) :
     ErrorCode(hr),
