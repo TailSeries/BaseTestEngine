@@ -890,3 +890,234 @@ RHI
 能用 Global Shader / RDG Pass 编写受控渲染扩展；
 再进入 Nanite、Lumen、VSM、TSR 等工业级系统。
 ```
+
+---
+
+# Part F：项目矩阵——每个阶段必须有可验证产物
+
+> 不等待一个“完整游戏项目”。通过一组规模受控的 Renderer 实验项目逐层积累；每个项目只验证一个或一组紧密相关的能力。
+
+## F1：三类项目的职责
+
+```text
+1. DX12 学习 Demo
+   目标：验证 API、数学和 GPU 行为。
+
+2. 自己的 RHI / Renderer
+   目标：验证抽象、资源生命周期、Pass 和架构。
+
+3. UE RenderingLab
+   目标：验证 UE 功能、GPU Capture 与源码映射。
+```
+
+| 项目类别 | 主要问题 |
+|---|---|
+| `Source/DirectX12` | DX12 到底如何工作？ |
+| `Core/RHI + Core/DX12RHI` | UE 为什么需要这样分层和封装？ |
+| `UERenderingLab` | UE 这一帧实际有什么 Pass、资源和性能代价？ |
+
+## F2：自己的 Renderer 项目阶梯
+
+| 阶段 | 项目 | 视觉验收 | 架构验收 |
+|---|---|---|---|
+| DX12 | `Shapes` / `LitWaves` / `TextureLab` | 光照、动态水面、纹理材质 | FrameResource、CB、SRV、Sampler、同步正确 |
+| RHI M1 | `RHI Clear` | 清屏并 Present | Test/Renderer 不直接调用 D3D12 |
+| RHI M2-M3 | `Textured Mesh Viewer` | 纹理 Mesh、相机、方向光 | Buffer/Texture/View/Shader/PSO 经 RHI 建立 |
+| Forward | `Mini Forward Renderer` | Shadow、HDR、Bloom、透明 | Pass、Resource、PSO、Material 分层 |
+| Deferred | `Mini Deferred Renderer` | GBuffer、多光源、后处理 | MRT、全屏 Pass、RTV/SRV 切换、Barrier 正确 |
+| RDG | `RenderGraph Migration` | 与改造前输出一致 | Pass 读写、依赖、Barrier、Transient 生命周期自动推导 |
+| Temporal | `TAA Lab` | 运动场景抗锯齿稳定 | Velocity、History、Jitter、Camera Cut、Resize 处理 |
+| GPU-driven | `Visibility Lab` | 大量 Instance 正确剔除 | Compute、UAV、Visible List、Indirect Draw |
+| UE 使用线 | `UERenderingLab` | 每项功能可见对照 | Capture 能定位 UE Pass / 资源 / 源码 |
+
+### 项目 1：RHI Clear
+
+```text
+能力：
+BeginFrame → BeginRenderPass/Clear → EndFrame → Present
+
+验证：
+FDynamicRHI、Device、Queue、SwapChain、Fence、Viewport 的职责边界。
+```
+
+### 项目 2：Textured Mesh Viewer
+
+作为第一个长期维护的 RHI 验证载体：
+
+```text
+画面：
+一个 Mesh + 一张 Texture + 可移动 Camera + Directional Light
+
+能力：
+FRHIBuffer / FRHITexture
+SRV / Sampler
+Vertex Declaration / Shader / PSO
+Object / Material / Pass 参数绑定
+```
+
+不要在这里加入 UI、游戏逻辑或复杂资产管线。
+
+### 项目 3：Mini Forward Renderer
+
+在 Mesh Viewer 上逐步加入：
+
+```text
+Directional / Point / Spot Light
+Alpha Test / Transparent Pass
+Skybox
+Shadow Map
+HDR SceneColor
+Tone Mapping
+Bloom
+```
+
+可与 UE 的最小场景使用相同模型、贴图、相机和方向光抓帧对照；目标是比较资源链和 Pass 链，而不是要求像素级一致。
+
+### 项目 4：Mini Deferred Renderer
+
+中期核心项目。建议场景规模：
+
+```text
+10~30 个 Static Mesh
+3~10 个 Material
+多个动态光源
+环境贴图或 Skybox
+```
+
+帧结构：
+
+```text
+Depth Prepass（可选）
+→ GBuffer Pass
+→ Deferred Lighting Pass
+→ Sky / Transparent Pass
+→ HDR SceneColor
+→ Tone Mapping / Post Process
+→ Back Buffer
+```
+
+完成它后可以建立直接映射：
+
+```text
+自己的 GBuffer Pass      ↔ UE BasePass
+自己的 Lighting Pass     ↔ UE Deferred Lighting
+自己的 HDR SceneColor    ↔ UE SceneColor
+自己的 ToneMap Pass      ↔ UE Post Processing
+```
+
+### 项目 5：Render Graph Migration
+
+只有当 Renderer 手写 Pass 达到约 5 个以上、资源/Barrier/释放管理开始痛苦时再引入。
+
+```text
+先：GBuffer → Lighting → AO → Bloom → ToneMap
+后：AddGBufferPass / AddLightingPass / AddSSAOPass / AddBloomPass / AddToneMapPass
+```
+
+目标不是先复刻 UE RDG 的全部功能，而是让自己亲自遇到并解决资源依赖和生命周期问题。
+
+### 项目 6：TAA Lab
+
+TAA 是规模可控但覆盖广泛的高级练习：
+
+```text
+Current SceneColor
++ Previous History
++ Depth
++ Velocity
++ Camera Jitter
+→ TAA Output
+```
+
+它覆盖跨帧资源、History Texture、Motion Vector、Camera Cut、Viewport Resize 和全屏 Pass，是理解 TSR、Lumen temporal filter 等系统的共同前置。
+
+### 项目 7：GPU-driven Visibility Lab
+
+在 Nanite / GPU Scene 之前，先实现最小 GPU 可见性链路：
+
+```text
+CPU 创建大量 Instance
+→ GPU Compute Frustum Culling
+→ Visible Instance List
+→ Indirect Draw
+```
+
+后续按需要加入：
+
+```text
+Hi-Z Occlusion Culling
+Instance Data Buffer
+Indirect Arguments
+```
+
+目标不是复刻 Nanite，而是能指出 Nanite 在 GPU Culling/Indirect Draw 基础上额外解决了哪些 cluster、raster、streaming 和可见性问题。
+
+## F3：UE RenderingLab 工程
+
+建立单独 UE 工程 `UERenderingLab`；每一个 Map 是一个可诊断实验，而不是追求最终画面。
+
+```text
+Maps/
+├─ 00_Baseline
+├─ 01_MaterialLab
+├─ 02_LightingLab
+├─ 03_ShadowLab
+├─ 04_TransparencyLab
+├─ 05_PostProcessLab
+├─ 06_DeferredLab
+├─ 07_NaniteLab
+├─ 08_LumenLab
+├─ 09_VSMLab
+└─ 10_TemporalLab
+```
+
+### 固定标准资产
+
+```text
+Plane / Cube / Sphere
+高频棋盘格贴图、低频渐变贴图、Normal Map
+高面数与低面数模型
+透明卡片 / Foliage
+强 Emissive 物体
+移动物体
+遮挡墙
+可反射的金属球
+不同 Roughness 的球
+```
+
+| 实验主题 | 关键测试物 |
+|---|---|
+| Texture / Mip / UV | 高频棋盘格、渐变贴图 |
+| PBR | 金属球、粗糙度球 |
+| Normal Map | 斜面 Plane 或球 |
+| Transparency / Overdraw | 透明卡片、Foliage |
+| Shadow Bias | Plane、Cube、掠射角光源 |
+| Nanite / LOD | 高低面数模型 |
+| Occlusion | 遮挡墙、大量 Instance |
+| TAA / TSR | 快速移动物体、高频纹理 |
+| Lumen / GI | 室内盒子、彩色墙面 |
+| VSM | 大尺度场景、近距离细节物体 |
+
+## F4：高阶 UE 系统的前置项目
+
+高阶系统不以“完整复刻 UE 功能”为目标，而以建立可解释的前置实现为目标。
+
+| UE 系统 | 不直接复刻 | 先完成的前置项目 |
+|---|---|---|
+| Nanite | 虚拟几何完整系统 | GPU Culling + Indirect Draw + Cluster 基础 |
+| Lumen | 完整动态全局光照系统 | Shadow Map → SSAO → SSR → 简单 SDF/Probe GI |
+| VSM | 虚拟页表阴影系统 | Cascaded Shadow Map / Atlas / Shadow Cache |
+| TSR | UE 的复杂超分重建 | TAA + Velocity + History + Jitter |
+| GPU Scene | 完整 GPU Primitive 数据库 | Instance Buffer + Compute Culling |
+| RDG | UE 全量 Render Graph | Read/Write 声明 + Barrier 推导 + Transient 生命周期 |
+| Material System | 材质图和全量 permutation | 参数材质 + Texture/Sampler + 少量 Static Switch |
+| Shader DDC | 分布式编译与缓存管线 | Shader Key + 本地 Bytecode Cache |
+
+高阶学习的进度标准：
+
+```text
+不是：我是否复刻了 UE 的 Nanite / Lumen？
+
+而是：我能否说清它相对于自己的前置实现多解决了哪些问题，
+以及为什么它需要额外的资源、Pass、数据结构和同步系统？
+```
