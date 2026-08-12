@@ -8,6 +8,7 @@
 #include "DirectX12/Common/MathHelper.h"
 #include "DirectX12/Chapter/BoxApp.h"
 #include "DirectX12/Chapter/ShapesApp.h"
+#include "DirectX12/Chapter/LitWaves.h"
 
 HWND CreateMainWindow(HINSTANCE hInstance);
 HWND CreateChildWindow(HWND parentWnd, HINSTANCE processHinstance);
@@ -106,7 +107,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		WarningStringMsg("EngineTest main Start");
 		//InitDirect3DApp D3DApp(hInstance);
 		// BoxApp D3DApp(hInstance);
-		ShapesApp D3DApp(hInstance);
+		//ShapesApp D3DApp(hInstance);
+		LitWavesApp D3DApp(hInstance);
 		if (!D3DApp.Initialize())
 		{
 			ErrorStringMsg("InitDirect3DApp Failed!");

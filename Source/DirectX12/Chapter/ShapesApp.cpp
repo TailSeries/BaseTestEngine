@@ -275,7 +275,7 @@ void ShapesApp::BuildRootSignature()
 
 void ShapesApp::BuildShadersAndInputLayout()
 {
-	std::string shaderPath = "F:/workspace/BaseTestEngine/Source/Shaders/Chapter7/color.hlsl";
+	std::string shaderPath = "F:/workspace/BaseTestEngine/Source/Shaders/Chapter8/color.hlsl";
 	mShaders["standardVS"] = D3DUtil::CompileShader(shaderPath, nullptr, "VS", "vs_5_1");
 	mShaders["opaquePS"] = D3DUtil::CompileShader(shaderPath, nullptr, "PS", "ps_5_1");
 
