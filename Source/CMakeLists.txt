@@ -11,6 +11,9 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../out/bin") # 针
 add_compile_definitions(NOMINMAX SYSTEM_WIN PLATFORM_WIN)
 
 add_subdirectory(Core)
+add_subdirectory(RHI)
+add_subdirectory(D3D12RHI)
+
 #add_subdirectory(Transfer)
 add_subdirectory(Algorithm)
 add_subdirectory(DirectX12)
