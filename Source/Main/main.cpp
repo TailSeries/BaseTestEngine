@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <Windows.h>
 #include <iostream>
 #include <map>
@@ -9,6 +10,7 @@
 #include "DirectX12/Chapter/BoxApp.h"
 #include "DirectX12/Chapter/ShapesApp.h"
 #include "DirectX12/Chapter/LitWaves.h"
+#include "DirectX12/Chapter/TexWavesApp.h"
 
 HWND CreateMainWindow(HINSTANCE hInstance);
 HWND CreateChildWindow(HWND parentWnd, HINSTANCE processHinstance);
@@ -105,10 +107,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	InitLogFile("Engine.log");
 	{
 		WarningStringMsg("EngineTest main Start");
+		std::cout << "Current working directory: "
+			<< std::filesystem::current_path() << '\n';
+
 		//InitDirect3DApp D3DApp(hInstance);
 		// BoxApp D3DApp(hInstance);
 		//ShapesApp D3DApp(hInstance);
-		LitWavesApp D3DApp(hInstance);
+		//LitWavesApp D3DApp(hInstance);
+		TexWavesApp  D3DApp(hInstance);
+
 		if (!D3DApp.Initialize())
 		{
 			ErrorStringMsg("InitDirect3DApp Failed!");

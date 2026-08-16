@@ -20,6 +20,7 @@
 
 #include <assert.h>
 #include <algorithm>
+#include <cstring>
 #include <memory>
 #include <wrl.h>
 
@@ -126,7 +127,7 @@ namespace
 
 struct handle_closer { void operator()(HANDLE h) { if (h) CloseHandle(h); } };
 
-typedef public std::unique_ptr<void, handle_closer> ScopedHandle;
+typedef std::unique_ptr<void, handle_closer> ScopedHandle;
 
 inline HANDLE safe_handle( HANDLE h ) { return (h == INVALID_HANDLE_VALUE) ? 0 : h; }
 
@@ -144,7 +145,7 @@ inline void SetDebugObjectName(_In_ ID3D11DeviceChild* resource, _In_ const char
 };
 
 //--------------------------------------------------------------------------------------
-static HRESULT LoadTextureDataFromFile( _In_z_ const wchar_t* fileName,
+static HRESULT LoadTextureDataFromFile( _In_z_ const char* fileName,
                                         std::unique_ptr<uint8_t[]>& ddsData,
                                         DDS_HEADER** header,
                                         uint8_t** bitData,
@@ -157,21 +158,13 @@ static HRESULT LoadTextureDataFromFile( _In_z_ const wchar_t* fileName,
     }
 
     // open the file
-#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
-    ScopedHandle hFile( safe_handle( CreateFile2( fileName,
-                                                  GENERIC_READ,
-                                                  FILE_SHARE_READ,
-                                                  OPEN_EXISTING,
-                                                  nullptr ) ) );
-#else
-    ScopedHandle hFile( safe_handle( CreateFileW( fileName,
+    ScopedHandle hFile( safe_handle( CreateFileA( fileName,
                                                   GENERIC_READ,
                                                   FILE_SHARE_READ,
                                                   nullptr,
                                                   OPEN_EXISTING,
                                                   FILE_ATTRIBUTE_NORMAL,
                                                   nullptr ) ) );
-#endif
 
     if ( !hFile )
     {
@@ -2129,7 +2122,7 @@ HRESULT DirectX::CreateDDSTextureFromMemoryEx( ID3D11Device* d3dDevice,
 //--------------------------------------------------------------------------------------
 _Use_decl_annotations_
 HRESULT DirectX::CreateDDSTextureFromFile( ID3D11Device* d3dDevice,
-                                           const wchar_t* fileName,
+                                           const char* fileName,
                                            ID3D11Resource** texture,
                                            ID3D11ShaderResourceView** textureView,
                                            size_t maxsize,
@@ -2142,7 +2135,7 @@ HRESULT DirectX::CreateDDSTextureFromFile( ID3D11Device* d3dDevice,
 
 HRESULT DirectX::CreateDDSTextureFromFile12(_In_ ID3D12Device* device,
 	_In_ ID3D12GraphicsCommandList* cmdList,
-	_In_z_ const wchar_t* szFileName,
+	_In_z_ const char* szFileName,
 	_Out_ ComPtr<ID3D12Resource>& texture,
 	_Out_ ComPtr<ID3D12Resource>& textureUploadHeap,
 	_In_ size_t maxsize,
@@ -2187,16 +2180,9 @@ HRESULT DirectX::CreateDDSTextureFromFile12(_In_ ID3D12Device* device,
 		if (texture != 0 || textureView != 0)
 		{
 			CHAR strFileA[MAX_PATH];
-			int result = WideCharToMultiByte(CP_ACP,
-				WC_NO_BEST_FIT_CHARS,
-				fileName,
-				-1,
-				strFileA,
-				MAX_PATH,
-				nullptr,
-				FALSE
-				);
-			if (result > 0)
+			const char* strFileA = fileName;
+		int result = static_cast<int>(strlen(strFileA)) + 1;
+		if (result > 1)
 			{
 				const CHAR* pstrName = strrchr(strFileA, '\\');
 				if (!pstrName)
@@ -2237,7 +2223,7 @@ HRESULT DirectX::CreateDDSTextureFromFile12(_In_ ID3D12Device* device,
 _Use_decl_annotations_
 HRESULT DirectX::CreateDDSTextureFromFile( ID3D11Device* d3dDevice,
                                            ID3D11DeviceContext* d3dContext,
-                                           const wchar_t* fileName,
+                                           const char* fileName,
                                            ID3D11Resource** texture,
                                            ID3D11ShaderResourceView** textureView,
                                            size_t maxsize,
@@ -2250,7 +2236,7 @@ HRESULT DirectX::CreateDDSTextureFromFile( ID3D11Device* d3dDevice,
 
 _Use_decl_annotations_
 HRESULT DirectX::CreateDDSTextureFromFileEx( ID3D11Device* d3dDevice,
-                                             const wchar_t* fileName,
+                                             const char* fileName,
                                              size_t maxsize,
                                              D3D11_USAGE usage,
                                              unsigned int bindFlags,
@@ -2269,7 +2255,7 @@ HRESULT DirectX::CreateDDSTextureFromFileEx( ID3D11Device* d3dDevice,
 _Use_decl_annotations_
 HRESULT DirectX::CreateDDSTextureFromFileEx( ID3D11Device* d3dDevice,
                                              ID3D11DeviceContext* d3dContext,
-                                             const wchar_t* fileName,
+                                             const char* fileName,
                                              size_t maxsize,
                                              D3D11_USAGE usage,
                                              unsigned int bindFlags,
@@ -2324,17 +2310,9 @@ HRESULT DirectX::CreateDDSTextureFromFileEx( ID3D11Device* d3dDevice,
 #if !defined(NO_D3D11_DEBUG_NAME) && ( defined(_DEBUG) || defined(PROFILE) )
         if (texture != 0 || textureView != 0)
         {
-            CHAR strFileA[MAX_PATH];
-            int result = WideCharToMultiByte( CP_ACP,
-                                              WC_NO_BEST_FIT_CHARS,
-                                              fileName,
-                                              -1,
-                                              strFileA,
-                                              MAX_PATH,
-                                              nullptr,
-                                              FALSE
-                               );
-            if ( result > 0 )
+            const char* strFileA = fileName;
+            int result = static_cast<int>(strlen(strFileA)) + 1;
+            if ( result > 1 )
             {
                 const CHAR* pstrName = strrchr( strFileA, '\\' );
                 if (!pstrName)

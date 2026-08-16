@@ -5,7 +5,7 @@
 #include "Waves.h"
 #include "Common/D3DApp.h"
 
-class TexWavesApp:public D3DApp
+class DXMODULE TexWavesApp:public D3DApp
 {
 public:
 	static const int gNumFrameResources = 3;
@@ -38,14 +38,14 @@ public:
 
 	virtual bool Initialize() override;
 
-public:
+protected:
 	virtual void OnResize() override;
 	virtual void Update(const GameTimer& gt) override;
 	virtual void Draw(const GameTimer& gt) override;
 	virtual void OnMouseDown(WPARAM btnState, int x, int y) override;
 	virtual void OnMouseMove(WPARAM btnState, int x, int y) override;
 	virtual void OnMouseUp(WPARAM btnState, int x, int y) override;
-
+public:
 	void OnKeyboardInput(const GameTimer& gt);
 	void UpdateCamera(const GameTimer& gt);
 	void AnimateMaterials(const GameTimer& gt);
