@@ -14,6 +14,7 @@
 struct ObjectConstants
 {
 	DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
+    DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
 };
 
 // 当前这个渲染流里需要放在常量缓冲区的部分
@@ -42,6 +43,7 @@ struct Vertex
 {
     DirectX::XMFLOAT3 Pos;
     DirectX::XMFLOAT3 Normal;
+    DirectX::XMFLOAT2 TexC;
 };
 
 struct FrameResource
