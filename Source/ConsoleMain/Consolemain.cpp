@@ -271,6 +271,44 @@ int main()
 	}
 
 
+	{
+
+		char c2 = 65;
+		char c = 'A';
+		auto resolt = s.countAndSay(4);
+		int va = 224;
+
+	}
+
+	{
+		std::vector<int> templist = { 2,3,6,7};
+		s.combinationSum(templist, 7);
+	}
+
+
+	{
+		std::vector<int> templist = {10, 1, 2, 7, 6, 1, 5};
+		s.combinationSum2(templist, 8);
+	}
+
+
+	{
+		std::vector<int> templist{ 3,4,-1,1};
+		s.firstMissingPositive(templist);
+
+	}
+
+
+	{
+		std::vector<int> templist{0,1,0,2,1,0,1,3,2,1,2,1};
+		s.trap(templist);
+	}
+
+	{
+		s.multiply("123", "456");
+	}
+
+
 	return 0;
 }
 #include "TestGFoo.hpp"
