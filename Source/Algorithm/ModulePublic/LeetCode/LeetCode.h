@@ -1673,116 +1673,510 @@ public:
 	/*
 	 * 37. https://leetcode.cn/problems/sudoku-solver/description/
 	 * 行不重复，列不重复，小九格不重复.
-	 * 注意到数独答案唯一
+	 * 注意到数独答案唯一。但实际上没有取巧方案，不能通过排除法去做，一个空格能填的数字，取决于其它空格怎么填。这是典型的"试错 + 撤销"问题：本质是一棵搜索树的深度优先遍历（DFS）
+	 * 最直接的写法：每次要判断"数字 d 能不能填在 (r,c)"时，就去扫描这一行 9 个格、这一列 9 个格、这个宫 9 个格，看有没有重复。这能work，但每次判断都要遍历约 27 个格子。回溯会进行成千上万次这样的判断，很浪费。关键优化就在这里。
+	 * 核心优化：位掩码（bitmask）  数字 1 用第 0 位，数字 2 用第 1 位，……数字 9 用第 8 位
 	 */
 	void solveSudoku(std::vector<std::vector<char>>& board)
 	{
-		std::map<std::pair<int, int>, std::set<char>> temp;
-		for (int i = 0; i < 9; i++)
-		{
-			for (int j = 0; j < 9; j++)
+		/*
+
+开三个数组：
+int rows[9];   // rows[r]  = 第 r 行用了哪些数字
+int cols[9];   // cols[c]  = 第 c 列用了哪些数字
+int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
+
+三个 O(1) 操作
+
+┌───────────────────────┬──────────────────────────────────────┬───────────────────────────────────────┐
+│         操作          │                 写法                 │                 含义                  │
+├───────────────────────┼──────────────────────────────────────┼───────────────────────────────────────┤
+│ 把数字 d（0~8）转成位   │ bit = 1 << d                         │ 第 d 位是 1，其余是 0                 │
+├───────────────────────┼──────────────────────────────────────┼───────────────────────────────────────┤
+│ 判断能否填             │ (rows[r] | cols[c] | boxes[b]) & bit │ 三处任一已用该数字，结果非 0 → 不能填 │
+├───────────────────────┼──────────────────────────────────────┼───────────────────────────────────────┤
+│ 填入（占位）            │ rows[r] |= bit; （列、宫同理）        │ 把那一位置 1                          │
+├───────────────────────┼──────────────────────────────────────┼───────────────────────────────────────┤
+│ 撤销（清位）            │ rows[r] ^= bit;                     │ 异或把那一位清 0                      │
+└───────────────────────┴──────────────────────────────────────┴───────────────────────────────────────┘
+
+▎ rows[r] | cols[c] | boxes[b] 一次运算就得到了"这个格子所有被禁止的数字"，判断从"扫 27 个格"变成"1 次位运算"。这就是快的原因。
+		 */
+		int rows[9] = { 0 };
+		int cols[9] = { 0 };
+		int boxes[9] = { 0 };
+		std::vector<std::pair<int, int>> empties;
+		std::function<bool(int)> backtrack = [&](int idx)->bool
 			{
-				temp[{i, j}] = { '1','2','3','4','5','6','7','8','9' };
+				if (idx == empties.size()) return true;
+				auto [r, c] = empties[idx];
+				int b = r / 3 * 3 + c / 3;
+				int used = rows[r] | cols[c] | boxes[b];
+				for (int i = 1; i <= 9; i++)
+				{
+					int tempbit = 1 << i;
+					if (tempbit & used) continue; //数字已经用过
+					used |= tempbit;
+					rows[r] |= tempbit;
+					cols[c] |= tempbit;
+					boxes[b] |= tempbit;
+					board[r][c] = '0' + i;
+					// 递归下一个空格
+					bool nextresult = backtrack(idx + 1);
+					if (nextresult)
+					{
+						return true;
+					}
+					else
+					{
+						rows[r] ^= tempbit;
+						cols[c] ^= tempbit;
+						boxes[b] ^= tempbit;
+					}
+				}
+				board[r][c] = '.';   // 9 个数字都失败 → 复原此格，向上层报告失败
+				return false;
+			};
+
+
+
+		for (int r = 0; r < 9; r++)
+		{
+			for (int c = 0; c < 9; c++)
+			{
+				if (board[r][c] == '.')
+				{
+					empties.emplace_back(r, c);
+				}
+				else
+				{
+					int bit = 1 << (board[r][c] - '0');
+					rows[r] |= bit;
+					cols[c] |= bit;
+					boxes[r / 3 * 3 + c / 3] |= bit;
+				}
 			}
 		}
 
-		//
-		auto clearrow = [&](int row)
-			{
-				std::vector<char>& rowvalues = board[row];
-				std::set<char> checkchars;
-				for (auto it : rowvalues)
-				{
-					if (it != '.')
-					{
-						checkchars.emplace(it);
-					}
-				}
-				for (int i = 0; i <9;i++)
-				{
-					std::erase_if(temp[{row, i}], [&](char c)
-					{
-							return checkchars.count(c) > 0;
-					});
-				}
-			};
+		bool result = backtrack(0);
+	}
 
-		auto clearcol = [&](int col)
-			{
-				std::set<char> checkchars;
-				for (int i = 0; i < 9;i++)
-				{
-					std::vector<char>& rowvalues = board[i];
-					if (rowvalues[col] != '.')
-					{
-						checkchars.emplace(rowvalues[col]);
-					}
-				}
 
-				for (int i = 0; i < 9; i++)
-				{
-					std::erase_if(temp[{i, col}], [&](char c)
-						{
-							return checkchars.count(c) > 0;
-						});
-				}
-			};
+	/*
+	 * 38. https://leetcode.cn/problems/count-and-say/description/
+	 * 题目很费解，但正常递归做法
+	 */
+	std::string countAndSay(int n) {
+		if (n == 1) return "1";
 
-		auto clearlittle = [&](int lttleidx)
+		std::string values = countAndSay(n - 1);
+		std::string temps = "";
+		char value = '.';
+		int valueNum = 0;
+		for (int i = 0; i < values.size(); i++)
 		{
-			int starti = ((int)(lttleidx / 3)) * 3;
-			int endi = starti + 3;// 左开右闭表示行
-
-			int startj = (lttleidx % 3) * 3;
-			int endj = startj + 3; // 左开右闭表示列
-			std::set<char> littlecheckers;
-			for (int row = starti; row < endi; row++)
+			if (i == 0)
 			{
-				std::vector<char>& rowvalues = board[row];
-				for (int col = startj; col<endj; col++)
+				value = values[0];
+				valueNum = 1;
+			}
+			else
+			{
+				char tempValue = values[i];
+				if (tempValue == value)
 				{
-					if (rowvalues[col] != '.')
+					valueNum++;
+				}
+				else
+				{
+					temps += std::to_string(valueNum);
+					temps += value;
+					valueNum = 1;
+					value = tempValue;
+				}
+			}
+		}
+		if (valueNum != 0)
+		{
+			temps += std::to_string(valueNum);
+			temps += value;
+			valueNum = 0;
+		}
+
+
+		return temps;
+
+	}
+
+	/*
+	 * 39. https://leetcode.cn/problems/combination-sum/description/
+	 * 除法和%想因式分解是行不通的，比如 7 = 2 + 2 + 3
+	 * 如此一来只能回溯去减了，减到0证明这种组合可以，非0证明这种组合失败，如果数组顺序非负可以直接负数就返回false
+	 * 将数据看成每一层选一个数
+	 */
+	std::vector<std::vector<int>> combinationSum(std::vector<int>& candidates, int target)
+	{
+		std::vector<std::vector<int>> Results;
+		{
+			std::sort(candidates.begin(), candidates.end());
+
+			std::vector<int> tempList;
+			// 去重，每一层顶多再需要把自己放进来
+			std::function<void(int, int)> backTrack = [&](int startidx, int val)
+				{
+					for (int i = startidx; i < candidates.size(); i++)
 					{
-						littlecheckers.emplace(rowvalues[col]);
+						if (candidates[i] == 0) continue;
+						tempList.push_back(candidates[i]);
+						int tempResult = val - candidates[i];
+
+						if (tempResult > 0)
+						{
+							backTrack(i, tempResult);
+						}
+						else if (tempResult == 0)
+						{
+							Results.push_back(tempList);
+						}
+						tempList.pop_back();
+
+						if (tempResult < 0)
+						{
+							// 当期这一层接下来的值没必要考虑了
+							break;
+						}
+					}
+				};
+
+			backTrack(0, target);
+		}
+
+		return Results;
+	}
+
+
+	/*
+	 * 40. https://leetcode.cn/problems/combination-sum-ii/description/
+	 * 相比上一次，不用在下一层考虑自己,但是有个问题，candiates是可以重复的.
+	 * 所以我们直接先排序，同一层的比较里面碰到相同值直接略过
+	 */
+	std::vector<std::vector<int>> combinationSum2(std::vector<int>& candidates, int target)
+	{
+		std::vector<std::vector<int>> Results;
+
+		std::sort(candidates.begin(), candidates.end());
+
+		std::vector<int> tempList;
+		// 去重，每一层顶多再需要把自己放进来
+		std::function<void(int, int)> backTrack = [&](int startidx, int val)
+			{
+				for (int i = startidx; i < candidates.size(); i++)
+				{
+					if (i > startidx && candidates[i] == candidates[i - 1])
+					{
+						//同一层的相同情况已经考虑过，就放弃，注意这里是 i > startidx，避免candidates[i] 比较到上一层
+						continue;
+					}
+
+					if (candidates[i] == 0) continue;
+					tempList.push_back(candidates[i]);
+					int tempResult = val - candidates[i];
+
+					if (tempResult > 0)
+					{
+						backTrack(i + 1, tempResult);
+					}
+					else if (tempResult == 0)
+					{
+						Results.push_back(tempList);
+					}
+					tempList.pop_back();
+
+					if (tempResult < 0)
+					{
+						// 当期这一层接下来的值没必要考虑了
+						break;
 					}
 				}
-			}
-			for (int row = starti; row < endi; row++)
+			};
+
+		backTrack(0, target);
+		return Results;
+	}
+
+	/*
+	 * 41. https://leetcode.cn/problems/first-missing-positive/description/
+	 * 1. 答案一定在[1, n+1]之间
+	 * 2. 限制o(n) 并且常数空间，那就把数组本身当做set用 :让"值 v"待在"下标 v-1"上：
+	 *	想想看 数组中的负数和0我们无所谓的，让1去0,2 去 1,3去2.... 自然数 1 ~ n 可以放在长度为n的数组的0 ~ n-1 位置上。
+	 *	我们要求v归位到v-1，实际操作中盯着一个归位的位置，如果这个位置上的v 在[1, n]的范围内，那它一定可以归位！
+	 *	那么扫描:  下标0是1✓  下标1不是2 ✗ → 答案 = 2
+	 */
+	int firstMissingPositive(std::vector<int>& nums)
+	{
+		int n = nums.size();
+		for (int i = 0; i < n; i++)
+		{
+			//其实这里有个关键是认识:while 循环的执行次数,不属于它所在的那次外层迭代,而是被所有外层迭代共享的一个总预算。
+			int value = nums[i];
+			int valueTargetIdx = nums[i] - 1;
+			/*
+			 * 1。注意这里用wihle进行保证：我们要求v归位到v-1，实际操作中盯着一个归位的位置，如果这个位置上的v 在[1, n]的范围内，那它一定可以归位！
+			 */
+			while (value >= 1 && value <= n && nums[valueTargetIdx] != value)
 			{
-				for (int col = startj; col < endj; col++)
-				{
-					std::erase_if(temp[{row, col}], [&](char c)
-						{
-							return littlecheckers.count(c) > 0;
-						});
-				}
-		
+				std::swap(nums[i], nums[valueTargetIdx]);
+				value = nums[i];
+				valueTargetIdx = nums[i] - 1;
 			}
+		}
+
+		for (int i = 0; i < n; i++)
+		{
+			if (nums[i] > 0 && nums[i] != i + 1)
+			{
+				return i + 1;
+			}
+		}
+		return n + 1;// 1 ~ n 全部就位
+
+	}
+
+
+	/*
+	 * 42. https://leetcode.cn/problems/trapping-rain-water/
+	 */
+	int trap(std::vector<int>& height)
+	{
+		{
+			//每个位置能接的水 = min(左侧最高, 右侧最高) - 当前高度。用左右两个指针从两端向中间收拢，维护 leftMax 和 rightMax：同时注意掉数组元素非负
+			/*
+			 * 为什么可以直接先不考虑中间，直接寻找两侧的低点呢？因为只要比边界高的实际上都一定可以先放进来没问题。
+			 */
+			int left = 0;
+			int right = height.size() - 1;
+			int leftMax = 0;
+			int rightMax = 0;
+			int ans = 0;
+			while (left < right)
+			{
+				leftMax = std::max(height[left], leftMax);
+				rightMax = std::max(height[right], rightMax);
+				if (leftMax < rightMax)
+				{
+					
+					ans += (leftMax - height[left]);
+					left++;
+				}
+				else
+				{
+					ans += (rightMax - height[right]);
+					right--;
+				}
+			}
+			return ans;
+
+		}
+		{
+			if (height.size() <= 2) return 0;
+			int n = height.size();
+			int left = 0;
+			int right = n - 1;
+
+			// 感觉似乎是从左右两边分别遍历
+			int temp = 0;
+			int leftPointer = left;
+			int rightPointer = right;
+
+			while (left < right)
+			{
+				int curTemp = 0;
+				int compareLeft = height[left];
+				for (; leftPointer <= right; leftPointer++)
+				{
+					if (height[leftPointer] < compareLeft)
+					{
+						curTemp += compareLeft - height[leftPointer];
+					}
+					else
+					{
+						temp += curTemp;
+						left = leftPointer;
+						curTemp = 0;
+					}
+
+					if (height[leftPointer] > compareLeft)
+					{
+						break;
+					}
+
+
+				}
+
+				// leftPointer 位于第一个比left大的点位上（此时left == leftpointer）/leftPointer = right + 1，left为0 或者 left = right
+				/*
+				 *  实际统计到的位置在left。
+				 */
+				curTemp = 0;
+				int compareRight = height[right];
+				for (; rightPointer >= left; rightPointer--)
+				{
+					if (height[rightPointer] < compareRight)
+					{
+						curTemp += compareRight - height[rightPointer];
+					}
+					else
+					{
+						temp += curTemp;
+						right = rightPointer;
+						curTemp = 0;
+					}
+					if (height[rightPointer] > compareRight)
+					{
+						break;
+					}
+				}// rightpointer 位于第一个比right大的点位上（此时right = rightpointer）/ rightpointer = left -1， right为n-1 或者 right = left
+			}
+			return temp;
+		}
+	}
+
+	/*
+	 * 43. https://leetcode.cn/problems/multiply-strings/description/
+	 * 不难，就是细节多 tencent wgx
+	 * 下标映射
+	 * 进位叠加顺序
+	 * chat int的转换方向
+	 * 判别"0"的情况
+	 */
+	std::string multiply(std::string num1, std::string num2)
+	{
+		std::string& lstr = num1.size() >= num2.size() ? num2 : num1;
+		std::string& hstr = num1.size() >= num2.size() ? num1 : num2;
+
+		std::vector<std::deque<int>> temps(lstr.size(), std::deque<int>{});
+
+		std::string reuslt;
+
+		size_t maxColSize = 0;
+		// 先得到每一行，然后处理进位
+		for (int i = lstr.size() - 1; i >= 0; i--)
+		{
+			int lineindex = (lstr.size() - 1) - i;
+			std::deque<int>& line = temps[lineindex];
+			int curvalue = 0;
+			int nextvalue = 0;
+
+			for (int j = 0; j <lineindex; j++)
+			{
+				line.push_back(0);// 直接补0 便于后面计算
+			}
+
+			for (int j = hstr.size() - 1; j >= 0; j--)
+			{
+				int v1 = hstr[j] - '0';
+				int v2 = lstr[i] - '0';
+				int tempvalue = v1 * v2 + nextvalue;
+				curvalue = tempvalue % 10;
+				nextvalue = tempvalue / 10;
+				line.push_back(curvalue);
+			}
+			if (nextvalue > 0)
+			{
+				line.push_back(nextvalue);
+			}
+			maxColSize = std::max(maxColSize, line.size()); // 最多 ls.size  + 1
+		}
+
+		auto getvalue = [&](size_t idx)->int
+		{
+			int value = 0;
+			for (auto& line:temps)
+			{
+				if (idx < line.size())
+				{
+					value += line[idx];
+				}
+			}
+			return value;
 		};
 
-
-		for (int i = 0;i <9;i++)
+		int curvalue = 0;
+		int nextvalue = 0;
+		std::vector<int> results;
+		
+		for (int i = 0; i < maxColSize; i++)
 		{
-			clearrow(i);
-			clearcol(i);
-			clearlittle(i);
+			int tempvalue =  getvalue(i) + nextvalue;
+			curvalue = tempvalue % 10 ;
+			nextvalue = tempvalue / 10;
+			results.push_back(curvalue);
 		}
 
-		for (int i = 0; i < 9; i++)
-		{
-			for (int j = 0; j < 9; j++)
-			{
-				if (board[i][j] =='.')
-				{
-					if (temp[{i, j}].size() > 1)
-					{
-						int a = 0;
-					}
-					board[i][j] = *temp[{i, j}].begin();
-				}
 		
+		while (nextvalue > 0)
+		{
+			int tempvalue = nextvalue;
+			curvalue = tempvalue % 10;
+			nextvalue = tempvalue / 10;
+			results.push_back(curvalue);
+		}
+
+		std::string resultstr;
+		for (int i = results.size() - 1; i >=0 ;i--)
+		{
+		
+			if (resultstr.empty() && results[i] == 0 && i > 0)
+			{
+				continue;
+			}
+			char v = results[i] + '0';
+			resultstr.push_back(v);
+		}
+		return resultstr;
+	}
+
+	/*
+	 * 44. https://leetcode.cn/problems/wildcard-matching/description/
+	 * todo 能想出来这个只能是大量刷题的了
+	 * dp[i][j] = s 前 i 个字符能否被 p 前 j 个字符匹配。
+	 * p[j] == '*'  >> dp[i][j] = dp[i][j-1] ||  dp[i-1][j] 当前这个字符是*，s的前i个字符能被p的前j-1个字符匹配，那么加上*就肯定能匹配 
+	 *	|| s的前i-1个字符能被p的前j个字符匹配。* 已经把 s[1..i-1] 匹配完了。现在多了一个 s[i]，* 可以直接再多吃一个，所以 dp[i][j] 也成立
+	 * p[j] == '?'/字符  dp[i][j] = dp[i-1][j-1] 当前这个字符是?/c 要求 s 前 i-1 个字符能被 p 前 j-1 个字符匹配。然后判断当前字符匹配规则。
+	 */
+
+	bool isMatch(std::string s, std::string p) 
+	{
+		{
+			int m = s.size();
+			int n = p.size();
+			std::vector<std::vector<bool>> dp(m + 1, std::vector<bool>(n + 1, false));
+			dp[0][0] = true;
+
+			//s 为空时，p 的前 j 个字符能否匹配空串。只有 p 前缀全是* 才行（一旦遇到非* 就断了）。
+			for (int j = 1; j <=n; j++)
+			{
+				dp[0][j] = (p[j - 1] == '*' && dp[0][j - 1]);
+			}
+
+			for (int i = 1; i <= m; i++) {
+				for (int j = 1; j <= n; j++) {
+					if (p[j - 1] == '*')
+					{
+						dp[i][j] = dp[i][j - 1] || dp[i - 1][j];
+					}
+					else if (p[j - 1] == '?' || p[j - 1] == s[i - 1])
+					{
+						dp[i][j] = dp[i - 1][j - 1];
+					}
+					else
+					{
+						dp[i][j] = false;
+					}
+						
+				
+				}
 			}
 		}
-
 	}
 };
