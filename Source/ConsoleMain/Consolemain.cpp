@@ -309,6 +309,22 @@ int main()
 	}
 
 
+	{
+		std::vector<int> templists{ 2,3,1,1,4 };
+		int rsdf = s.jump(templists);
+	}
+
+	{
+		std::vector<int> templists{ 1,2,3 };
+		auto sdfuiigh = s.permute(templists);
+	}
+
+	{
+		std::vector<int> templists{ 1,1,2 };
+		auto valuefsdf = s.permuteUnique(templists);
+	}
+
+
 	return 0;
 }
 #include "TestGFoo.hpp"

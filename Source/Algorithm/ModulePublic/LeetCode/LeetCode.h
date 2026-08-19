@@ -2179,4 +2179,199 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 			}
 		}
 	}
+
+	/*
+	 * 45. https://leetcode.cn/problems/jump-game-ii/
+	 * int step <= i + nums[i]
+	 * 注意到 如果 i 能跳跃到j，那么i ~ j 的任意位置都能跳到，同时nums[i]越大，那么i就可以越小
+	 * 反向贪心符合直接，但是也可以走正向贪心，速度更快 正向贪心的「找最远」容易被误解成「每次都跳到能跳最远的那个点」——其实不是。关键在于它区分了两个东西：
+	 * 核心：不是"跳到最远点"，而是"探明这一跳的势力范围"
+	 * 想象你手里有「一次跳跃的额度」，这次跳跃能落在一个区间里的任意位置。你不着急决定落在哪，而是先把这个区间里每个点再跳一步能到多远都看一遍，记下最大值 farthest。
+	 */
+	int jump(std::vector<int>& nums) 
+	{
+		// pointer 之前可以以最大步长跳到pointer的index
+		auto getindex = [&](int pointer)->int
+		{
+			int leftIndex = 0;
+			for (int i = pointer - 1; i >=0; i-- )
+			{
+				int j = nums[i] + i;
+				if (j >= pointer)
+				{
+					leftIndex = i;
+				}
+			}
+			return leftIndex;
+		};
+
+		int firstPointer = nums.size() - 1;
+		int index = 0;
+		while (firstPointer > 0)
+		{
+			index++;
+			firstPointer = getindex(firstPointer);
+		}
+
+		return index;
+
+		{
+			int jumps = 0;        // 已跳次数
+			int currentEnd = 0;   // 当前这一跳能覆盖到的最远边界
+			int farthest = 0;     // 遍历过程中能到达的最远下标
+
+			for (int i = 0; i < (int)nums.size() - 1; i++) {
+				farthest = std::max(farthest, i + nums[i]);
+				if (i == currentEnd) {     // 走到当前跳的边界，必须再跳一次
+					jumps++;
+					currentEnd = farthest;
+				}
+			}
+			return jumps;
+		}
+	}
+
+
+	/*
+	 * 46. https://leetcode.cn/problems/permutations/description/
+	 * 其实是深搜，但注意回溯 + 撤销选择, 注意分辨是不是只撤销本轮的选择，下一轮的循环还正常续上
+	 */
+
+	std::vector<std::vector<int>> permute(std::vector<int>& nums) 
+	{
+		std::vector<std::vector<int>> result;
+		std::vector<int> tempresults;
+		std::function<void(std::set<int>&)> getvalue = [&](std::set<int>& indexs)
+			{
+				if (indexs.size() == nums.size())
+				{
+					result.push_back(tempresults);
+					return;
+				}
+				for (int i = 0; i < nums.size(); i++)
+				{
+					if (indexs.count(i) == 0)
+					{
+						indexs.emplace(i);
+						tempresults.push_back(nums[i]);
+						getvalue(indexs);
+						// 回溯 撤销本轮选择，记住之类只撤销本轮选择，但是下一轮的循环还正常续上
+						indexs.erase(i);
+						tempresults.pop_back();
+					}
+				}
+			};
+
+		std::set<int> allindexs;
+		getvalue(allindexs);
+		return result;
+	}
+
+
+	/*
+	 *47. https://leetcode.cn/problems/permutations-ii/description/
+	 * 这里要求去重，注意到如果nums[i] == nums[i - 1]的话，那么nums[i] 的组合应该与  nums[i - 1] 一致。
+	 * 注意，应该是这一层算完了之后才略过相同的,这里的细节很蛋疼，
+	 * 
+	 * 官方法：要注意到used[i-1]==true 不是"i-1 用过就丢一边了"，而是"i-1 此刻正躺在 path 里"——是某个祖先层选了它，我们正在它下面继续往深处填数。
+	 */
+	std::vector<std::vector<int>> permuteUnique(std::vector<int>& nums) 
+	{
+		{
+			std::sort(nums.begin(), nums.end()); // 排序，相同项放在一起
+			using namespace std;
+			vector<vector<int>> res;
+			vector<int> path;
+			vector<bool> used(nums.size(), false);
+			std::function<void()> backtrack = [&]()
+			{
+				if (path.size() == nums.size())
+				{
+					res.push_back(path);
+					return;
+				}
+				for (int i = 0; i <nums.size(); i++)
+				{
+					if (used[i]) continue;
+					//同一层里，跳过与前一个相同、且前一个还没被用的数字.注意这里 !used[i - 1] 不是指这一层没用，而是指当前层/上一层上上一层/祖先层没有用它，这种情况下才能用它
+					if (i < 0 && nums[i] == nums[i - 1] && !used[i - 1]) continue;
+
+					used[i] = true;
+					path.push_back(nums[i]);
+					backtrack();
+					path.pop_back();
+					used[i] = false;
+				}
+
+			};
+
+		}
+
+
+		std::sort(nums.begin(), nums.end());
+		std::vector<std::vector<int>> results;
+		std::vector<int> temp;
+		std::function<void(std::set<int>& indexs)> getvalue = [&](std::set<int>& indexs)
+		{
+			if (indexs.size() == nums.size())
+			{
+				results.push_back(temp);
+				return;
+			}
+			for (int i = 0; i < nums.size();)
+			{
+				/*不能直接这样搞，nums[i - 1] 不一定被加入过index里面
+				 *if (i > 0 && (nums[i] == nums[i - 1]))
+				{
+					continue;
+				}*/
+
+
+				if (indexs.count(i) == 0)
+				{
+					indexs.emplace(i);
+					temp.push_back(nums[i]);
+					getvalue(indexs);
+					temp.pop_back();
+					indexs.erase(i);
+					// 应该在保证相同的i已经参与过组合之后，我们才排除相同的i + 1项
+					i++;
+					while (i < nums.size() && (nums[i] == nums[i - 1]))
+					{
+						i++;
+					}
+				}
+				else
+				{
+					i++;
+				}
+			
+			
+
+			}
+
+		};
+		std::set<int> indexs;
+		getvalue(indexs);
+		return results;
+	}
+
+	/*
+	 * 48. https://leetcode.cn/problems/rotate-image/description/
+	 * 这一题理应熟悉矩阵变换的性质
+	 */
+	void rotate(std::vector<std::vector<int>>& matrix) 
+	{
+		int n = matrix.size();
+		/*
+		 * k 行 》 n - 1 - k 列 交换，元素遍历顺序为顺序遍历
+		 * [i][j] >> [j][n - 1 -i]
+		 * 
+		 * 先上下调换，然后x，y镜像
+		 */
+		 
+
+
+
+	}
 };
