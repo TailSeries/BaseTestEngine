@@ -45,8 +45,8 @@ Source/D3D12RHI/                   ← 对应 UE: Runtime/D3D12RHI/
 > 只精简内部细节：接口多版本数组→留基础版；多GPU数组→单个；多线程提交管线(Payload/对象池/Timing)→去掉。
 
 ### UE 源码参考路径
-- 接口层：`F:\shakervon_engine_merge\Engine\Source\Runtime\RHI\`
-- 实现层：`F:\shakervon_engine_merge\Engine\Source\Runtime\D3D12RHI\Private\`
+- 接口层：`F:\workspace\UnrealEngine58\Engine\Source\Runtime\RHI\` 或者可能在这儿 `F:\shakervon_engine_merge\Engine\Source\Runtime\RHI\`
+- 实现层：`F:\workspace\UnrealEngine58\Engine\Source\Runtime\D3D12RHI\Private\` 或者可能在这儿 `F:\shakervon_engine_merge\Engine\Source\Runtime\D3D12RHI\Private\`
 - UE 版本固定，目录路径可能变动（以用户告知为准）
 
 ---
