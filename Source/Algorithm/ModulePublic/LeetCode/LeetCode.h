@@ -1964,7 +1964,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 				rightMax = std::max(height[right], rightMax);
 				if (leftMax < rightMax)
 				{
-					
+
 					ans += (leftMax - height[left]);
 					left++;
 				}
@@ -2067,7 +2067,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 			int curvalue = 0;
 			int nextvalue = 0;
 
-			for (int j = 0; j <lineindex; j++)
+			for (int j = 0; j < lineindex; j++)
 			{
 				line.push_back(0);// 直接补0 便于后面计算
 			}
@@ -2089,31 +2089,31 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 		}
 
 		auto getvalue = [&](size_t idx)->int
-		{
-			int value = 0;
-			for (auto& line:temps)
 			{
-				if (idx < line.size())
+				int value = 0;
+				for (auto& line : temps)
 				{
-					value += line[idx];
+					if (idx < line.size())
+					{
+						value += line[idx];
+					}
 				}
-			}
-			return value;
-		};
+				return value;
+			};
 
 		int curvalue = 0;
 		int nextvalue = 0;
 		std::vector<int> results;
-		
+
 		for (int i = 0; i < maxColSize; i++)
 		{
-			int tempvalue =  getvalue(i) + nextvalue;
-			curvalue = tempvalue % 10 ;
+			int tempvalue = getvalue(i) + nextvalue;
+			curvalue = tempvalue % 10;
 			nextvalue = tempvalue / 10;
 			results.push_back(curvalue);
 		}
 
-		
+
 		while (nextvalue > 0)
 		{
 			int tempvalue = nextvalue;
@@ -2123,9 +2123,9 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 		}
 
 		std::string resultstr;
-		for (int i = results.size() - 1; i >=0 ;i--)
+		for (int i = results.size() - 1; i >= 0; i--)
 		{
-		
+
 			if (resultstr.empty() && results[i] == 0 && i > 0)
 			{
 				continue;
@@ -2140,12 +2140,12 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 	 * 44. https://leetcode.cn/problems/wildcard-matching/description/
 	 * todo 能想出来这个只能是大量刷题的了
 	 * dp[i][j] = s 前 i 个字符能否被 p 前 j 个字符匹配。
-	 * p[j] == '*'  >> dp[i][j] = dp[i][j-1] ||  dp[i-1][j] 当前这个字符是*，s的前i个字符能被p的前j-1个字符匹配，那么加上*就肯定能匹配 
+	 * p[j] == '*'  >> dp[i][j] = dp[i][j-1] ||  dp[i-1][j] 当前这个字符是*，s的前i个字符能被p的前j-1个字符匹配，那么加上*就肯定能匹配
 	 *	|| s的前i-1个字符能被p的前j个字符匹配。* 已经把 s[1..i-1] 匹配完了。现在多了一个 s[i]，* 可以直接再多吃一个，所以 dp[i][j] 也成立
 	 * p[j] == '?'/字符  dp[i][j] = dp[i-1][j-1] 当前这个字符是?/c 要求 s 前 i-1 个字符能被 p 前 j-1 个字符匹配。然后判断当前字符匹配规则。
 	 */
 
-	bool isMatch(std::string s, std::string p) 
+	bool isMatch(std::string s, std::string p)
 	{
 		{
 			int m = s.size();
@@ -2154,7 +2154,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 			dp[0][0] = true;
 
 			//s 为空时，p 的前 j 个字符能否匹配空串。只有 p 前缀全是* 才行（一旦遇到非* 就断了）。
-			for (int j = 1; j <=n; j++)
+			for (int j = 1; j <= n; j++)
 			{
 				dp[0][j] = (p[j - 1] == '*' && dp[0][j - 1]);
 			}
@@ -2173,8 +2173,8 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 					{
 						dp[i][j] = false;
 					}
-						
-				
+
+
 				}
 			}
 		}
@@ -2188,22 +2188,22 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 	 * 核心：不是"跳到最远点"，而是"探明这一跳的势力范围"
 	 * 想象你手里有「一次跳跃的额度」，这次跳跃能落在一个区间里的任意位置。你不着急决定落在哪，而是先把这个区间里每个点再跳一步能到多远都看一遍，记下最大值 farthest。
 	 */
-	int jump(std::vector<int>& nums) 
+	int jump(std::vector<int>& nums)
 	{
 		// pointer 之前可以以最大步长跳到pointer的index
 		auto getindex = [&](int pointer)->int
-		{
-			int leftIndex = 0;
-			for (int i = pointer - 1; i >=0; i-- )
 			{
-				int j = nums[i] + i;
-				if (j >= pointer)
+				int leftIndex = 0;
+				for (int i = pointer - 1; i >= 0; i--)
 				{
-					leftIndex = i;
+					int j = nums[i] + i;
+					if (j >= pointer)
+					{
+						leftIndex = i;
+					}
 				}
-			}
-			return leftIndex;
-		};
+				return leftIndex;
+			};
 
 		int firstPointer = nums.size() - 1;
 		int index = 0;
@@ -2237,7 +2237,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 	 * 其实是深搜，但注意回溯 + 撤销选择, 注意分辨是不是只撤销本轮的选择，下一轮的循环还正常续上
 	 */
 
-	std::vector<std::vector<int>> permute(std::vector<int>& nums) 
+	std::vector<std::vector<int>> permute(std::vector<int>& nums)
 	{
 		std::vector<std::vector<int>> result;
 		std::vector<int> tempresults;
@@ -2272,10 +2272,10 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 	 *47. https://leetcode.cn/problems/permutations-ii/description/
 	 * 这里要求去重，注意到如果nums[i] == nums[i - 1]的话，那么nums[i] 的组合应该与  nums[i - 1] 一致。
 	 * 注意，应该是这一层算完了之后才略过相同的,这里的细节很蛋疼，
-	 * 
+	 *
 	 * 官方法：要注意到used[i-1]==true 不是"i-1 用过就丢一边了"，而是"i-1 此刻正躺在 path 里"——是某个祖先层选了它，我们正在它下面继续往深处填数。
 	 */
-	std::vector<std::vector<int>> permuteUnique(std::vector<int>& nums) 
+	std::vector<std::vector<int>> permuteUnique(std::vector<int>& nums)
 	{
 		{
 			std::sort(nums.begin(), nums.end()); // 排序，相同项放在一起
@@ -2284,26 +2284,31 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 			vector<int> path;
 			vector<bool> used(nums.size(), false);
 			std::function<void()> backtrack = [&]()
-			{
-				if (path.size() == nums.size())
 				{
-					res.push_back(path);
-					return;
-				}
-				for (int i = 0; i <nums.size(); i++)
-				{
-					if (used[i]) continue;
-					//同一层里，跳过与前一个相同、且前一个还没被用的数字.注意这里 !used[i - 1] 不是指这一层没用，而是指当前层/上一层上上一层/祖先层没有用它，这种情况下才能用它
-					if (i < 0 && nums[i] == nums[i - 1] && !used[i - 1]) continue;
+					if (path.size() == nums.size())
+					{
+						res.push_back(path);
+						return;
+					}
+					for (int i = 0; i < nums.size(); i++)
+					{
+						if (used[i]) continue;
+						//同一层里，跳过与前一个相同、且前一个还没被用的数字.注意这里 !used[i - 1] 不是指这一层没用，而是指当前层/上一层上上一层/祖先层没有用它
+						/*
+						 * a a a aa 此时到了a[2]
+						 * a a a aa 第二层的a[3]是要取的.此时 used[i - 1]其实是上一层的a[2] 它是true。
+						 */
 
-					used[i] = true;
-					path.push_back(nums[i]);
-					backtrack();
-					path.pop_back();
-					used[i] = false;
-				}
+						if (i > 0 && nums[i] == nums[i - 1] && !used[i - 1]) continue;
 
-			};
+						used[i] = true;
+						path.push_back(nums[i]);
+						backtrack();
+						path.pop_back();
+						used[i] = false;
+					}
+
+				};
 
 		}
 
@@ -2312,45 +2317,45 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 		std::vector<std::vector<int>> results;
 		std::vector<int> temp;
 		std::function<void(std::set<int>& indexs)> getvalue = [&](std::set<int>& indexs)
-		{
-			if (indexs.size() == nums.size())
 			{
-				results.push_back(temp);
-				return;
-			}
-			for (int i = 0; i < nums.size();)
-			{
-				/*不能直接这样搞，nums[i - 1] 不一定被加入过index里面
-				 *if (i > 0 && (nums[i] == nums[i - 1]))
+				if (indexs.size() == nums.size())
 				{
-					continue;
-				}*/
+					results.push_back(temp);
+					return;
+				}
+				for (int i = 0; i < nums.size();)
+				{
+					/*不能直接这样搞，nums[i - 1] 不一定被加入过index里面
+					 *if (i > 0 && (nums[i] == nums[i - 1]))
+					{
+						continue;
+					}*/
 
 
-				if (indexs.count(i) == 0)
-				{
-					indexs.emplace(i);
-					temp.push_back(nums[i]);
-					getvalue(indexs);
-					temp.pop_back();
-					indexs.erase(i);
-					// 应该在保证相同的i已经参与过组合之后，我们才排除相同的i + 1项
-					i++;
-					while (i < nums.size() && (nums[i] == nums[i - 1]))
+					if (indexs.count(i) == 0)
+					{
+						indexs.emplace(i);
+						temp.push_back(nums[i]);
+						getvalue(indexs);
+						temp.pop_back();
+						indexs.erase(i);
+						// 应该在保证相同的i已经参与过组合之后，我们才排除相同的i + 1项
+						i++;
+						while (i < nums.size() && (nums[i] == nums[i - 1]))
+						{
+							i++;
+						}
+					}
+					else
 					{
 						i++;
 					}
-				}
-				else
-				{
-					i++;
-				}
-			
-			
 
-			}
 
-		};
+
+				}
+
+			};
 		std::set<int> indexs;
 		getvalue(indexs);
 		return results;
@@ -2358,20 +2363,960 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 
 	/*
 	 * 48. https://leetcode.cn/problems/rotate-image/description/
-	 * 这一题理应熟悉矩阵变换的性质
+	 * 这一题理应熟悉矩阵变换的性质, 它不允许用旋转，而且要求原地旋转
 	 */
-	void rotate(std::vector<std::vector<int>>& matrix) 
+	void rotate(std::vector<std::vector<int>>& matrix)
 	{
 		int n = matrix.size();
 		/*
 		 * k 行 》 n - 1 - k 列 交换，元素遍历顺序为顺序遍历
 		 * [i][j] >> [j][n - 1 -i]
-		 * 
+		 *
 		 * 先上下调换，然后x，y镜像
 		 */
-		 
+		for (int i = 0, j = n - 1; i < j; i++, j--)
+		{
+			std::swap(matrix[i], matrix[j]);
+		}
+
+		for (int i = 0; i < n; i++)
+		{
+			for (int j = i + 1; j < n; j++) // 注意，只需要走上三角，避免被换两次
+			{
+				std::swap(matrix[i][j], matrix[j][i]);
+			}
+		}
+
+	}
+
+
+	/*
+	 * 49. https://leetcode.cn/problems/group-anagrams/description/
+	 */
+
+	std::vector<std::vector<std::string>> groupAnagrams(std::vector<std::string>& strs)
+	{
+		{
+			// 找排列速度太慢，不如直接 每个字符串排序后作为分组的 key，相同 key 归为一组。
+			std::map<std::string, std::vector<std::string>> results;
+
+			for (int i = 0; i < strs.size(); i++)
+			{
+				std::string str = strs[i];
+				std::sort(str.begin(), str.end());
+				results[str].push_back(strs[i]);
+			}
+			std::vector<std::vector<std::string>> finalresults;
+			for (auto& it : results)
+			{
+				finalresults.push_back(it.second);
+			}
+			return finalresults;
+
+		}
+
+		// 算一个 std::string的全排列,这个方法容易超时。
+		{
+			std::function<void(std::string&, std::vector<bool>&, std::string&, std::map<std::string, int>&, int)> backtrack =
+				[&](std::string& s, std::vector<bool>& used, std::string& temp, std::map<std::string, int>& allsitua, int index)
+				{
+					if (temp.size() == s.size())
+					{
+						allsitua.emplace(temp, index);
+					}
+
+					for (int i = 0; i < s.size(); i++)
+					{
+						// 当前层的这个元素和前一个元素一致的时候应该略过
+						if (i > 0 && !used[i - 1] && s[i] == s[i - 1])
+						{//同一层里，跳过与前一个相同、且前一个还没被用的数字.注意这里 !used[i - 1] 不是指这一层没用，而是指当前层/上一层上上一层/祖先层没有用它
+							/*
+							 * a a a aa 此时到了a[2]
+							 * a a a aa 第二层的a[3]是要取的.此时 used[i - 1]其实是上一层的a[2] 它是true。
+							 */
+							continue;
+						}
+
+
+						if (!used[i])
+						{
+							used[i] = true;
+							temp.push_back(s[i]);
+							backtrack(s, used, temp, allsitua, index);
+							temp.pop_back();
+							used[i] = false;
+						}
+
+					}
+
+				};
+
+			std::map<std::string, int> allresults;
+			std::vector<std::vector<std::string>> finalResults;
+			for (int i = 0; i < strs.size(); i++)
+			{
+				std::string str = strs[i];
+				auto it = allresults.find(str);
+				if (it == allresults.end())
+				{
+					std::vector<bool> used(str.size(), false);
+					std::string temp;
+					std::set<std::string> allsitua;
+					backtrack(str, used, temp, allresults, (int)finalResults.size());
+				}
+				it = allresults.find(str);
+				int index = it->second;
+				if (index >= finalResults.size())
+				{
+					finalResults.push_back({ str });
+				}
+				else
+				{
+					finalResults[index].push_back(str);
+				}
+			}
+			return finalResults;
+		}
+
+
+	}
+
+
+	/*
+	 * 50. https://leetcode.cn/problems/powx-n/description/
+	 */
+	double myPow(double x, int n)
+	{
+
+		{
+			// 快速求幂 二分法
+			/*
+			 * - x^n = (x^(n/2))^2（n 为偶数）
+				- x^n = x * (x^(n/2))^2（n 为奇数）
+			 */
+
+			std::function<double(double, long long)> fastpow = [&](double x, long long n)
+				{
+					if (n == 0) return 1.0;
+					double half = fastpow(x, n / 2);
+					if (n % 2 == 0)
+					{
+						return half * half;
+					}
+					else
+					{
+						return x * half * half;
+					}
+				};
+			long long N = n;  // 防止 n = INT_MIN 时 -n 溢出
+			if (N < 0) {
+				x = 1 / x;
+				N = -N;
+			}
+			return fastpow(x, N);
+
+
+		}
+		if (n == 0) return 1;
+		if (x == 1.0) return 1;
+		if (x == 0) return 0;
+		double result = 1;
+		int v = n;
+		while (v != 0)
+		{
+			result = result * x;
+			if (n > 0)
+			{
+				v--;
+			}
+			else
+			{
+				v++;
+			}
+
+		}
+
+		if (n < 0)
+		{
+			result = 1 / result;
+		}
+		return result;
+	}
+
+	/*
+	 *51. https://leetcode.cn/problems/n-queens/
+	 *
+	 * 注意到每一行都必须有一个，那就按行回溯，每行选一列放皇后，用集合记录已占用的列、主对角线、副对角线.
+	 * 注意技巧：row - col 相同的点在同一条主对角线（\ 方向），row + col 相同的点在同一条副对角线（/ 方向）
+	 */
+
+	std::vector<std::vector<std::string>> solveNQueens(int n)
+	{
+
+		{
+			std::vector<std::vector<int>> allqueens;
+			std::function<void(std::vector<int>&, int, int, std::set<int>&, std::set<int>&, std::set<int>&)> backtrack =
+				[&](std::vector<int>& queens, int n, int row, std::set<int>& cols, std::set<int>& diag1, std::set<int>& diag2)
+				{
+					if (row == n)
+					{
+						allqueens.push_back(queens);
+
+						return;
+					}
+
+					for (int col = 0; col < n; col++)
+					{
+						// 当前(row, col) 已经和其他Q的列/对角线上
+						if (cols.count(col) || diag1.count(row - col) || diag2.count(row + col))
+						{
+							continue;
+						}
+
+						queens[row] = col;
+						cols.insert(col);
+						diag1.insert(row - col);
+						diag2.insert(row + col);
+						// 探索下一行
+						backtrack(queens, n, row + 1, cols, diag1, diag2);
+						queens[row] = -1;
+						cols.erase(col);
+						diag1.erase(row - col);
+						diag2.erase(row + col);
+
+					}
+				};
+			std::vector<int> queues(n, -1);
+			std::set<int> cols;
+			std::set<int> diag1;
+			std::set<int> diag2;
+			backtrack(queues, n, 0, cols, diag1, diag2);
+
+
+
+			std::vector<std::vector<std::string>> chesses;
+			for (int i = 0; i < allqueens.size(); i++)
+			{
+				std::vector<std::string> temp(n, std::string(n, '.'));
+				std::vector<int>& queen = allqueens[i];
+				for (int j = 0; j < n; j++)
+				{
+					temp[j][queen[j]] = 'Q';
+				}
+				chesses.push_back(temp);
+
+			}
+
+			return chesses;
+
+		}
+
+	}
+
+	/*
+	 * 52. https://leetcode.cn/problems/n-queens-ii/description/
+	 */
+	int totalNQueens(int n) {
+		std::vector<std::vector<int>> allqueens;
+		std::function<void(std::vector<int>&, int, int, std::set<int>&, std::set<int>&, std::set<int>&)> backtrack =
+			[&](std::vector<int>& queens, int n, int row, std::set<int>& cols, std::set<int>& diag1, std::set<int>& diag2)
+			{
+				if (row == n)
+				{
+					allqueens.push_back(queens);
+
+					return;
+				}
+
+				for (int col = 0; col < n; col++)
+				{
+					// 当前(row, col) 已经和其他Q的列/对角线上
+					if (cols.count(col) || diag1.count(row - col) || diag2.count(row + col))
+					{
+						continue;
+					}
+
+					queens[row] = col;
+					cols.insert(col);
+					diag1.insert(row - col);
+					diag2.insert(row + col);
+					// 探索下一行
+					backtrack(queens, n, row + 1, cols, diag1, diag2);
+					queens[row] = -1;
+					cols.erase(col);
+					diag1.erase(row - col);
+					diag2.erase(row + col);
+
+				}
+			};
+		std::vector<int> queues(n, -1);
+		std::set<int> cols;
+		std::set<int> diag1;
+		std::set<int> diag2;
+		backtrack(queues, n, 0, cols, diag1, diag2);
+
+		return allqueens.size();
+	}
+
+	/*
+	 * 53. https://leetcode.cn/problems/maximum-subarray/
+	 * 对每个位置，判断"接上前面的子数组"还是"从自己重新开始"哪个更划算：
+		- 如果前面累积的和是负数，拖累了当前值，不如舍弃，从当前元素重新开始
+		- 如果前面累积的和是正数，加上继续更优
+		注意：正常来讲这么做的话，需要枚举每个值，但是curSum 在每一步做的决策就是——"以当前位置结尾，最优的起点应该是哪"：
+		dp[i] = max(nums[i], dp[i-1] + nums[i])
+		dp[i] 表示以 nums[i] 结尾的最大子数组和。最终答案是所有 dp[i] 中的最大值。
+	 */
+
+	int maxSubArray(std::vector<int>& nums)
+	{
+		int curSum = nums[0];
+		int maxSum = nums[0];
+		for (int i = 1; i < nums.size(); i++)
+		{
+			// 关键在于这里cursum：考虑的不是当前值对于sum是正贡献还是负的贡献，而是反过来考虑的是前面累积的值对于当前值是正贡献还是负的贡献，以此来决定是否刷新起点
+			curSum = std::max(nums[i], curSum + nums[i]);
+			maxSum = std::max(curSum, maxSum);
+		}
+		return maxSum;
+
+	}
+
+
+	/*
+	 * 54. https://leetcode.cn/problems/spiral-matrix/description/
+	 *
+	 * 感觉就是一个状态机罢了
+	 */
+	std::vector<int> spiralOrder(std::vector<std::vector<int>>& matrix)
+	{
+		int m = matrix.size();
+		int n = matrix[0].size();
+
+		std::vector<int> results;
+
+		int upRow = 0;
+		int downRow = m - 1;
+		int leftCol = 0;
+		int rightCol = n - 1;
+		size_t totalsize = m * n;
+
+		int state = 0; //0:从左到右遍历行，1 从上到下遍历列，2从右到左遍历行，3 从下到上遍历列
+		while (true)
+		{
+			if (state == 0)
+			{
+				std::vector<int>& currow = matrix[upRow];
+				for (int i = leftCol; i <= rightCol; i++)
+				{
+					results.push_back(currow[i]);
+				}
+				upRow++;
+				state = 1;
+			}
+			else if (state == 1)
+			{
+				for (int i = upRow; i <= downRow; i++)
+				{
+					results.push_back(matrix[i][rightCol]);
+				}
+				rightCol--;
+				state = 2;
+			}
+			else if (state == 2)
+			{
+				std::vector<int>& currow = matrix[downRow];
+				for (int i = rightCol; i >= leftCol; i--)
+				{
+					results.push_back(currow[i]);
+				}
+				downRow--;
+				state = 3;
+			}
+			else if (state == 3)
+			{
+				for (int i = downRow; i >= upRow; i--)
+				{
+					results.push_back(matrix[i][leftCol]);
+				}
+				leftCol++;
+				state = 0;
+			}
+
+			if (results.size() == totalsize)
+			{
+				break;
+			}
+
+		}
+
+		return results;
+
+	}
+
+	/*
+	 * 55. https://leetcode.cn/problems/jump-game/
+	 * dp[i] 为真的前提是 dp[i - 1] 为真 nums[i - 1] > i
+	 */
+	bool canJump(std::vector<int>& nums)
+	{
+		/*
+		 * 依次遍历, 当前i能到过的最远位置（这个情况隐含考虑了比较i-1能到达的最远位置的情况）
+		 */
+
+		{
+			int max = nums[0] + 0;
+			int targetIndex = nums.size() - 1;
+			for (int i = 1; i < nums.size(); i++)
+			{
+				if (i > max)
+				{
+					// 连当前位置都到不了，可以直接宣布放弃
+					return false;
+				}
+
+				int temp = nums[i] + i;
+
+				if (max < temp)
+				{
+					max = temp;
+				}
+			}
+
+			return max >= targetIndex;
+
+
+		}
+		{
+
+
+
+			// 回溯法有时间限制
+			std::vector<std::vector<int>> paths;
+			std::function<void(int, std::vector<int>&)> backtrack = [&](int targetIndex, std::vector<int>& path)
+				{
+					if (targetIndex == 0)
+					{
+						paths.push_back(path);
+						return;
+					}
+
+					for (int i = targetIndex - 1; i >= 0; i--)
+					{
+						bool temp = (nums[i] + i >= targetIndex);
+						if (temp)
+						{
+							path.push_back(i);
+							backtrack(i, path);
+							if (paths.size() > 0)
+							{
+								return;
+							}
+							path.pop_back();
+						}
+					}
+				};
+			std::vector<int> path;
+			backtrack(nums.size() - 1, path);
+			return paths.size() > 0;
+		}
+	}
+
+	/*
+	 * 56. https://leetcode.cn/problems/merge-intervals/
+	 */
+	std::vector<std::vector<int>> merge(std::vector<std::vector<int>>& intervals) 
+	{
+		/*
+		 *如果，直接遍历， 第三个元素才扩张第一个元素，导致第二个元素才能被包进来，那就搞笑了。
+		 *所以我们先排序
+		 */
+
+		std::sort(intervals.begin(), intervals.end(),[&](const std::vector<int>& lhs, const std::vector<int>& rhs)->bool
+		{
+				return lhs[0] < rhs[0];
+		});
+
+		std::vector<std::vector<int>> results;
+		for (int i = 0;i < intervals.size(); i++)
+		{
+			std::vector<int>& tempInterval = intervals[i];
+			if (results.size() == 0)
+			{
+				results.push_back(tempInterval);
+				continue;
+			}
+			else
+			{
+				std::vector<int>& temp = results[results.size() - 1];
+
+				// temp[0] 一定小于 tempinterval[0], 但是 temp[1] 有可能比tempinterval[0]大的
+				if (tempInterval[0]<=temp[1])
+				{
+					temp[1] = std::max(tempInterval[1], temp[1]);
+				}
+				else
+				{
+					results.push_back(tempInterval);
+				}
+
+			}
+		}
+
+		return results;
+
+
+	}
+
+	/*
+	 * 57. https://leetcode.cn/problems/insert-interval/
+	 */
+	std::vector<std::vector<int>> insert(std::vector<std::vector<int>>& intervals, std::vector<int>& newInterval) {
+		
+		int leftIndex = -1;
+		int rightIndex = intervals.size() - 1;
+		for (int i = 0; i < intervals.size(); i++)
+		{
+			std::vector<int>& curInterval = intervals[i];
+			if (curInterval[0]<= newInterval[0])
+			{
+				leftIndex = i;
+			}
+			else
+			{
+				break;
+			}
+		}
+		intervals.insert(intervals.begin() + (leftIndex + 1), newInterval);
+		std::vector<std::vector<int>> results;
+		// 合并
+		for (int i =0; i < intervals.size(); i++)
+		{
+			std::vector<int>& tempInterval = intervals[i];
+			if (results.size() == 0)
+			{
+				results.push_back(tempInterval);
+				continue;
+			}
+			else
+			{
+				std::vector<int>& temp = results[results.size() - 1];
+
+				// temp[0] 一定小于 tempinterval[0], 但是 temp[1] 有可能比tempinterval[0]大的
+				if (tempInterval[0] <= temp[1])
+				{
+					temp[1] = std::max(tempInterval[1], temp[1]);
+				}
+				else
+				{
+					results.push_back(tempInterval);
+				}
+
+			}
+		}
+		return results;
+
+	}
+
+	/*
+	 * 58. https://leetcode.cn/problems/length-of-last-word/description/
+	 */
+
+	int lengthOfLastWord(std::string s) {
+		int result = 0;
+		for (int i = s.size() - 1; i >=0;i--)
+		{
+			if (s[i] == ' ')
+			{
+				if (result == 0)
+				{
+					continue;
+				}
+
+				return result;
+			}
+			else
+			{
+				result++;
+			}
+		}
+		return result;
+	}
+
+
+	/*
+	 * 59. https://leetcode.cn/problems/spiral-matrix-ii/description/
+	 */
+	std::vector<std::vector<int>> generateMatrix(int n) 
+	{
+
+		std::vector<std::vector<int>> results(n, std::vector<int>(n, 0));
+
+		/*
+		 * state 0: 从左到右，1 从上到下，2从右到左 3 从下到上
+		 */
+
+		int value = 1;
+		int total = n * n;
+		int upRow = 0;
+		int downRow = n - 1;
+		int leftCol = 0;
+		int rightCol = n - 1;
+
+		int state = 0;
+		while (value <= total)
+		{
+
+			if (state == 0)
+			{
+				for (int i = leftCol; i <= rightCol; i++)
+				{
+					results[upRow][i] = value;
+					value++;
+				}
+				state = 1;
+				upRow++;
+			}
+			else if (state == 1)
+			{
+				for (int i = upRow; i <= downRow; i++)
+				{
+					results[i][rightCol] = value;
+					value++;
+				}
+				state = 2;
+				rightCol--;
+			}
+			else if (state == 2)
+			{
+				for (int i = rightCol; i >= leftCol; i--)
+				{
+					results[downRow][i] = value;
+					value++;
+				}
+				state = 3;
+				downRow--;
+			}
+			else
+			{
+				for (int i = downRow; i >= upRow; i--)
+				{
+					results[i][leftCol] = value;
+					value++;
+				}
+				state = 0;
+				leftCol++;
+			}
+
+		}
+
+
+		return results;
+
+	}
+
+
+	/*
+	 *60.  https://leetcode.cn/problems/permutation-sequence/
+	 *n!的总数其实是n个(n-1)!， 剥洋葱式的确定前面的数字
+	 *关键还得构造一个allnums出来，有数字用过之后i可就不是自然数排列了
+	 *
+	 */
+	std::string getPermutation(int n, int k) 
+	{
+		/*
+		 * 
+		 */
+		int sum = 1;
+		std::vector<int> allnums(n + 1, 0);
+		std::vector<int> factorial(n + 1, 1);
+		for (int i = 1; i <= n;i++)
+		{
+			sum *= i;
+			factorial[i] = sum;
+			allnums[i] = i;
+		}
+	
+
+		std::vector<int> results;
+		//第n层由 n - 1项构成
+		while (true)
+		{
+			if (allnums.size() == 1)
+			{
+				break;
+			}
+			int frontNums = factorial[n - 1];
+			int a = k / frontNums + 1;
+			int b = k % frontNums;
+			if (b == 0)
+			{
+				// 刚好是某一轮最后一个数, 那么实际上 就是前一轮往后数frontNums个数
+				a = a - 1;
+				b = frontNums;
+			}
+			results.push_back(allnums[a]);
+			allnums.erase(allnums.begin() + a);
+			// 我们找到了一个数，去剩下的里面继续找第一个数
+			n = n - 1;
+			k = b;
+		}
+		std::string s;
+		for (int i = 0; i < results.size(); i++)
+		{
+			s.push_back('0' + results[i]);
+		}
+		return s;
+	}
+
+
+	/*
+	 * 61. https://leetcode.cn/problems/rotate-list/description/
+	 */
+
+	ListNode* rotateRight(ListNode* head, int k) {
+		/*
+		 * n - k 位置作为新的头
+		 */
+		if (!head) return head;
+
+		ListNode* first = head;
+		ListNode* last = nullptr;
+		int i = 0;
+		while (head)
+		{
+			i++;
+			last = head;
+			head = head->next;
+		}
+		int n = i;
+		k = k % n;
+		if (k == 0) return first; // 没变化
+		i = 0;
+		head = first;
+		ListNode* pre = nullptr;
+		while (head)
+		{
+
+			if (i == n - k)
+			{
+				break;
+			}
+			i++;
+			pre = head;
+			head = head->next;
+		}
+
+		/*
+		 * first: 原来的第一个节点
+		 * head n - k 号节点
+		 * last: 原来的最后一个节点
+		 * pre n- k -1 号节点
+		 */
+
+		pre->next = nullptr;
+		last->next = first;
+		return head;
+
 
 
 
 	}
+
+	/*
+	 * 62. https://leetcode.cn/problems/unique-paths/description/
+	 * 只能向下m步，向右走n步 map(0,0) 到 map(m-1, n-1)
+	 * 核心观察： 无论怎么走，机器人总共要走 (m-1) 步"向下" + (n-1) 步"向右"，一共 (m+n-2) 步。
+	 * 问题转化为：在这 (m+n-2) 步里，选出哪几步是"向下"（剩下的自然都是"向右"），这就是标准的组合数问题：
+	 * C_{m+n-2}^{m-1} = \frac{(m+n-2)!}{(m-1)!,(n-1)!}
+	 */
+	int uniquePaths(int m, int n) 
+	{
+		std::vector<std::vector<int>> map(m, std::vector<int>());
+		long long result = 1;
+		int total = m + n - 2;
+		int k = std::min(m-1, n-1);
+		for (int i = 1; i <= k; i++) {
+			// 这里优化了一下计算顺序，其实是一样的
+			result = result * (total - k + i) / i;
+		}
+		return (int)result;
+
+	}
+
+
+	/*
+	 * 63. https://leetcode.cn/problems/unique-paths-ii/description/
+	 * 这个像就不能直接计算了
+	 * 直接回溯 会超时
+	 * dp[i, j] = dp[i - 1][j] && map[i][j]  || dp[i][j - 1] && map[i][j] 
+	 * 所以用dp，那dp什么呢？
+	 * dp[i][j] = 0;//如果（i，j）是障碍物，
+	 * dp[i][j] = dp[i-1][j] + dp[i][j-1];//（i，j）路径数量 = （i-1，j）路径数量 +（i，j-1）路径数量
+	 */
+	int uniquePathsWithObstacles(std::vector<std::vector<int>>& obstacleGrid) 
+	{
+		int m = obstacleGrid.size();
+		int n = obstacleGrid[0].size();
+
+		{
+			// 当然存在优化技巧，实际上arr[i],足够记录二维信息
+			std::vector<std::vector<int>> paths(m, std::vector<int>(n, 0));
+			for (int i = 0; i < m; i++)
+			{
+				for (int j = 0; j < n;j++)
+				{
+					if (obstacleGrid[i][j])
+					{
+						paths[i][j] = 0;
+					}
+					else
+					{
+						if (i == 0 && j == 0)
+						{
+							paths[i][j] = 1;
+						}
+						else
+						{
+							if (i == 0)
+							{
+								// i == 0 j >0
+								paths[i][j] = paths[i][j - 1];
+								
+							}
+							else if (j == 0)
+							{
+								// j==0 i > 0
+								paths[i][j] = paths[i - 1][j];
+							}
+							else
+							{
+								// j > 0 ;i > 0
+								paths[i][j] = paths[i - 1][j] + paths[i][j - 1];
+							}
+						}
+					}
+		
+				}
+			}
+			return paths[m - 1][n - 1];
+
+		}
+
+
+
+		int totalnum = 0;
+		std::function<void(int, int)> backfunc = [&](int row, int col)
+		{
+			if (obstacleGrid[row][col])
+			{
+				// 当前这条路线行不通了
+				return;
+			}
+			else
+			{
+				if (row == m - 1 && col == n - 1)
+				{
+					// 到达最后了
+					totalnum++;
+					return;
+				}
+				if (row < m - 1)
+				{
+					// 向下走
+					backfunc(row + 1, col);
+				}
+				if (col < n - 1)
+				{
+					// 向右走
+					backfunc(row, col + 1);
+				}
+
+			}
+		};
+
+		backfunc(0, 0);
+		return totalnum;
+	}
+
+
+	/*
+	 * 64. https://leetcode.cn/problems/minimum-path-sum/
+	 * 所有路径里面和最小
+	 * 
+	 */
+	int minPathSum(std::vector<std::vector<int>>& grid) {
+
+		int m = grid.size();
+		int n = grid[0].size();
+
+		{
+			// 回溯容易超时，换个思路
+			/*因为必须连续走，那么到达（i,j）的最小值，就是 min((i,j-1), (i - 1, j)) + (i -1, j -1) + grid[i][j] 了
+			 * dp[i][j] = grid[i][j] + min(dp[i - 1][j], dp[i][j - 1])
+			 */
+			std::vector<std::vector<int>> dp(m, std::vector<int>(n, 0));
+			dp[0][0] = grid[0][0];
+
+			for (int i = 0; i < m; i++)
+			{
+				for (int j = 0; j < n; j++)
+				{
+					if (i == 0 && j == 0)
+					{
+						dp[i][j] = grid[i][j];
+					}
+					else
+					{
+						if (i == 0)
+						{
+							dp[i][j] = dp[i][j - 1] + grid[i][j];
+						}
+						else if (j == 0)
+						{
+							dp[i][j] = dp[i - 1][j] + grid[i][j];
+						}
+						else
+						{
+							dp[i][j] = std::min(dp[i - 1][j], dp[i][j - 1]) + grid[i][j];
+						}
+					}
+
+				}
+			}
+			return dp[m - 1][n - 1];
+
+		}
+
+		int totalsum = 0xffffffff>>1;
+		int tempsum = 0;
+		std::function<void(int, int)> forwardfunc = [&](int row, int col)
+			{
+				tempsum += grid[row][col];
+				if (row == m - 1 && col == n - 1)
+				{
+					// 到头了
+					if (totalsum > tempsum)
+					{
+						totalsum = tempsum;
+					}
+					// return;// 细节这里不要加return 不然最后一步的	tempsum -= grid[row][col]; 的撤销操作就没了
+				}
+
+				if (row < m - 1)
+				{
+					forwardfunc(row + 1, col);
+				}
+			
+				if (col < n - 1)
+				{
+					forwardfunc(row, col + 1);
+				}
+				tempsum -= grid[row][col];
+			};
+
+		forwardfunc(0, 0);
+		return totalsum;
+	}
+
 };
