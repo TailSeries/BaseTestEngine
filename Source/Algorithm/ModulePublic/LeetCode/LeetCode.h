@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <bit>
 #include <functional>
 #include <set>
 #include <stack>
@@ -9,6 +10,11 @@
 #include <unordered_set>
 #include <map>
 #include <queue>
+#include <sstream>
+/*
+ * std::string std::stringstream之类对于字符串的处理有莫大帮助啊
+ */
+
 class Solution {
 public:
 
@@ -2825,20 +2831,20 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 	/*
 	 * 56. https://leetcode.cn/problems/merge-intervals/
 	 */
-	std::vector<std::vector<int>> merge(std::vector<std::vector<int>>& intervals) 
+	std::vector<std::vector<int>> merge(std::vector<std::vector<int>>& intervals)
 	{
 		/*
 		 *如果，直接遍历， 第三个元素才扩张第一个元素，导致第二个元素才能被包进来，那就搞笑了。
 		 *所以我们先排序
 		 */
 
-		std::sort(intervals.begin(), intervals.end(),[&](const std::vector<int>& lhs, const std::vector<int>& rhs)->bool
-		{
+		std::sort(intervals.begin(), intervals.end(), [&](const std::vector<int>& lhs, const std::vector<int>& rhs)->bool
+			{
 				return lhs[0] < rhs[0];
-		});
+			});
 
 		std::vector<std::vector<int>> results;
-		for (int i = 0;i < intervals.size(); i++)
+		for (int i = 0; i < intervals.size(); i++)
 		{
 			std::vector<int>& tempInterval = intervals[i];
 			if (results.size() == 0)
@@ -2851,7 +2857,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 				std::vector<int>& temp = results[results.size() - 1];
 
 				// temp[0] 一定小于 tempinterval[0], 但是 temp[1] 有可能比tempinterval[0]大的
-				if (tempInterval[0]<=temp[1])
+				if (tempInterval[0] <= temp[1])
 				{
 					temp[1] = std::max(tempInterval[1], temp[1]);
 				}
@@ -2872,13 +2878,13 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 	 * 57. https://leetcode.cn/problems/insert-interval/
 	 */
 	std::vector<std::vector<int>> insert(std::vector<std::vector<int>>& intervals, std::vector<int>& newInterval) {
-		
+
 		int leftIndex = -1;
 		int rightIndex = intervals.size() - 1;
 		for (int i = 0; i < intervals.size(); i++)
 		{
 			std::vector<int>& curInterval = intervals[i];
-			if (curInterval[0]<= newInterval[0])
+			if (curInterval[0] <= newInterval[0])
 			{
 				leftIndex = i;
 			}
@@ -2890,7 +2896,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 		intervals.insert(intervals.begin() + (leftIndex + 1), newInterval);
 		std::vector<std::vector<int>> results;
 		// 合并
-		for (int i =0; i < intervals.size(); i++)
+		for (int i = 0; i < intervals.size(); i++)
 		{
 			std::vector<int>& tempInterval = intervals[i];
 			if (results.size() == 0)
@@ -2924,7 +2930,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 
 	int lengthOfLastWord(std::string s) {
 		int result = 0;
-		for (int i = s.size() - 1; i >=0;i--)
+		for (int i = s.size() - 1; i >= 0; i--)
 		{
 			if (s[i] == ' ')
 			{
@@ -2947,7 +2953,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 	/*
 	 * 59. https://leetcode.cn/problems/spiral-matrix-ii/description/
 	 */
-	std::vector<std::vector<int>> generateMatrix(int n) 
+	std::vector<std::vector<int>> generateMatrix(int n)
 	{
 
 		std::vector<std::vector<int>> results(n, std::vector<int>(n, 0));
@@ -3022,21 +3028,21 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 	 *关键还得构造一个allnums出来，有数字用过之后i可就不是自然数排列了
 	 *
 	 */
-	std::string getPermutation(int n, int k) 
+	std::string getPermutation(int n, int k)
 	{
 		/*
-		 * 
+		 *
 		 */
 		int sum = 1;
 		std::vector<int> allnums(n + 1, 0);
 		std::vector<int> factorial(n + 1, 1);
-		for (int i = 1; i <= n;i++)
+		for (int i = 1; i <= n; i++)
 		{
 			sum *= i;
 			factorial[i] = sum;
 			allnums[i] = i;
 		}
-	
+
 
 		std::vector<int> results;
 		//第n层由 n - 1项构成
@@ -3130,12 +3136,12 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 	 * 问题转化为：在这 (m+n-2) 步里，选出哪几步是"向下"（剩下的自然都是"向右"），这就是标准的组合数问题：
 	 * C_{m+n-2}^{m-1} = \frac{(m+n-2)!}{(m-1)!,(n-1)!}
 	 */
-	int uniquePaths(int m, int n) 
+	int uniquePaths(int m, int n)
 	{
 		std::vector<std::vector<int>> map(m, std::vector<int>());
 		long long result = 1;
 		int total = m + n - 2;
-		int k = std::min(m-1, n-1);
+		int k = std::min(m - 1, n - 1);
 		for (int i = 1; i <= k; i++) {
 			// 这里优化了一下计算顺序，其实是一样的
 			result = result * (total - k + i) / i;
@@ -3149,12 +3155,12 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 	 * 63. https://leetcode.cn/problems/unique-paths-ii/description/
 	 * 这个像就不能直接计算了
 	 * 直接回溯 会超时
-	 * dp[i, j] = dp[i - 1][j] && map[i][j]  || dp[i][j - 1] && map[i][j] 
+	 * dp[i, j] = dp[i - 1][j] && map[i][j]  || dp[i][j - 1] && map[i][j]
 	 * 所以用dp，那dp什么呢？
 	 * dp[i][j] = 0;//如果（i，j）是障碍物，
 	 * dp[i][j] = dp[i-1][j] + dp[i][j-1];//（i，j）路径数量 = （i-1，j）路径数量 +（i，j-1）路径数量
 	 */
-	int uniquePathsWithObstacles(std::vector<std::vector<int>>& obstacleGrid) 
+	int uniquePathsWithObstacles(std::vector<std::vector<int>>& obstacleGrid)
 	{
 		int m = obstacleGrid.size();
 		int n = obstacleGrid[0].size();
@@ -3164,7 +3170,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 			std::vector<std::vector<int>> paths(m, std::vector<int>(n, 0));
 			for (int i = 0; i < m; i++)
 			{
-				for (int j = 0; j < n;j++)
+				for (int j = 0; j < n; j++)
 				{
 					if (obstacleGrid[i][j])
 					{
@@ -3182,7 +3188,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 							{
 								// i == 0 j >0
 								paths[i][j] = paths[i][j - 1];
-								
+
 							}
 							else if (j == 0)
 							{
@@ -3196,7 +3202,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 							}
 						}
 					}
-		
+
 				}
 			}
 			return paths[m - 1][n - 1];
@@ -3207,33 +3213,33 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 
 		int totalnum = 0;
 		std::function<void(int, int)> backfunc = [&](int row, int col)
-		{
-			if (obstacleGrid[row][col])
 			{
-				// 当前这条路线行不通了
-				return;
-			}
-			else
-			{
-				if (row == m - 1 && col == n - 1)
+				if (obstacleGrid[row][col])
 				{
-					// 到达最后了
-					totalnum++;
+					// 当前这条路线行不通了
 					return;
 				}
-				if (row < m - 1)
+				else
 				{
-					// 向下走
-					backfunc(row + 1, col);
-				}
-				if (col < n - 1)
-				{
-					// 向右走
-					backfunc(row, col + 1);
-				}
+					if (row == m - 1 && col == n - 1)
+					{
+						// 到达最后了
+						totalnum++;
+						return;
+					}
+					if (row < m - 1)
+					{
+						// 向下走
+						backfunc(row + 1, col);
+					}
+					if (col < n - 1)
+					{
+						// 向右走
+						backfunc(row, col + 1);
+					}
 
-			}
-		};
+				}
+			};
 
 		backfunc(0, 0);
 		return totalnum;
@@ -3243,7 +3249,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 	/*
 	 * 64. https://leetcode.cn/problems/minimum-path-sum/
 	 * 所有路径里面和最小
-	 * 
+	 *
 	 */
 	int minPathSum(std::vector<std::vector<int>>& grid) {
 
@@ -3288,7 +3294,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 
 		}
 
-		int totalsum = 0xffffffff>>1;
+		int totalsum = 0xffffffff >> 1;
 		int tempsum = 0;
 		std::function<void(int, int)> forwardfunc = [&](int row, int col)
 			{
@@ -3307,7 +3313,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 				{
 					forwardfunc(row + 1, col);
 				}
-			
+
 				if (col < n - 1)
 				{
 					forwardfunc(row, col + 1);
@@ -3318,5 +3324,470 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 		forwardfunc(0, 0);
 		return totalsum;
 	}
+
+	/*
+	 * 66. https://leetcode.cn/problems/plus-one/
+	 */
+	std::vector<int> plusOne(std::vector<int>& digits)
+	{
+		int fronttemp = 1;
+		for (int i = digits.size() - 1; i >= 0; i--)
+		{
+			digits[i] = digits[i] + fronttemp;
+			if (digits[i] >= 10)
+			{
+				digits[i] = 0;
+			}
+			else
+			{
+				fronttemp = 0;
+				break;
+			}
+		}
+
+		if (fronttemp == 1)
+		{
+			digits.insert(digits.begin(), 1);
+		}
+		return digits;
+	}
+
+	/*
+	 * 67. https://leetcode.cn/problems/add-binary/description/
+	 */
+	std::string addBinary(std::string a, std::string b)
+	{
+
+		int fronttemp = 0;
+		if (b.size() < a.size())
+		{
+			std::swap(a, b);
+		}
+		int bn = b.size() - 1;
+		int an = a.size() - 1;
+		while (bn >= 0 && an >= 0)
+		{
+			unsigned int  tempvalue = 0;
+			if (b[bn] == '0' && a[an] == '0')
+			{
+				tempvalue = 0;
+			}
+			else if (b[bn] == '0' && a[an] == '1')
+			{
+				tempvalue = 1;
+			}
+			else if (b[bn] == '1' && a[an] == '0')
+			{
+				tempvalue = 1;
+			}
+			else if (b[bn] == '1' && a[an] == '1')
+			{
+				tempvalue = 2;
+			}
+			tempvalue = tempvalue + fronttemp;
+			fronttemp = (int)tempvalue / 2;
+			tempvalue = tempvalue % 2;
+			b[bn] = '0' + tempvalue;
+			bn--;
+			an--;
+		}
+
+		while (fronttemp > 0)
+		{
+			if (bn < 0 && fronttemp > 0)
+			{
+				b.insert(b.begin(), '1');
+				fronttemp = 0;
+				break;
+			}
+			if (b[bn] == '1')
+			{
+				b[bn] = '0'; // 细节千万别上头知己诶写了个 b[bn] = 0；
+				fronttemp = 1;
+			}
+			else if (b[bn] == '0')
+			{
+				b[bn] = '1';// 细节千万别上头知己诶写了个 b[bn] = 1；
+				fronttemp = 0;
+			}
+			bn--;
+
+		}
+
+		return b;
+
+
+	}
+
+	/*
+	 * 68. https://leetcode.cn/problems/text-justification/
+	 */
+	std::vector<std::string> fullJustify(std::vector<std::string>& words, int maxWidth)
+	{
+
+		// 获取,当前遍历到那个单词，最终放置多少个单词，以及最终剩余的空白字符数量
+		auto tempfunc = [&](int& startIdx, int& wordnums, int& banknums, int& lineWidth)
+			{
+				std::vector<std::string> tempresults;
+				while (startIdx < words.size())
+				{
+					std::string& tempstr = words[startIdx];
+
+					if (wordnums > 0)
+					{
+						// 前面已经有单词了
+						int temp = lineWidth - tempstr.size() - 1; // 需要至少额外减去一个空格
+						if (temp >= 0)
+						{
+							lineWidth = temp;
+							tempresults.push_back(" ");
+							tempresults.push_back(tempstr);
+							wordnums++;
+							startIdx++;
+							banknums++;
+						}
+						else
+						{
+							// 位置不够
+							break;
+						}
+					}
+					else
+					{
+						int temp = lineWidth - tempstr.size();
+						// 前面还没有单词
+						if (temp >= 0)
+						{
+							lineWidth = temp;
+							tempresults.push_back(tempstr);
+							wordnums++;
+							startIdx++;
+						}
+						else
+						{
+							// 位置不够
+							break;
+						}
+
+					}
+
+
+
+				}
+
+				int lastblanks = maxWidth - lineWidth; // 最后一个单词到末尾剩余量
+				if (banknums > 0)
+				{
+					int extrabanknums = lastblanks / banknums;// 每个空格应该增加的
+					int modbanknums = lastblanks % banknums;// 尾巴应该遗留多少空格
+				}
+
+
+			};
+
+	}
+
+
+	/*
+	 * 69. https://leetcode.cn/problems/sqrtx/
+	 */
+	int mySqrt(int x)
+	{
+		float x2 = x * 0.5f;
+		float y = x;
+		float y1 = x;
+
+		// 类型双关：float 位模式当作 int 操作
+		int i = std::bit_cast<int>(y);
+		i = 0x5F3759DF - (i >> 1);       // 魔法在这里
+		y = std::bit_cast<float>(i);
+
+		// 牛顿迭代修正精度（可迭代多次）
+		y = y * (1.5f - (x2 * y * y));   // 第1次
+		// y = y * (1.5f - (x2 * y * y)); // 第2次，更精确
+		float result = y1 * y;
+		return result;
+	}
+
+	/*
+	 * 70. https://leetcode.cn/problems/climbing-stairs/description/
+	 *
+	 * f(n) = f(n - 1) + 1;
+	 * f(n) = f(n - 2) + 2;
+	 * 回溯法会说超时
+	 * dp[i] 一共有dp[i]中方法跳到, dp[i]相当于 dp[i - 1] 跳1步，或者 dp[i - 2]跳两步，那么总的路径数量
+	 * dp[i] = dp[i - 2] + dp[i - 1];
+	 */
+
+	int climbStairs(int n)
+	{
+		{
+			std::vector<int> totals(n + 1, 0);
+			totals[0] = 1;
+			totals[1] = 1;
+			for (int i = 2; i <= n; i++)
+			{
+				totals[i] = totals[i - 1] + totals[i - 2];
+			}
+			return totals[n];
+		}
+
+
+		int total = 0;
+		std::function<void(int)> tempfunc = [&](int i)
+			{
+				if (i == 0)
+				{
+					total++;
+					return;
+				}
+				else if (i < 0)
+				{
+					return;
+				}
+				tempfunc(i - 1);
+				tempfunc(i - 2);
+
+			};
+		tempfunc(n);
+		return total;
+	}
+
+	/*
+	 * 71. https://leetcode.cn/problems/simplify-path/
+	 */
+	std::string simplifyPath(std::string path) {
+		/*
+		 *
+		 */
+		std::vector<std::string> stk;
+		std::stringstream ss(path); // 流
+		std::string token;
+		while (std::getline(ss, token, '/')) //  // 每次读取到下一个 '/' 之前的内容，存入 token
+		{
+			if (token == "..")
+			{
+				if (!stk.empty())
+				{
+					stk.pop_back();
+				}
+			}
+			else if (!token.empty() && token != ".")
+			{
+				stk.push_back(token);
+			}
+		}
+
+		std::string result;
+		for (const std::string& dir : stk)
+		{
+			result += "/" + dir;
+		}
+
+		return result.empty() ? "/" : result;
+	}
+
+	/*
+	 * 72. https://leetcode.cn/problems/edit-distance/description/
+	 * 问题直接转化：word1 前 i 个字符转换为 word2 前 j 个字符所需的最少操作数。
+	 *  dp[i][j] = word1 前 i 个字符转换为 word2 前 j 个字符所需的最少操作数。
+	 *  二维的dp问题，两个字符串各有独立的处理进度
+	 *  - 字符相同：dp[i][j] = dp[i-1][j-1]
+	 *  - 字符不同：dp[i][j] = 1 + min(替换, 删除, 插入)
+	 *  关键：如何求min(替换, 删除, 插入)，实际上反过来想更清楚——做完这个操作之后，问题变成了什么？
+	 *	---
+	 *
+	 *	替换 → dp[i-1][j-1]
+	 *
+	 *	把 word1[i] 替换成 word2[j]，这两个字符就匹配上了，都消耗掉：
+	 *	 word1 还剩前 i-1 个，word2 还剩前 j-1 个
+	 *	 → 子问题是 dp[i-1][j-1]
+	 *
+	 *	---
+	 *
+	 *	删除 → dp[i-1][j]
+	 *
+	 *	把 word1[i] 删掉，word2 没动：
+	 *
+	 *	word1 还剩前 i-1 个，word2 还剩前 j 个
+	 *	→ 子问题是 dp[i-1][j]
+	 *
+	 *	---
+	 *
+	 *	插入 → dp[i][j-1]
+	 *
+	 *	往 word1 末尾插入 word2[j]，插入的字符和 word2[j] 匹配消耗掉，word1 没动：
+	 *
+	 *	word1 还剩前 i 个，word2 还剩前 j-1 个
+	 *	→ 子问题是 dp[i][j-1]
+
+	 */
+	int minDistance(std::string word1, std::string word2)
+	{
+		int m = word1.size();
+		int n = word2.size();
+
+		std::vector<std::vector<int>> dp(m + 1, std::vector<int>(n + 1, 0));
+
+		for (int i = 0; i <= m; i++)
+		{
+			// world1前0个字符转换为word2的前0个需要0步，前1个需要1步，前2个需要2步（删2）
+			dp[i][0] = i;
+		}
+		for (int j = 0; j <= n; j++)
+		{
+			// world1前0个字符转换为word2的前0个需要0步 ，换前1个需要1步（增1），换前2个需要2步（增2）
+			dp[0][j] = j;
+		}
+
+		for (int i = 1; i <= m; i++)
+		{
+			for (int j = 1; j <= n; j++)
+			{
+				if (word1[i - 1] == word2[j - 1])
+				{
+					dp[i][j] = dp[i - 1][j - 1];
+				}
+				else
+				{
+					// 如果不一样的话，那就必然是增删改中的一种。那就是1 + min(改，删，增)
+					/*
+					 * 改，这一轮步骤相比上一轮 + 1
+					 * 删，那就相当于 前word1的前i-1个字符已经足够拿过word2的j个字符、
+					 * 增，word1的前i个字符，只能拿过wold2的前j个字符。
+					 */
+					dp[i][j] = 1 + std::min({ dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1] });
+				}
+			}
+		}
+
+
+		return dp[m][n];
+
+	}
+	/*
+	 * 73. https://leetcode.cn/problems/set-matrix-zeroes/
+	 * 递归思路本身是错误的
+	 * 关键技巧：用第 0 行和第 0 列当"标记位"，省掉额外的标记数组。
+	 */
+	void setZeroes(std::vector<std::vector<int>>& matrix) {
+		int m = matrix.size();
+		int n = matrix[0].size();
+		{
+			bool firstRow = false;
+			bool firstCol = false;
+			for (int i = 0; i < m;i++)
+			{
+				if (matrix[i][0]==0)
+				{
+					firstCol = true;
+					break;
+				}
+			}
+
+			for (int j = 0; j < n;j++)
+			{
+				if (matrix[0][j] == 0)
+				{
+					firstRow = true;
+					break;
+				}
+			}
+
+			//用0行 0 列标记其余格子的清零标记
+			for (int i = 0; i < m;i++)
+			{
+				for (int j = 0; j < n;j++)
+				{
+					if (matrix[i][j] == 0)
+					{
+						matrix[0][j] = 0;
+						matrix[i][0] = 0;
+		
+					}
+				}
+			}
+
+			//除了0行0列剩下的 根据标记做清除
+			for (int i = 1; i < m; i++)
+			{
+				for (int j = 1; j < n; j++)
+				{
+					if (matrix[0][j] == 0)
+					{
+						// 当前这一列应该全部是0
+						matrix[i][j] = 0;
+					}
+
+					if (matrix[i][0] == 0)
+					{
+						// 当前这一行应该全部是0
+						matrix[i][j] = 0;
+					}
+				}
+			}
+
+			// 再来处理 第0行第0列
+			if (firstRow)
+			{
+				for (int j = 0; j < n;j++)
+				{
+					matrix[0][j] = 0;
+				}
+			}
+
+			if (firstCol)
+			{
+				for (int i = 0; i < m; i++)
+				{
+					matrix[i][0] = 0;
+				}
+			}
+
+
+
+		}
+
+
+		{
+			//递归思路本身是错误的，它只能保证退栈的时候不在当前子树的前面，无法保证不在所有分支的前面
+	
+		std::function<void(int, int)> backtrack = [&](int a, int b)
+		{
+				bool bshouldzero = false;
+				if (matrix[a][b] == 0)
+				{
+					bshouldzero = true;
+				}
+
+				if (b < n - 1)
+				{
+					backtrack(a, b + 1);
+				}
+	
+				if (a < m - 1)
+				{
+					backtrack(a + 1, b);
+				}
+
+				if (bshouldzero)
+				{
+					//a 行 b列全部改0
+					for (int i = 0; i < m;i++)
+					{
+						matrix[i][b] = 0;
+					}
+					for (int j = 0; j < n;j++)
+					{
+						matrix[a][j] = 0;
+					}
+				}
+		};
+
+		backtrack(0, 0);
+		}
+
+	}
+
 
 };
