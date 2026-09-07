@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <map>
+#include <numbers>
 #include <queue>
 #include <sstream>
 /*
@@ -3790,4 +3791,179 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 	}
 
 
+	/*
+	 * 74. https://leetcode.cn/problems/search-a-2d-matrix/
+	 * O(log(m * n)) 要求二分吧
+	 * 边界条件要分清，如果lo < hi 而不是lo <=hi的话，mid永远娶不到hi，得做额外判断。如果lo <= hi了，那么注意每次hi = mid -1，lo = mid + 1 这个后面的1就得带上了
+	 */
+
+	bool searchMatrix(std::vector<std::vector<int>>& matrix, int target) 
+	{
+		/*
+		 * 行主序的递增，二分法
+		 * 似乎可以先二分定位行 ，再二分定位列
+		 */
+		int m = matrix.size();
+		int n = matrix[0].size();
+		int lo = 0; int hi = m;
+		int point = -1;
+		while (lo <= hi)
+		{
+			int mid = (lo + hi) / 2;
+			if (target < matrix[mid][0])
+			{
+				hi = mid - 1;
+			}
+			else if (target > matrix[mid][n - 1])
+			{
+				lo = mid + 1;
+			}
+			else
+			{
+				point = mid;
+				break;
+			}
+		}
+		if (point == -1)
+		{
+			return false;
+		}
+
+		std::vector<int>& currow = matrix[point];
+		lo = 0;
+		hi = n - 1;
+		while (lo <= hi)
+		{
+			int mid = (lo + hi) / 2;
+			if (target < currow[mid])
+			{
+				hi = mid - 1;
+			}
+			else if (target > currow[mid])
+			{
+				lo = mid + 1;
+			}
+			else
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/*
+	 * 75. https://leetcode.cn/problems/sort-colors/
+	 * 感觉类似三分快排，pivot = 1 罢了 三路划分能成立的关键不变量是:[low, mid) 区间里全是 1。
+	 * 
+
+	 */
+	void sortColors(std::vector<int>& nums) 
+	{
+		int left = 0;
+		int right = nums.size() - 1;
+		int piovt = 0;
+
+		/*
+		 * 先保证right一定是2，这样的话nums[piovt] 与 nums[left]一定是0 或者 1. 
+		 * 然后遍历nums[pivot] == 0 就和 nums[left]交换
+		 */
+		while (piovt <= right)
+		{
+			if (nums[piovt] == 2)
+			{
+				std::swap(nums[piovt], nums[right]);
+				right--;
+			}
+			else if (nums[piovt] == 1)
+			{
+				piovt++;
+			}
+			else
+			{
+				std::swap(nums[piovt], nums[left]);
+				left++; // 可以保证 0 ~ left - 1一定是0
+				piovt++;// 这个很关键啊，left 要不然 == pivot == 0，要不然nums[left] == 1
+			}
+		}
+
+		
+	}
+
+
+	/*
+	 * 76. https://leetcode.cn/problems/minimum-window-substring/
+	 */
+	std::string minWindow(std::string s, std::string t) 
+	{
+		int m = s.size();
+		int n = t.size();
+		/*
+		 * 注意到，不要求t在s中的字符顺序一致，
+		 */
+		std::map<char, int> records;
+		int minidx = -1;
+		int maxidx = -1;
+		int totalNums = n;
+		for (int i = 0; i < n; i++)
+		{
+			if (records.find(t[i]) != records.end())
+			{
+				records[t[i]]++;
+			}
+			else
+			{
+				records[t[i]] = 1;
+			}
+		}
+
+		for (int i = 0; i < m; i++)
+		{
+			auto it = records.find(s[i]);
+			if (it != records.end() && it->second > 0)
+			{
+				// 搜到了一个字符
+				records[s[i]]--;
+				totalNums--;
+			}
+
+			if (totalNums == 0)
+			{
+				maxidx = i;
+				break;
+			}
+		}
+
+
+		totalNums = t.size();
+		for (int i = 0; i < n; i++)
+		{
+			records[t[i]]++;
+		}
+
+		for (int i = maxidx; i >= 0; i--)
+		{
+			auto it = records.find(s[i]);
+			if (it != records.end() && it->second > 0)
+			{
+				// 搜到了一个字符
+				records[s[i]]--;
+				totalNums--;
+			}
+
+			if (totalNums == 0)
+			{
+				minidx = i;
+				break;
+			}
+		}
+		if (minidx > 0 && minidx < maxidx && maxidx < m)
+		{
+			return s.substr(minidx, maxidx - minidx + 1);
+		}
+		else
+		{
+			return "";
+		}
+	}
 };

@@ -205,7 +205,12 @@ class FD3D12Queue {
 
 ### 进度
 - [x] 第1章 UE 源码讲解完成
-- [ ] 第1章 实现：创建 CMakeLists.txt、D3D12Device.h、D3D12Device.cpp
+- [x] 第1章 实现：`D3D12Queue.h`（ED3D12QueueType / FD3D12Fence / FD3D12Queue 头文件完成）
+- [ ] 第1章 实现（剩余）：
+  - [ ] `D3D12Queue.cpp`：FD3D12Fence::Init/Destroy/Signal/WaitCPU + FD3D12Queue::Init/Flush/析构
+  - [ ] `D3D12Device.h/.cpp`：FD3D12Device（Adapter回指 + GPUIndex + Queues[Count]数组）
+  - [ ] `D3D12Adapter.h/.cpp`：FD3D12AdapterDesc + FD3D12Adapter（枚举GPU / 创建Device / 初始化节点）
+  - [ ] `D3D12Viewport.h/.cpp`：FD3D12Viewport（SwapChain，第1章末尾）
 - [ ] 第2章及后续
 
 ---

@@ -1,6 +1,6 @@
 #pragma once
 #include "D3D12RHIPrivate.h"
-#include "../../Core/Base/GenericPlatform.h"
+#include "Core/Base/GenericPlatform.h"
 
 /*
  * 对齐 UE 的 D3D12Queue.h:枚举 + 命令类型辅助函数 + FD3D12Fence + FD3D12Queue。先讲三个 UE 对照点,再给你敲的内容:
@@ -10,7 +10,7 @@
  * 3. 构造方式偏离:UE 用 FD3D12Queue(Device*, Type, Index) 构造函数。我们改用默认构造 + Init()——因为 Device 里要放 Queues[Count] 值数组,带参构造 + 值数组会牵扯 move 语义,Init() 模式更简单。这是"简化内部细节、不动骨架"的典型。
  */
 
-using namespace Microsoft::WRL;
+using Microsoft::WRL::ComPtr;
 class FD3D12Device;
 class FD3D12Queue;
 
@@ -42,23 +42,29 @@ struct FD3D12Fence
 	ComPtr<ID3D12Fence> D3DFence;
 	uint64 NextCompletionValue = 1; // 下一个要 Signal 的值（UE 命名）
 	HANDLE FenceEvent = nullptr;
-
-	void     Init(ID3D12Device* InDevice);          // 建 fence + event
-	void     Destroy();                             // CloseHandle
-	uint64_t Signal(ID3D12CommandQueue* InQueue);   // 队尾插 Signal，返回本次值
-	void     WaitCPU(uint64_t Value);               // CPU 阻塞到 GPU 完成 Value
 };
 
 // ── FD3D12Queue（UE: class FD3D12Queue final）─────────
 class D3D12RHIMODULE FD3D12Queue
 {
 public:
-	FD3D12Queue() = default;
+	// UE 带参构造(UE 还有第三参 int32 QueueIndex,单队列省略——简化内部细节)
+	FD3D12Queue(FD3D12Device* InDevice, ED3D12QueueType InType);
 	~FD3D12Queue();
 
 	FD3D12Queue(const FD3D12Queue&) = delete;
 	FD3D12Queue& operator=(const FD3D12Queue&) = delete;
 
+
+	// 微小偏离：UE 返回 void，我们返回本次 signal 的值，方便 WaitCPU 直接用
+	uint64 Signal(FD3D12Fence& InFence);
+	// 对应 UE FD3D12Queue::Wait(FD3D12Fence&, uint64) — GPU 端等待（跨队列同步用）
+	void Wait(FD3D12Fence& InFence, uint64 Value);
+
+	// 无 UE 对应，InterruptThread 的单线程替代：CPU 阻塞到 GPU 完成 Value
+	void WaitCPU(uint64 Value);
+
+	ID3D12CommandQueue* GetD3DQueue() const { return D3DCommandQueue.Get(); }
 
 	FD3D12Device* Device = nullptr;//  // 回指父 Device
 	ED3D12QueueType            Type = ED3D12QueueType::Direct;

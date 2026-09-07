@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(target_name D3D12RHI)
-FILE(GLOB_RECURSE source_list
+FILE(GLOB_RECURSE source_list CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/*.c
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h

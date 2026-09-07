@@ -416,6 +416,20 @@ int main()
 
 	}
 
+	{
+		std::vector<std::vector<int>> templist{ {1,3,5,7 }, { 10,11,16,20 }, { 23,30,34,60 }};
+		s.searchMatrix(templist, 13);
+	}
+
+	{
+		std::vector<int> templist = { 2,0,2,1,1,0};
+		s.sortColors(templist);
+	}
+
+	{
+		s.minWindow("ADOBECODEBANC", "ABC");
+	}
+
 
 	return 0;
 }
