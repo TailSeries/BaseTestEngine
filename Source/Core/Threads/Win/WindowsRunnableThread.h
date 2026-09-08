@@ -10,7 +10,7 @@ public:
 
 	HANDLE Thread;
 
-	//windowsÉÌ
+	//windowså•†
 	static ::DWORD STDCALL _ThreadProc(LPVOID pThis)
 	{
 		auto* ThisThread =  static_cast<FRunnableThreadWin*>(pThis);
@@ -18,10 +18,10 @@ public:
 		return ThisThread->GuardedRun();
 	}
 
-	/*Èç¹ûµ÷ÊÔÆ÷ÕıÔÚ¸½¼ÓÔËĞĞ£¨ÀıÈçÄãÔÚ Visual Studio ÖĞµ÷ÊÔ£©£¬ÄÇÃ´²»»á½øÈë±£»¤Ä£Ê½£¨²»´¥·¢Òì³£²¶»ñ£©£¬ÕâÑùÄãÄÜÔÚ±ÀÀ£µãÖ±½Ó¿´µ½ callstack£»*/
+	/*å¦‚æœè°ƒè¯•å™¨æ­£åœ¨é™„åŠ è¿è¡Œï¼ˆä¾‹å¦‚ä½ åœ¨ Visual Studio ä¸­è°ƒè¯•ï¼‰ï¼Œé‚£ä¹ˆä¸ä¼šè¿›å…¥ä¿æŠ¤æ¨¡å¼ï¼ˆä¸è§¦å‘å¼‚å¸¸æ•è·ï¼‰ï¼Œè¿™æ ·ä½ èƒ½åœ¨å´©æºƒç‚¹ç›´æ¥çœ‹åˆ° callstackï¼›*/
 	uint32 GuardedRun();
 
-	/*Ïß³ÌÕæÕıµÄÈë¿Ú*/
+	/*çº¿ç¨‹çœŸæ­£çš„å…¥å£*/
 	uint32 Run();
 
 public:

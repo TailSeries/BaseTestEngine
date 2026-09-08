@@ -57,7 +57,7 @@ void FTaskGraphInterface::BroadcastSlow_OnlyUseForSpecialPurposes(bool bDoTaskTh
 
 
 #pragma region FGraphEvent
-//todo ÎÒÃÇ»¹Ã»ÊµÏÖTLockFreeClassAllocator_TLSCache ÎŞËøÏß³Ì±¾µØ·ÖÅäÆ÷£¬ÎÒÃÇÏÈÖ±½ÓÊ¹ÓÃmake_shared
+//todo æˆ‘ä»¬è¿˜æ²¡å®ç°TLockFreeClassAllocator_TLSCache æ— é”çº¿ç¨‹æœ¬åœ°åˆ†é…å™¨ï¼Œæˆ‘ä»¬å…ˆç›´æ¥ä½¿ç”¨make_shared
 FGraphEventRef FGraphEvent::CreateGraphEvent()
 {
 	return std::make_shared<FGraphEvent>();
@@ -86,7 +86,7 @@ void FGraphEvent::DispatchSubsequents(std::vector<FBaseGraphTask*>& NewTasks, EN
 		if (GTestDontCompleteUntilForAlreadyComplete)
 		{
 			bSpawnGatherTask = false;
-			// ËùÓĞºóĞøÈÎÎñÖĞÖ»ÒªÓĞÒ»¸öÈÎÎñÃ»Íê³É bSpawnGatherTask = true
+			// æ‰€æœ‰åç»­ä»»åŠ¡ä¸­åªè¦æœ‰ä¸€ä¸ªä»»åŠ¡æ²¡å®Œæˆ bSpawnGatherTask = true
 			for (auto& Item: TempEventsToWaitFor)
 			{
 				if (!Item->IsComplete())
@@ -98,9 +98,9 @@ void FGraphEvent::DispatchSubsequents(std::vector<FBaseGraphTask*>& NewTasks, EN
 		}
 		if (bSpawnGatherTask)
 		{
-			/* ÕâÀïÓÃÒ»¸ö¿ÕÈÎÎñ FNullGraphTask À´µÈ´ı TempEventsToWaitFor ÖĞËùÓĞÊÂ¼şÍê³É
-			 * Õâ¸ö¡°¾ÛºÏÈÎÎñ¡±±¾ÖÊÊÇ¸ö barrier£¬µ±ËüÍê³ÉÊ±£¬µ±Ç°ÈÎÎñ²ÅÄÜÕæÕıÍê³É¡£
-			 * ÕâÑù±£Ö¤ÁËµ±Ç°ÈÎÎñÑÓ³ÙÍê³ÉµÄÓïÒå¡£
+			/* è¿™é‡Œç”¨ä¸€ä¸ªç©ºä»»åŠ¡ FNullGraphTask æ¥ç­‰å¾… TempEventsToWaitFor ä¸­æ‰€æœ‰äº‹ä»¶å®Œæˆ
+			 * è¿™ä¸ªâ€œèšåˆä»»åŠ¡â€æœ¬è´¨æ˜¯ä¸ª barrierï¼Œå½“å®ƒå®Œæˆæ—¶ï¼Œå½“å‰ä»»åŠ¡æ‰èƒ½çœŸæ­£å®Œæˆã€‚
+			 * è¿™æ ·ä¿è¯äº†å½“å‰ä»»åŠ¡å»¶è¿Ÿå®Œæˆçš„è¯­ä¹‰ã€‚
 			 */
 			ENamedThreads::Type LocalThreadToDoGatherOn = ENamedThreads::AnyHiPriThreadHiPriTask;
 
@@ -114,7 +114,7 @@ void FGraphEvent::DispatchSubsequents(std::vector<FBaseGraphTask*>& NewTasks, EN
 		}
 	}
 
-	// Ã»ÓĞÇ°ÖÃÊÂ¼şÁË
+	// æ²¡æœ‰å‰ç½®äº‹ä»¶äº†
 	{
 		FRWScopeLock<SLT_Write> ScopeLock(SubsequentListLock);
 		NewTasks.insert(NewTasks.end(), SubsequentList.begin(), SubsequentList.end());
@@ -131,7 +131,7 @@ void FGraphEvent::DispatchSubsequents(std::vector<FBaseGraphTask*>& NewTasks, EN
 
 void FGraphEvent::Recycle(FGraphEvent* ToRecycle)
 {
-	//todo ÎÒÃÇÃ»ÓĞ·ÖÅäÆ÷£¬ÏÈÖ±½Ódelete
+	//todo æˆ‘ä»¬æ²¡æœ‰åˆ†é…å™¨ï¼Œå…ˆç›´æ¥delete
 	delete ToRecycle;
 }
 
@@ -141,7 +141,7 @@ FGraphEvent::~FGraphEvent()
 	{
 		assert(IsClosed);
 	}
-	// Îö¹¹µÄÊ±ºò£¬Ç°ÖÃÊÂ¼şÁĞ±íÓ¦¸ÃÈ«²¿Íê³ÉÁË
+	// ææ„çš„æ—¶å€™ï¼Œå‰ç½®äº‹ä»¶åˆ—è¡¨åº”è¯¥å…¨éƒ¨å®Œæˆäº†
 	CheckDontCompleteUntilIsEmpty(); //  
 }
 #pragma endregion FGraphEvent

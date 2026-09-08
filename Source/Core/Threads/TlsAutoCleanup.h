@@ -1,7 +1,7 @@
 #pragma once
 #include "CoreModule.h"
 /*
- * һ�׻��ƣ��������߳��ڲ��Զ�����
+ * 一套机制，用于在线程内部自动清理
  */
 
 class COREMODULE FTlsAutoCleanup
@@ -14,7 +14,7 @@ public:
 };
 
 
-//��Ҫ���Funnable�ӿ�ʹ�ã�������ʵ�ʴ洢����T��һ�ݸ������������ں������̵߳�ͬ
+//需要配合Funnable接口使用，它里面实际存储的是T的一份副本，生命周期和整个线程等同
 template< class T >
 class TTlsAutoCleanupValue
 	: public FTlsAutoCleanup

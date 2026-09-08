@@ -30,8 +30,7 @@ public:
 
     FD3D12Adapter* GetParentAdapter() const { return Adapter; }
     uint32 GetGPUIndex() const { return GPUIndex; }
-
-    FD3D12Queue& Getueue(ED3D12QueueType QueueType) { return *Queues[(uint32)QueueType]; }
+    FD3D12Queue& GetQueue(ED3D12QueueType QueueType) { return *Queues[(uint32)QueueType]; }
 private:
     FD3D12Adapter* Adapter = nullptr;  // UE: FD3D12AdapterChild::ParentAdapter
     uint32         GPUIndex = 0;         // UE: FD3D12SingleNodeGPUObject 的 GPU 掩码简化 对应的就是NodeMask

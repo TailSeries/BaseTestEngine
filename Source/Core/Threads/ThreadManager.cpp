@@ -19,11 +19,11 @@ void FThreadManager::AddThread(uint32 ThreadId, class FRunnableThread* Thread)
 	{
 		assert((ThreadId & FFakeThread::FakeIdReservedBit) == 0);
 
-		/*ÔÚµ¥Ïß³ÌÄ£Äâ¶àÏß³ÌµÄ»·¾³ÖĞ£¬ÓÃÌØ¶¨µÄ ID Î»À´Çø·Ö¡°¼ÙÏß³Ì¡±Óë¡°ÕæÏß³Ì¡±¡£
+		/*åœ¨å•çº¿ç¨‹æ¨¡æ‹Ÿå¤šçº¿ç¨‹çš„ç¯å¢ƒä¸­ï¼Œç”¨ç‰¹å®šçš„ ID ä½æ¥åŒºåˆ†â€œå‡çº¿ç¨‹â€ä¸â€œçœŸçº¿ç¨‹â€ã€‚
 
-		ÕâÌõ¶ÏÑÔÈ·±£²Ù×÷ÏµÍ³·ÖÅä¸øÕæÏß³ÌµÄ ID ²»»áÓë¼ÙÏß³ÌµÄ±ê¼ÇÎ»³åÍ»¡£
+		è¿™æ¡æ–­è¨€ç¡®ä¿æ“ä½œç³»ç»Ÿåˆ†é…ç»™çœŸçº¿ç¨‹çš„ ID ä¸ä¼šä¸å‡çº¿ç¨‹çš„æ ‡è®°ä½å†²çªã€‚
 
-		Èç¹û¶ÏÑÔ´¥·¢£¬ËµÃ÷Éè¼ÆÖĞµÄÏß³Ì ID ·ÖÅäÂß¼­³öÏÖÁËÎÊÌâ£¬ĞèÒªĞŞÕı¡£*/
+		å¦‚æœæ–­è¨€è§¦å‘ï¼Œè¯´æ˜è®¾è®¡ä¸­çš„çº¿ç¨‹ ID åˆ†é…é€»è¾‘å‡ºç°äº†é—®é¢˜ï¼Œéœ€è¦ä¿®æ­£ã€‚*/
 	}
 
 	FScopeLock ThreadsLock(&ThreadsCritical);
@@ -54,7 +54,7 @@ void FThreadManager::Tick()
 		FScopeLock ThreadsLock(&ThreadsCritical);
 		for (auto& ThreadPair : Threads)
 		{
-			//ÎÒÃÇÖ»TickËùÓĞµÄFackeÏß³Ì
+			//æˆ‘ä»¬åªTickæ‰€æœ‰çš„Fackeçº¿ç¨‹
 			if (ThreadPair.second->GetThreadType() != FRunnableThread::ThreadType::Real)
 			{
 				ThreadPair.second->Tick();
@@ -66,7 +66,7 @@ void FThreadManager::Tick()
 
 void FThreadManager::GetAllThreadStackBackTraces(std::vector<FThreadStackBackTrace>& StackTraces)
 {
-	//todo ÓÃÀ´»ñÈ¡·ÖÎö¶ÑÕ»£¬ÎÒÃÇºóÃæÔÙÊµÏÖ
+	//todo ç”¨æ¥è·å–åˆ†æå †æ ˆï¼Œæˆ‘ä»¬åé¢å†å®ç°
 }
 
 void FThreadManager::ForEachThread(TFunction<void(uint32, class FRunnableThread*)> Func)

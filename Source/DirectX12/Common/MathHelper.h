@@ -9,19 +9,19 @@ class DXMODULE MathHelper
 {
 public:
 
-	// »ñÈ¡[a, b)Ö®¼äµÄ¸¡µãÊı
+	// è·å–[a, b)ä¹‹é—´çš„æµ®ç‚¹æ•°
 	static float RandF(float a, float b)
 	{
 		return  a + RandF() * (b - a);
 	}
 
-	//»ñÈ¡[0, 1)Ö®¼äµÄ¸¡µãÊı
+	//è·å–[0, 1)ä¹‹é—´çš„æµ®ç‚¹æ•°
 	static float RandF()
 	{
 		return (float)(rand()) / (float)RAND_MAX;
 	}
 
-	// »ñÈ¡[a, b] Ö®¼äµÄËæ»úÕûÊı
+	// è·å–[a, b] ä¹‹é—´çš„éšæœºæ•´æ•°
 	static int Rand(int a, int b)
 	{
 		return a + rand() % (b - a + 1);
@@ -50,10 +50,10 @@ public:
 	}
 
 
-	//½«Çò×ø±êÏµ£¨Spherical Coordinates£©ÏÂµÄµã (radius, theta, phi) ×ª»»ÎªµÑ¿¨¶û×ø±êÏµ£¨Cartesian Coordinates£©ÏÂµÄ XMVECTOR¡£
-	/*yÖá³¯ÉÏµÄ×ø±êÏµ£¬
-	 *theta£¬ÓëxÖá¼Ğ½Ç
-	 *phi£¬ÓëyÖá¼Ğ½Ç
+	//å°†çƒåæ ‡ç³»ï¼ˆSpherical Coordinatesï¼‰ä¸‹çš„ç‚¹ (radius, theta, phi) è½¬æ¢ä¸ºç¬›å¡å°”åæ ‡ç³»ï¼ˆCartesian Coordinatesï¼‰ä¸‹çš„ XMVECTORã€‚
+	/*yè½´æœä¸Šçš„åæ ‡ç³»ï¼Œ
+	 *thetaï¼Œä¸xè½´å¤¹è§’
+	 *phiï¼Œä¸yè½´å¤¹è§’
 	 */
 	static DirectX::XMVECTOR SphericalToCartesian(float redius, float theta, float phi)
 	{
@@ -65,26 +65,26 @@ public:
 		);
 	}
 
-	//ÇóÈ¥µôÆ½ÒÆÓ°ÏìÖ®ºóµÄ¾ØÕóµÄÄæ×ªÖÃ¾ØÕó
+	//æ±‚å»æ‰å¹³ç§»å½±å“ä¹‹åçš„çŸ©é˜µçš„é€†è½¬ç½®çŸ©é˜µ
 	/*
-	 * Í¨³£ÓÃÔÚÇó·¨ÏßÄæ×ªÖÃ¾ØÕóµÄ¹ı³ÌÖĞ£¬·¨ÏßÖ»Òª·½Ïò£¬ºÍÎ»ÒÆÃ»¹ØÏµ
+	 * é€šå¸¸ç”¨åœ¨æ±‚æ³•çº¿é€†è½¬ç½®çŸ©é˜µçš„è¿‡ç¨‹ä¸­ï¼Œæ³•çº¿åªè¦æ–¹å‘ï¼Œå’Œä½ç§»æ²¡å…³ç³»
 	 */
 	static DirectX::XMMATRIX InverseTranspose(const DirectX::XMMATRIX& M)
 	{
 		DirectX::XMMATRIX A = M;
-		A.r[3] = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);//È¥µô×îºóÒ»ĞĞÎ»ÒÆµÄÓ°Ïì
-		DirectX::XMVECTOR det = DirectX::XMMatrixDeterminant(A);// detµÄÖµÊµ¼ÊÉÏÖ»´æÔÚÓÚx·ÖÁ¿ÉÏ£¬ÎªÁËÕÕ¹ËSIMDÓÃÁËvector
+		A.r[3] = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);//å»æ‰æœ€åä¸€è¡Œä½ç§»çš„å½±å“
+		DirectX::XMVECTOR det = DirectX::XMMatrixDeterminant(A);// detçš„å€¼å®é™…ä¸Šåªå­˜åœ¨äºxåˆ†é‡ä¸Šï¼Œä¸ºäº†ç…§é¡¾SIMDç”¨äº†vector
 		return DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(&det, A));
 	}
 
-	//»ñÈ¡Ò»¸öµ¥Î»4x4¾ØÕó
-	/*ÎªÊ²Ã´·µ»ØÖµ²»ÊÇ XMMATRIX £¿
-	 *XMFLOAT4X4 ÊÇÒ»¸öÆÕÍ¨µÄ C++ ½á¹¹Ìå£¬ÓÃÓÚ´æ´¢Êı¾İ£»¶ø XMMATRIX ÊÇÒ»¸ö¸ßĞÔÄÜµÄ SIMD ÀàĞÍ£¬½öÓÃÓÚ¼ÆËã£¬²»ÍÆ¼öÕâ¸ö¶«Î÷µÄÊ¹ÓÃ¹ı³ÌÖĞ³öÏÖ¿½±´¡£
-	  ´Ó XMMATRIX ×ª»»Îª XMFLOAT4X4
+	//è·å–ä¸€ä¸ªå•ä½4x4çŸ©é˜µ
+	/*ä¸ºä»€ä¹ˆè¿”å›å€¼ä¸æ˜¯ XMMATRIX ï¼Ÿ
+	 *XMFLOAT4X4 æ˜¯ä¸€ä¸ªæ™®é€šçš„ C++ ç»“æ„ä½“ï¼Œç”¨äºå­˜å‚¨æ•°æ®ï¼›è€Œ XMMATRIX æ˜¯ä¸€ä¸ªé«˜æ€§èƒ½çš„ SIMD ç±»å‹ï¼Œä»…ç”¨äºè®¡ç®—ï¼Œä¸æ¨èè¿™ä¸ªä¸œè¥¿çš„ä½¿ç”¨è¿‡ç¨‹ä¸­å‡ºç°æ‹·è´ã€‚
+	  ä» XMMATRIX è½¬æ¢ä¸º XMFLOAT4X4
 		XMMATRIX mat = XMMatrixIdentity();
 		XMFLOAT4X4 matOut;
 		XMStoreFloat4x4(&matOut, mat);
-	  ´Ó XMFLOAT4X4 ×ª»»Îª XMMATRIX
+	  ä» XMFLOAT4X4 è½¬æ¢ä¸º XMMATRIX
 		XMMATRIX mat2 = XMLoadFloat4x4(&matOut);
 	 */
 	static DirectX::XMFLOAT4X4 Identity4x4()
@@ -99,7 +99,7 @@ public:
 	}
 
 
-	//¡¢¡¢¿ìËÙ¿ª¸ù£¬µ«ÊÇĞ¡ÓÚ1µÄÊ±ºòÎó²îºÜ´ó
+	//ã€ã€å¿«é€Ÿå¼€æ ¹ï¼Œä½†æ˜¯å°äº1çš„æ—¶å€™è¯¯å·®å¾ˆå¤§
 	static float FastCbrtMagic(float x) {
 		float xthird = 0.333f * x;
 		union { float f; int i; } u = { x };
@@ -110,14 +110,14 @@ public:
 
 
 
-	// ½«Ò»¸ö¶şÎ¬ÏòÁ¿×ª³É³ËËüÓëxÖáµÄ¼Ğ½Ç [0, 2PI)
+	// å°†ä¸€ä¸ªäºŒç»´å‘é‡è½¬æˆä¹˜å®ƒä¸xè½´çš„å¤¹è§’ [0, 2PI)
 	static float AngleFromXY(const float x, const float y);
 
-	// Éú³ÉÒ»¸öÔÚµ¥Î»ÇòÃæÉÏËæ»ú·Ö²¼µÄµ¥Î»ÏòÁ¿
+	// ç”Ÿæˆä¸€ä¸ªåœ¨å•ä½çƒé¢ä¸Šéšæœºåˆ†å¸ƒçš„å•ä½å‘é‡
 	static DirectX::XMVECTOR RandUnitVec3();
-	//Éú³ÉÒ»¸öÔÚµ¥Î»ÇòÃæÉÏ¡¢²¢ÇÒÎ»ÓÚÖ¸¶¨·¨Ïß n ËùÖ¸·½ÏòµÄ°ëÇòÖĞµÄËæ»úµ¥Î»ÏòÁ¿¡£
+	//ç”Ÿæˆä¸€ä¸ªåœ¨å•ä½çƒé¢ä¸Šã€å¹¶ä¸”ä½äºæŒ‡å®šæ³•çº¿ n æ‰€æŒ‡æ–¹å‘çš„åŠçƒä¸­çš„éšæœºå•ä½å‘é‡ã€‚
 	/*
-	 * ³£ÓÃÓÚ GI£¬Lambert£¬ Â·¾¶×·×Ù£¬¾Ö²¿·½Ïò²ÉÑù
+	 * å¸¸ç”¨äº GIï¼ŒLambertï¼Œ è·¯å¾„è¿½è¸ªï¼Œå±€éƒ¨æ–¹å‘é‡‡æ ·
 	 */
 	static DirectX::XMVECTOR RandHemisphereUnitVec3(DirectX::XMVECTOR n);
 

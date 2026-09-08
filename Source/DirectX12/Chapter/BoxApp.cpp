@@ -18,22 +18,22 @@ bool BoxApp::Initialize()
 {
     if (!D3DApp::Initialize()) return false;
 
-    // ÏÈÇå¿ÕÃüÁîÁÐ±í
+    // å…ˆæ¸…ç©ºå‘½ä»¤åˆ—è¡¨
     ThrowIfFailed(MCommandList->Reset(MCommandAllocator.Get(), nullptr));
 
-    // ´´½¨CBVµÄÃèÊö·û¶Ñ
+    // åˆ›å»ºCBVçš„æè¿°ç¬¦å †
     BuildDescriptorHeaps();
-    // ´´½¨cb×ÊÔ´ÒÔ¼°cbv
+    // åˆ›å»ºcbèµ„æºä»¥åŠcbv
     BuildConstantBuffers();
     BuildRootSignature();
 
-    // ±àÒëshaderÎª¶þ½øÖÆ£¬¹¹½¨ÊäÈë²¼¾Ö
+    // ç¼–è¯‘shaderä¸ºäºŒè¿›åˆ¶ï¼Œæž„å»ºè¾“å…¥å¸ƒå±€
     BuildShadersAndInputLayout();
     BuildBoxGeometry();
     BuildPSO();
 
   
-    // indexbuffer£¬ vertexbufferÐ´ÈëÉÏ´«¶ÑµÄÃüÁîÕâÀï¾ÍÖ´ÐÐÁË
+    // indexbufferï¼Œ vertexbufferå†™å…¥ä¸Šä¼ å †çš„å‘½ä»¤è¿™é‡Œå°±æ‰§è¡Œäº†
     ThrowIfFailed(MCommandList->Close());
     ID3D12CommandList* cmdsLists[] = { MCommandList.Get() };
     MCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
@@ -45,12 +45,12 @@ bool BoxApp::Initialize()
 void BoxApp::BuildDescriptorHeaps()
 {
     /*
-     * ÔÚinitialize½×¶ÎÎÒÃÇÒÑ¾­´´½¨Ò»¸öRTVÃèÊö·û¶Ñ£¬Ò»¸öDSVµÄÃèÊö·û¶Ñ¡£ÎÒÃÇÏÖÔÚÒª´«¾ØÕó¾Í¶ÔÓ¦´´½¨Ò»¸öCBVµÄÃèÊö·û¶Ñ
+     * åœ¨initializeé˜¶æ®µæˆ‘ä»¬å·²ç»åˆ›å»ºä¸€ä¸ªRTVæè¿°ç¬¦å †ï¼Œä¸€ä¸ªDSVçš„æè¿°ç¬¦å †ã€‚æˆ‘ä»¬çŽ°åœ¨è¦ä¼ çŸ©é˜µå°±å¯¹åº”åˆ›å»ºä¸€ä¸ªCBVçš„æè¿°ç¬¦å †
      */
     D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc;
     cbvHeapDesc.NumDescriptors = 1;
     cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;// Õâ¸ö¶Ñ
+    cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;// è¿™ä¸ªå †
     cbvHeapDesc.NodeMask = 0;
     ThrowIfFailed(MD3dDevice->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&MCbvHeap)));
 
@@ -58,25 +58,25 @@ void BoxApp::BuildDescriptorHeaps()
 
 void BoxApp::BuildRootSignature()
 {
-   CD3DX12_ROOT_PARAMETER slotRootParamater[1];// ÎÒÃÇÏÖÔÚÖ»ÐèÒª´«µÝÒ»¸öconstantbuffer½øÈ¥£¬Òò´Ë¾ÍÒ»¸ö¸ù²ÎÊý
+   CD3DX12_ROOT_PARAMETER slotRootParamater[1];// æˆ‘ä»¬çŽ°åœ¨åªéœ€è¦ä¼ é€’ä¸€ä¸ªconstantbufferè¿›åŽ»ï¼Œå› æ­¤å°±ä¸€ä¸ªæ ¹å‚æ•°
 
-   // Ê¹ÓÃÃèÊö·û±í×÷Îª¸ù²ÎÊý
+   // ä½¿ç”¨æè¿°ç¬¦è¡¨ä½œä¸ºæ ¹å‚æ•°
    CD3DX12_DESCRIPTOR_RANGE cbvTable;
-   cbvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);// ÀàÐÍ: CBV, ÊýÁ¿: 1, ¼Ä´æÆ÷: b0
+   cbvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);// ç±»åž‹: CBV, æ•°é‡: 1, å¯„å­˜å™¨: b0
    slotRootParamater[0].InitAsDescriptorTable(1, &cbvTable); 
    
 
    /*
-   * D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT ÔÊÐíÊ¹ÓÃ IA ½×¶ÎµÄ ¶¥µã»º³å + ÊäÈë²¼¾Ö£¨Input Layout:ÒâÎ¶×Å¿ÉÒÔÔÚÊäÈë×°Åä½×¶ÎÊ¹ÓÃÏÂÃæµÄÃüÁî
+   * D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT å…è®¸ä½¿ç”¨ IA é˜¶æ®µçš„ é¡¶ç‚¹ç¼“å†² + è¾“å…¥å¸ƒå±€ï¼ˆInput Layout:æ„å‘³ç€å¯ä»¥åœ¨è¾“å…¥è£…é…é˜¶æ®µä½¿ç”¨ä¸‹é¢çš„å‘½ä»¤
    *   IASetVertexBuffers
    *   IASetIndexBuffer
    *   InputLayout
    */
-   // 1 Ò»¸ö¸ù²ÎÊý£¬¸ù²ÎÊýÊý×é£¬0¸ö¾²Ì¬²ÉÑùÆ÷£¬ÔÊÐíÊäÈë×°ÅäÆ÷ÊäÈë²¼¾Ö
+   // 1 ä¸€ä¸ªæ ¹å‚æ•°ï¼Œæ ¹å‚æ•°æ•°ç»„ï¼Œ0ä¸ªé™æ€é‡‡æ ·å™¨ï¼Œå…è®¸è¾“å…¥è£…é…å™¨è¾“å…¥å¸ƒå±€
    CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(1, slotRootParamater, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
    
    /*
-   * ÐòÁÐ»¯£º½«¸ùÇ©Ãû×ª»»³ÉGPU¿ÉÀí½âµÄ¶þ½øÖÆ¸ñÊ½
+   * åºåˆ—åŒ–ï¼šå°†æ ¹ç­¾åè½¬æ¢æˆGPUå¯ç†è§£çš„äºŒè¿›åˆ¶æ ¼å¼
    * 
    * 
    */
@@ -117,16 +117,16 @@ void BoxApp::BuildShadersAndInputLayout()
     MvsByteCode = D3DUtil::CompileShader(shaderPath, nullptr, "VS", "vs_5_0");
     MpsByteCode = D3DUtil::CompileShader(shaderPath, nullptr, "PS", "ps_5_0");
 
-    //ÎÒÃÇµÄ¶¥µãÖ»ÓÐÒ»¸ö struct Vertex 	D3D12_INPUT_ELEMENT_DESC
+    //æˆ‘ä»¬çš„é¡¶ç‚¹åªæœ‰ä¸€ä¸ª struct Vertex 	D3D12_INPUT_ELEMENT_DESC
      /*struct D3D12_INPUT_ELEMENT_DESC
      {
-     LPCSTR SemanticName; // ÓïÒåÃû³Æ
-     UINT SemanticIndex; // Í¬ÓïÒåµÄ²»Í¬Ë÷ÒýÏÂ±ê
-     DXGI_FORMAT Format; // ¸Ã³ÉÔ±µÄÊý¾Ý¸ñÊ½
-     UINT InputSlot; //ÊäÈë²Û 0 ~ 15
-     UINT AlignedByteOffset; //ÔÚbuffer½á¹¹ÖÐµÄÆ«ÒÆÎ»ÖÃ
-     D3D12_INPUT_CLASSIFICATION InputSlotClass; // PER_VERTEX_DATA PER_INSTANCE_DATAÊÇinstance¼¼ÊõÓÃµÄ
-     UINT InstanceDataStepRate;// Ä¿Ç°Îª0, ÒªÓÃinstanceÕâÀïÐ´1
+     LPCSTR SemanticName; // è¯­ä¹‰åç§°
+     UINT SemanticIndex; // åŒè¯­ä¹‰çš„ä¸åŒç´¢å¼•ä¸‹æ ‡
+     DXGI_FORMAT Format; // è¯¥æˆå‘˜çš„æ•°æ®æ ¼å¼
+     UINT InputSlot; //è¾“å…¥æ§½ 0 ~ 15
+     UINT AlignedByteOffset; //åœ¨bufferç»“æž„ä¸­çš„åç§»ä½ç½®
+     D3D12_INPUT_CLASSIFICATION InputSlotClass; // PER_VERTEX_DATA PER_INSTANCE_DATAæ˜¯instanceæŠ€æœ¯ç”¨çš„
+     UINT InstanceDataStepRate;// ç›®å‰ä¸º0, è¦ç”¨instanceè¿™é‡Œå†™1
      }
  *
  */
@@ -188,7 +188,7 @@ void BoxApp::BuildBoxGeometry()
     ThrowIfFailed(D3DCreateBlob(iByteSize, &mBoxGeo->IndexBufferCPU));
     CopyMemory(mBoxGeo->IndexBufferCPU->GetBufferPointer(), indices.data(), iByteSize);
 
-    // ×¢ÒâÕâÀï´´½¨µÄÊ±ºò¾Í°ÑÉÏ´«¶ÑµÄ¶¥µã¿½±´µ½Ä¬ÈÏ¶ÑÀïÁË
+    // æ³¨æ„è¿™é‡Œåˆ›å»ºçš„æ—¶å€™å°±æŠŠä¸Šä¼ å †çš„é¡¶ç‚¹æ‹·è´åˆ°é»˜è®¤å †é‡Œäº†
     mBoxGeo->VertexBufferGPU = D3DUtil::CreateDefaultBuffer(MD3dDevice.Get(), MCommandList.Get(), vertices.data(), vByteSize, mBoxGeo->VertexBufferUploader);
 
     mBoxGeo->IndexBufferGPU = D3DUtil::CreateDefaultBuffer(MD3dDevice.Get(), MCommandList.Get(), indices.data(), iByteSize, mBoxGeo->IndexBufferUploader);
@@ -200,8 +200,8 @@ void BoxApp::BuildBoxGeometry()
 
     SubMeshGeometry submesh;
     submesh.IndexCount = (UINT)indices.size();
-    submesh.StartIndexLocation = 0;//// ´ÓË÷Òý»º³åÇøµÄ¿ªÍ·¿ªÊ¼
-    submesh.BaseVertexLocation = 0;  // ¶¥µã»º³åÇøÆ«ÒÆÎª 0
+    submesh.StartIndexLocation = 0;//// ä»Žç´¢å¼•ç¼“å†²åŒºçš„å¼€å¤´å¼€å§‹
+    submesh.BaseVertexLocation = 0;  // é¡¶ç‚¹ç¼“å†²åŒºåç§»ä¸º 0
     mBoxGeo->DrawArgs["box"] = submesh;
 }
 
@@ -214,35 +214,35 @@ void BoxApp::BuildPSO()
     psoDesc.VS = {reinterpret_cast<BYTE*>(MvsByteCode->GetBufferPointer()), MvsByteCode->GetBufferSize()};
     psoDesc.PS = {reinterpret_cast<BYTE*>(MpsByteCode->GetBufferPointer()), MpsByteCode->GetBufferSize()};
 
-    /*¹âÕ¤»¯×´Ì¬
-    *   - Ê¹ÓÃÄ¬ÈÏÖµ£º
-    - FillMode = D3D12_FILL_MODE_SOLID£¨ÊµÐÄÌî³ä£©
-    - CullMode = D3D12_CULL_MODE_BACK£¨±³ÃæÌÞ³ý£©
-    - FrontCounterClockwise = FALSE£¨Ë³Ê±ÕëÎªÕýÃæ£©
-    - DepthBias = 0 µÈ
+    /*å…‰æ …åŒ–çŠ¶æ€
+    *   - ä½¿ç”¨é»˜è®¤å€¼ï¼š
+    - FillMode = D3D12_FILL_MODE_SOLIDï¼ˆå®žå¿ƒå¡«å……ï¼‰
+    - CullMode = D3D12_CULL_MODE_BACKï¼ˆèƒŒé¢å‰”é™¤ï¼‰
+    - FrontCounterClockwise = FALSEï¼ˆé¡ºæ—¶é’ˆä¸ºæ­£é¢ï¼‰
+    - DepthBias = 0 ç­‰
 
     */
     psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 
     /*
-    *  Ä¬ÈÏ²»»ìºÏ£ºRenderTarget[0].BlendEnable = FALSE
+    *  é»˜è®¤ä¸æ··åˆï¼šRenderTarget[0].BlendEnable = FALSE
     */
     psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 
-    /*Ä¬ÈÏÆôÓÃÉî¶È²âÊÔ£º
+    /*é»˜è®¤å¯ç”¨æ·±åº¦æµ‹è¯•ï¼š
     - DepthEnable = TRUE
     - DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL
-    - DepthFunc = D3D12_COMPARISON_FUNC_LESS£¨Éî¶È¸üÐ¡Í¨¹ý£©*/
+    - DepthFunc = D3D12_COMPARISON_FUNC_LESSï¼ˆæ·±åº¦æ›´å°é€šè¿‡ï¼‰*/
     psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
     psoDesc.DSVFormat = MDepthStencilFormat;
-    /*£º¿ØÖÆÄÄÐ©²ÉÑùµã±»ÆôÓÃ¡£
-  - UINT_MAX ±íÊ¾ËùÓÐ²ÉÑùµã¶¼ÆôÓÃ£¨32Î»È«1£©¡£*/
+    /*ï¼šæŽ§åˆ¶å“ªäº›é‡‡æ ·ç‚¹è¢«å¯ç”¨ã€‚
+  - UINT_MAX è¡¨ç¤ºæ‰€æœ‰é‡‡æ ·ç‚¹éƒ½å¯ç”¨ï¼ˆ32ä½å…¨1ï¼‰ã€‚*/
     psoDesc.SampleMask = UINT_MAX;
 
     psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-    /*  - ÊýÁ¿£º1¸öäÖÈ¾Ä¿±ê£¨½»»»Á´µÄºó»º³åÇø£©¡£
-  - ¸ñÊ½£ºmBackBufferFormat£¨Èç DXGI_FORMAT_R8G8B8A8_UNORM£©¡£*/
+    /*  - æ•°é‡ï¼š1ä¸ªæ¸²æŸ“ç›®æ ‡ï¼ˆäº¤æ¢é“¾çš„åŽç¼“å†²åŒºï¼‰ã€‚
+  - æ ¼å¼ï¼šmBackBufferFormatï¼ˆå¦‚ DXGI_FORMAT_R8G8B8A8_UNORMï¼‰ã€‚*/
     psoDesc.NumRenderTargets = 1;
     psoDesc.RTVFormats[0] = MBackBufferFormat;
 
@@ -295,7 +295,7 @@ void BoxApp::Draw(const GameTimer& gt)
     CD3DX12_RESOURCE_BARRIER BackBufferTransition = CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
     MCommandList->ResourceBarrier(1, &BackBufferTransition);
 
-    //0 nullptr ´îÅäÒâË¼ÊÇÇå³ýÕû¸öRT
+    //0 nullptr æ­é…æ„æ€æ˜¯æ¸…é™¤æ•´ä¸ªRT
     MCommandList->ClearRenderTargetView(CurrentBackBufferView(), DirectX::Colors::LightSteelBlue, 0, nullptr);
     MCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
     D3D12_CPU_DESCRIPTOR_HANDLE depthstencilvview = DepthStencilView();
@@ -308,7 +308,7 @@ void BoxApp::Draw(const GameTimer& gt)
 
     MCommandList->SetGraphicsRootSignature(mRootSignature.Get());
 
-    //ÔÚDirectX12µÄInput Assembler½×¶Î£¬È·Êµ¿ÉÒÔÓÐ¶à¸ö¶¥µã»º³åÇøÊÓÍ¼£¨Vertex Buffer Views£©£¬µ«Ö»ÄÜÓÐÒ»¸öË÷Òý»º³åÇøÊÓÍ¼£¨Index Buffer View£©; Ë÷ÒýÊÇ¶Ô¶¥µãµÄÕûÌåÒýÓÃ£¬GPU»á´ÓÃ¿¸ö¶¥µã»º³åÇøÖÐ¶ÁÈ¡ÏàÍ¬Î»ÖÃ£¨ÏàÍ¬Ë÷Òý£©µÄÊý¾Ý£¬È»ºó×éºÏ³ÉÍêÕûµÄ¶¥µã¡£
+    //åœ¨DirectX12çš„Input Assembleré˜¶æ®µï¼Œç¡®å®žå¯ä»¥æœ‰å¤šä¸ªé¡¶ç‚¹ç¼“å†²åŒºè§†å›¾ï¼ˆVertex Buffer Viewsï¼‰ï¼Œä½†åªèƒ½æœ‰ä¸€ä¸ªç´¢å¼•ç¼“å†²åŒºè§†å›¾ï¼ˆIndex Buffer Viewï¼‰; ç´¢å¼•æ˜¯å¯¹é¡¶ç‚¹çš„æ•´ä½“å¼•ç”¨ï¼ŒGPUä¼šä»Žæ¯ä¸ªé¡¶ç‚¹ç¼“å†²åŒºä¸­è¯»å–ç›¸åŒä½ç½®ï¼ˆç›¸åŒç´¢å¼•ï¼‰çš„æ•°æ®ï¼Œç„¶åŽç»„åˆæˆå®Œæ•´çš„é¡¶ç‚¹ã€‚
     D3D12_VERTEX_BUFFER_VIEW vertesbufferview = mBoxGeo->VertexBufferView();
     MCommandList->IASetVertexBuffers(0, 1, &vertesbufferview);
     D3D12_INDEX_BUFFER_VIEW indexbufferview = mBoxGeo->IndexBufferView();

@@ -27,12 +27,12 @@ FRunnableThread::~FRunnableThread()
 
 FRunnableThread* FRunnableThread::Create(FRunnable* InRunnable, const char* ThreadName, unsigned int InStackSize, EThreadPriority InThreadPri, uint64 InThreadAffinityMask, EThreadCreateFlags InCreateFlags)
 {
-	//ÏÈ¼ì²éÏµÍ³±¾ÉíÊÇ·ñÖ§³Ö¶àÏß³Ì
+	//å…ˆæ£€æŸ¥ç³»ç»Ÿæœ¬èº«æ˜¯å¦æ”¯æŒå¤šçº¿ç¨‹
 	bool bCreateRealThread = FPlatformProcess::SupportsMultithreading();
 	FRunnableThread* NewThread = nullptr;
 	if (bCreateRealThread)
 	{
-		//µ÷ÓÃ¸ÃÆ½Ì¨´´½¨Ïß³ÌµÄ·½·¨
+		//è°ƒç”¨è¯¥å¹³å°åˆ›å»ºçº¿ç¨‹çš„æ–¹æ³•
 		NewThread = FPlatformProcess::CreateRunnableThread();
 	}
 	else if (InRunnable->GetSingleThreadInterface())
@@ -56,7 +56,7 @@ void FRunnableThread::SetupCreatedThread(FRunnableThread*& NewThread, FRunnable*
 	}
 	else
 	{
-		//´´½¨Ê§°ÜµÄÇé¿öÏÂÉ¾³ıÕâ¸öthread
+		//åˆ›å»ºå¤±è´¥çš„æƒ…å†µä¸‹åˆ é™¤è¿™ä¸ªthread
 		delete NewThread;
 		NewThread = nullptr;
 	}
@@ -64,7 +64,7 @@ void FRunnableThread::SetupCreatedThread(FRunnableThread*& NewThread, FRunnable*
 }
 void FRunnableThread::PostCreate(EThreadPriority InThreadPriority)
 {
-	//todo ºóĞøÊµÏÖÎÒÃÇµÄstats
+	//todo åç»­å®ç°æˆ‘ä»¬çš„stats
 	//FStartupMessages::Get().AddThreadMetadata(FName(*GetThreadName()), GetThreadID());
 }
 
@@ -146,5 +146,5 @@ FRunnableThread::ThreadType FFakeThread::GetThreadType() const
 	return ThreadType::Fake;
 
 }
-uint32 FFakeThread::ThreadIdCounter = 0xffff; // 65535 ±Ü¿ªÒ»°ãµÄÕæÊµµÄÏß³ÌidµÄ·¶Î§
-/*Ò»¸öÏß³Ì³Ø FQueuedThread*/
+uint32 FFakeThread::ThreadIdCounter = 0xffff; // 65535 é¿å¼€ä¸€èˆ¬çš„çœŸå®çš„çº¿ç¨‹idçš„èŒƒå›´
+/*ä¸€ä¸ªçº¿ç¨‹æ±  FQueuedThread*/

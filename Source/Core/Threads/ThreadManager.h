@@ -7,19 +7,19 @@
 #endif
 
 /*
- * ¹ÜÀíRunnables ÒÔ¼° Runnable Threads
+ * ç®¡ç†Runnables ä»¥åŠ Runnable Threads
  */
 class FRunnableThread;
 class COREMODULE FThreadManager
 {
 	/*
-	 * ¶ÔÓÚThreadsµÄ±¾ÉíµÄ¹ÜÀí£¬¾ÍĞèÒª¼ÓËø
+	 * å¯¹äºThreadsçš„æœ¬èº«çš„ç®¡ç†ï¼Œå°±éœ€è¦åŠ é”
 	 */
 	FCriticalSection ThreadsCritical;
 	static bool bIsInitialized;
 
 	/*
-	 * Òª±»tickµÄËùÓĞÏß³ÌµÄÁĞ±í
+	 * è¦è¢«tickçš„æ‰€æœ‰çº¿ç¨‹çš„åˆ—è¡¨
 	 */
 	std::unordered_map<uint32, FRunnableThread*> Threads;
 
@@ -42,7 +42,7 @@ public:
 
 
 	/**
-	 * Tick ËùÓĞµÄfakethreads
+	 * Tick æ‰€æœ‰çš„fakethreads
 	 */
 	void Tick();
 
@@ -78,7 +78,7 @@ public:
 #endif
 
 	/*
-	 * ±éÀúËùÓĞÏß³ÌµÄ½Ó¿Ú
+	 * éå†æ‰€æœ‰çº¿ç¨‹çš„æ¥å£
 	 */
 	void ForEachThread(TFunction<void(uint32, class FRunnableThread*)> Func);
 

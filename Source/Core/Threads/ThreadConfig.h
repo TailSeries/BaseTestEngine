@@ -1,7 +1,7 @@
 #pragma once
 #include "Core.h"
 /*
- * Ïß³ÌÓÅÏÈ¼¶£¬Ô½´óÔ½¸ß
+ * çº¿ç¨‹ä¼˜å…ˆçº§ï¼Œè¶Šå¤§è¶Šé«˜
  */
 enum COREMODULE EThreadPriority
 {
@@ -18,9 +18,9 @@ enum COREMODULE EThreadPriority
 
 enum class COREMODULE EThreadCreateFlags : int8
 {
-	None = 0,// Ä¬ÈÏÏß³Ì´´½¨ÐÐÎª
-	SMTExclusive = (1 << 0), // 	Ö¸¶¨Ïß³Ì²»ÓëÆäËûÏß³Ì¹²ÏíÍ¬Ò»ÎïÀíºËÐÄµÄ³¬Ïß³ÌÂß¼­ºË
+	None = 0,// é»˜è®¤çº¿ç¨‹åˆ›å»ºè¡Œä¸º
+	SMTExclusive = (1 << 0), // 	æŒ‡å®šçº¿ç¨‹ä¸ä¸Žå…¶ä»–çº¿ç¨‹å…±äº«åŒä¸€ç‰©ç†æ ¸å¿ƒçš„è¶…çº¿ç¨‹é€»è¾‘æ ¸
 };
 
-//ÎÞËùÎ½ÄÄ¸öcpuºËÐÄ
+//æ— æ‰€è°“å“ªä¸ªcpuæ ¸å¿ƒ
 COREMODULE const uint64 GetNoAffinityMask();

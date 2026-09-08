@@ -3,15 +3,15 @@
 
 #include "Core.h"
 #include "Threads/ScopeLock.h"
-//todo 	ÎÒÃÇ»¹Ã»ÓĞÎŞËø½á¹¹£¬FStallingTaskQueue ÎÒÃÇÏÈÖ±½ÓÓÃËø + std::priority_queue À´ÊµÏÖ
+//todo 	æˆ‘ä»¬è¿˜æ²¡æœ‰æ— é”ç»“æ„ï¼ŒFStallingTaskQueue æˆ‘ä»¬å…ˆç›´æ¥ç”¨é” + std::priority_queue æ¥å®ç°
 /**
- *ÎÒÃÇµÄ¹æÔòÊÇÕâÑùµÄ£º
- *Ò»¹² 4 +  26 * 3 = 82 ¸öÏß³Ì£¬Ç°Ãæ4¸öÊÇnamedthread.ÄÇÃ´ 4 ~  29  >> 0 ; 30 ~ 55 >> 1; 56 ~ 79 >> 2
- *0 1 2 ÊÇÈı¸ö²»Í¬µÈ¼¶µÄthread£¬Ã¿Ò»×ésetÓĞÒ»¸öqueue£¬¿ÉÒÔÈÏÎªÆäÒ»¹²¿ÉÒÔ²Ù×÷µÄÏß³Ì±àºÅ¾ùÎª 0 ~ 26. Õâ¸öÊıÖµµş*priority + namedthread ¾Í¿ÉÒÔµÃµ½Ô­À´µÄÏß³Ì±àºÅÁË¡£
- *ÔÚueÔ­À´µÄ²Ù×÷ÓÃ£¬ÓÃbitÎ»À´¼ÇÂ¼µ±Ç°¾¿¾¹ÄÇ¸öÏß³ÌÔÚ²Ù×÷queue£¬ÓÈÆäÊÇpopµÄÊ±ºò´«ÈëÁËµ±Ç°µÄthread£¬popÖ®ºó£¬Õâ¸öÏß³Ì¾ÍÊÇ¹ÒÆğ×´Ì¬ÁË
+ *æˆ‘ä»¬çš„è§„åˆ™æ˜¯è¿™æ ·çš„ï¼š
+ *ä¸€å…± 4 +  26 * 3 = 82 ä¸ªçº¿ç¨‹ï¼Œå‰é¢4ä¸ªæ˜¯namedthread.é‚£ä¹ˆ 4 ~  29  >> 0 ; 30 ~ 55 >> 1; 56 ~ 79 >> 2
+ *0 1 2 æ˜¯ä¸‰ä¸ªä¸åŒç­‰çº§çš„threadï¼Œæ¯ä¸€ç»„setæœ‰ä¸€ä¸ªqueueï¼Œå¯ä»¥è®¤ä¸ºå…¶ä¸€å…±å¯ä»¥æ“ä½œçš„çº¿ç¨‹ç¼–å·å‡ä¸º 0 ~ 26. è¿™ä¸ªæ•°å€¼å *priority + namedthread å°±å¯ä»¥å¾—åˆ°åŸæ¥çš„çº¿ç¨‹ç¼–å·äº†ã€‚
+ *åœ¨ueåŸæ¥çš„æ“ä½œç”¨ï¼Œç”¨bitä½æ¥è®°å½•å½“å‰ç©¶ç«Ÿé‚£ä¸ªçº¿ç¨‹åœ¨æ“ä½œqueueï¼Œå°¤å…¶æ˜¯popçš„æ—¶å€™ä¼ å…¥äº†å½“å‰çš„threadï¼Œpopä¹‹åï¼Œè¿™ä¸ªçº¿ç¨‹å°±æ˜¯æŒ‚èµ·çŠ¶æ€äº†
  *
  * @tparam T
- * @tparam NumPriorities ÄÚ²¿²»Í¬ÓÅÏÈ¶ÈµÄ¶ÓÁĞÊıÁ¿
+ * @tparam NumPriorities å†…éƒ¨ä¸åŒä¼˜å…ˆåº¦çš„é˜Ÿåˆ—æ•°é‡
  */
 template<typename T, int32 NumPriorities>
 class FStallingTaskQueue : public FNoncopyable
@@ -35,7 +35,7 @@ public:
 
 	T* Pop(int32 threadId = 0, bool bAllowStall = false)
 	{
-		// ±éÀúËùÓĞµÄ¶ÓÁĞ£¬Ö±½ÓÄÃ³öÒ»¸öÄÜÓÃµÄ
+		// éå†æ‰€æœ‰çš„é˜Ÿåˆ—ï¼Œç›´æ¥æ‹¿å‡ºä¸€ä¸ªèƒ½ç”¨çš„
 		for (int32 Index = 0; Index < NumPriorities; Index++)
 		{
 			{
@@ -50,7 +50,7 @@ public:
 
 		}
 		if (!bAllowStall) return nullptr;
-		// Ã»ÈÎÎñ£¬±ê¼Ç×Ô¼ºÎª¿ÕÏĞ
+		// æ²¡ä»»åŠ¡ï¼Œæ ‡è®°è‡ªå·±ä¸ºç©ºé—²
 		TurnOnBit(threadId);
 		return nullptr;
 	}
@@ -96,7 +96,7 @@ private:
 
 
 private:
-	// Ã¿¸öbitÎ» 1 ´ú±í¸ÃÏß³Ì´¦ÔÚ¿ÕÏĞ×´Ì¬ 
+	// æ¯ä¸ªbitä½ 1 ä»£è¡¨è¯¥çº¿ç¨‹å¤„åœ¨ç©ºé—²çŠ¶æ€ 
 	std::atomic<uint64>  masterState;
 	std::priority_queue<T*> PriorityQueues[NumPriorities];
 	FRWLock PriorityQueueLocks[NumPriorities];

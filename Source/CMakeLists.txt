@@ -9,10 +9,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../out/bin") # 针
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../out/bin") # 针对linux静态库，以及windows的dll的依赖lib文件
 
 add_compile_definitions(NOMINMAX SYSTEM_WIN PLATFORM_WIN)
-
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 add_subdirectory(Core)
 add_subdirectory(RHI)
 add_subdirectory(D3D12RHI)
+add_subdirectory(RHITest)
 
 #add_subdirectory(Transfer)
 add_subdirectory(Algorithm)

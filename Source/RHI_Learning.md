@@ -70,6 +70,7 @@ Source/D3D12RHI/                   ← 对应 UE: Runtime/D3D12RHI/
 | 章 | 内容 | 说明 |
 |---|---|---|
 | 9+ | Submission / 中断线程 | 复刻 UE 的 InterruptThread：GPU 完成的 event 等待外包给专职后台线程，业务线程不再 inline 阻塞，实现 CPU/GPU 重叠 |
+| 9+ | 多线程 Present | 同属此套流水线：UE 的 Present 是排进 Submission 线程的 payload（SchedulePresent / PresentOnSubmissionThread / WaitForLastPresent / PresentEvent），不能独立提前加。第1~8章用 inline `FD3D12Viewport::Present()` 直调，对应 inline `WaitCPU()` 的同款简化，同章一起加回 |
 
 **为什么放到第6章后**：中断线程的循环外壳很简单（Core 已有 `FRunnableThread`/`FRunnable`/`FEvent`，UE 的 `FD3D12Thread` 就是 `FRunnableThread` 薄封装），但它唤醒后要处理的「payload」——命令列表/分配器回池、资源延迟删除、query 解析、触发 `FGraphEvent` 唤醒等待任务——**依赖第2/3/6章的资源与命令列表系统**。没有这些，中断线程醒来无活可干。等第6章 CommandList + 资源延迟删除到位，它才有真正的「客户」，那时单开此章顺理成章。第1~8章先用 inline 阻塞 `Flush()`，但 fence-per-queue 骨架已为它留位。
 
@@ -205,13 +206,20 @@ class FD3D12Queue {
 
 ### 进度
 - [x] 第1章 UE 源码讲解完成
-- [x] 第1章 实现：`D3D12Queue.h`（ED3D12QueueType / FD3D12Fence / FD3D12Queue 头文件完成）
-- [ ] 第1章 实现（剩余）：
-  - [ ] `D3D12Queue.cpp`：FD3D12Fence::Init/Destroy/Signal/WaitCPU + FD3D12Queue::Init/Flush/析构
-  - [ ] `D3D12Device.h/.cpp`：FD3D12Device（Adapter回指 + GPUIndex + Queues[Count]数组）
-  - [ ] `D3D12Adapter.h/.cpp`：FD3D12AdapterDesc + FD3D12Adapter（枚举GPU / 创建Device / 初始化节点）
-  - [ ] `D3D12Viewport.h/.cpp`：FD3D12Viewport（SwapChain，第1章末尾）
-- [ ] 第2章及后续
+- [x] 第1章 实现：`D3D12Queue.h/.cpp`（ED3D12QueueType / FD3D12Fence 纯数据struct / FD3D12Queue：带参构造 + Signal/Wait/WaitCPU）
+  - 定案：FD3D12Fence 无成员函数，操作全在 Queue 上（贴 UE）；Queue non-movable，Device 用 `vector<unique_ptr<FD3D12Queue>>` 存储
+- [x] 第1章 实现：`D3D12Device.h/.cpp`（Adapter回指 + GPUIndex + Queues；GetDevice() 转发 Adapter->GetD3DDevice()）
+- [x] 第1章 实现：`D3D12Adapter.h/.cpp`（FD3D12AdapterDesc + FindAdapter + CreateRootDevice + InitializeDevices）
+  - 选卡用 `IDXGIFactory6::EnumAdapterByGpuPreference(HIGH_PERFORMANCE)` 选独显；FindAdapter 与 CreateRootDevice 必须用同一枚举方式，否则 AdapterIndex 对不上（或改按 LUID 匹配更稳）
+- [x] 第1章 实现：`D3D12Viewport.h/.cpp`（FD3D12Viewport：Init 建 SwapChain + ResizeInternal 取 BackBuffer + PresentInternal；两段式对齐 UE）
+- [x] **第1章 闭环验证通过**：`RHITest.exe`（Win32 窗口 + 三层 + Viewport + Present），黑窗口不崩，选中 NVIDIA RTX 3060
+- [ ] 第2章：RHI 资源基类（FRHIResource / D3D12Resources）
+
+**踩坑记录**：
+- 新建 C++ 文件必须 UTF-8 with BOM（否则 cp936 下 MSVC 按 GBK 解析中文注释，打乱 class 结构报假错如 `C2065 undeclared`）。已建 `.editorconfig`（`charset = utf-8-bom`）自动处理。
+- 空壳模块（无导出符号）不生成 `.lib`，链接它会 LNK1104。D3D12RHI 暂不链 RHI，等第2章 RHI 有导出类后再加回。
+
+**工程约定补记**：所有 CMakeLists 的 `FILE(GLOB_RECURSE ...)` 已加 `CONFIGURE_DEPENDS`（新文件自动并入 target，首次仍需一次 reconfigure）。跨模块 include 用 `Core/Base/...`（靠 D3D12RHI 的 `..` 暴露 `Source/`），不用 `../../`。
 
 ---
 

@@ -26,11 +26,11 @@ DirectX::XMVECTOR MathHelper::RandUnitVec3()
 {
 	DirectX::XMVECTOR One = DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f);
 	DirectX::XMVECTOR Zero = DirectX::XMVectorZero();
-	// ÎÒÃÇ²»ÓÃÑ­»·£¬¶øÊÇÖ±½ÓÇòÃæ¹«Ê½»ñÈ¡Ëæ»úÖµ
+	// æˆ‘ä»¬ä¸ç”¨å¾ªç¯ï¼Œè€Œæ˜¯ç›´æ¥çƒé¢å…¬å¼è·å–éšæœºå€¼
 	float y = RandF(-1.0f, 1.0f); // cos(phi)
 	float theta = RandF(0.0f, 2 * Pi);
 
-	float l = sqrtf(1.0f - y * y);// xz Æ½ÃæÉÏµÄÍ¶Ó°³¤¶È
+	float l = sqrtf(1.0f - y * y);// xz å¹³é¢ä¸Šçš„æŠ•å½±é•¿åº¦
 	float x = l * cosf(theta);
 	float z = l * sinf(theta);
 
@@ -40,34 +40,34 @@ DirectX::XMVECTOR MathHelper::RandUnitVec3()
 
 DirectX::XMVECTOR MathHelper::RandHemisphereUnitVec3(DirectX::XMVECTOR n)
 {
-	//ÎÒÃÇ²»Ê¹ÓÃÑ­»·£¬¶øÊÇÊ¹ÓÃÇòÃæ×ø±êÏµÖ±½Ó²ÉÑù·¨Ïß·½ÏòµÄ°ëÇò£¬ÎŞĞèÑ­»·ÓëÅĞ¶Ï
+	//æˆ‘ä»¬ä¸ä½¿ç”¨å¾ªç¯ï¼Œè€Œæ˜¯ä½¿ç”¨çƒé¢åæ ‡ç³»ç›´æ¥é‡‡æ ·æ³•çº¿æ–¹å‘çš„åŠçƒï¼Œæ— éœ€å¾ªç¯ä¸åˆ¤æ–­
 
 	/*
-	 * ÏÈÔÚÉÏ°ëÇòÉÏËæ»ú²ÉÑùÒ»¸ö·½ÏòÏòÁ¿£¬È»ºó½«Õâ¸ö°ëÇòĞı×ªµ½·¨ÏßËùÖ¸µÄ°ëÇòÉÏ¡£
+	 * å…ˆåœ¨ä¸ŠåŠçƒä¸Šéšæœºé‡‡æ ·ä¸€ä¸ªæ–¹å‘å‘é‡ï¼Œç„¶åå°†è¿™ä¸ªåŠçƒæ—‹è½¬åˆ°æ³•çº¿æ‰€æŒ‡çš„åŠçƒä¸Šã€‚
 	 */
 	float y = RandF(0.0f, 1.0f); // cos(phi)
 	float theta = RandF(0.0f, 2 * Pi);
 
-	float l = sqrtf(1.0f - y * y);// xz Æ½ÃæÉÏµÄÍ¶Ó°³¤¶È
+	float l = sqrtf(1.0f - y * y);// xz å¹³é¢ä¸Šçš„æŠ•å½±é•¿åº¦
 	float x = l * cosf(theta);
 	float z = l * sinf(theta);
 
-	DirectX::XMVECTOR LocalDir = DirectX::XMVectorSet(x, y, z, 1.0f); // (+y ³¯ÉÏ)
+	DirectX::XMVECTOR LocalDir = DirectX::XMVectorSet(x, y, z, 1.0f); // (+y æœä¸Š)
 
-	//¹¹½¨¾Ö²¿Õı½»»ù £¨a, n, t£© ¶ÔÓ¦Ô­À´µÄ(x, y, z)
+	//æ„å»ºå±€éƒ¨æ­£äº¤åŸº ï¼ˆa, n, tï¼‰ å¯¹åº”åŸæ¥çš„(x, y, z)
 	DirectX::XMVECTOR forward = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f); 
-	if (fabsf(DirectX::XMVectorGetX(DirectX::XMVector3Dot(forward, n))) > 0.999f)      // ·ÀÖ¹ up Óë n Æ½ĞĞ£¬ÍË»¯
+	if (fabsf(DirectX::XMVectorGetX(DirectX::XMVector3Dot(forward, n))) > 0.999f)      // é˜²æ­¢ up ä¸ n å¹³è¡Œï¼Œé€€åŒ–
 	{
 		forward = DirectX::XMVectorSet(0.0, -1.0f, 0.0f, 0.0f);
 	}
 
 	/*
-	 * ×óÊÖÏµÏÂ XxY¡·¡·Z  YxZ ¡·¡· X    Z x X ¡·¡· Y
-	 * ÄÇÃ´	   a n ¡·¡·t n t ¡·¡· a    t   a ¡·¡·n
+	 * å·¦æ‰‹ç³»ä¸‹ XxYã€‹ã€‹Z  YxZ ã€‹ã€‹ X    Z x X ã€‹ã€‹ Y
+	 * é‚£ä¹ˆ	   a n ã€‹ã€‹t n t ã€‹ã€‹ a    t   a ã€‹ã€‹n
 	 */
 	DirectX::XMVECTOR a = DirectX::XMVector3Normalize(DirectX::XMVector3Cross(n, forward));
 	DirectX::XMVECTOR t = DirectX::XMVector3Cross(a, n);
-	//½«localdirĞı×ª£¬Ğı×ª¾ØÕó¹¹½¨Ïà³ËÖ®ºóµÄ½á¹ûÊµ¼ÊÉÏ¾ÍÊÇ xa  + yn + zt
+	//å°†localdiræ—‹è½¬ï¼Œæ—‹è½¬çŸ©é˜µæ„å»ºç›¸ä¹˜ä¹‹åçš„ç»“æœå®é™…ä¸Šå°±æ˜¯ xa  + yn + zt
 	DirectX::XMVECTOR WorldDir = DirectX::XMVectorAdd(
 		DirectX::XMVectorAdd(DirectX::XMVectorScale(a, x), DirectX::XMVectorScale(n, y))
 		, DirectX::XMVectorScale(t, z));

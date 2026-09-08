@@ -19,7 +19,7 @@ void FTaskThreadAnyThread::ProcessTasksUntilQuit(int32 QueueIndex)
 
 uint64 FTaskThreadAnyThread::ProcessTasksUntilIdle(int32 QueueIndex)
 {
-	// ÆæÁË¹ÖÁË£¬AnyThreadÏÂÕâ¸öº¯Êý²»ÔÊÐíÔËÐÐÔÚ¶àÏß³ÌÏÂ
+	// å¥‡äº†æ€ªäº†ï¼ŒAnyThreadä¸‹è¿™ä¸ªå‡½æ•°ä¸å…è®¸è¿è¡Œåœ¨å¤šçº¿ç¨‹ä¸‹
 	if (FTaskGraphInterface::IsMultithread() == false)
 	{
 		return ProcessTasks();
@@ -45,14 +45,14 @@ uint64 FTaskThreadAnyThread::ProcessTasks()
 			const bool bIsMultithread = FTaskGraphInterface::IsMultithread();
 			if (bIsMultithread)
 			{
-				// ÕÒ²»µ½ÈÎÎñµÄÊ±ºòÎÒÃÇ¾ÍÈÃÏß³ÌµÈ´ýÖ±µ½¿ÉÒÔÕÒµ½ÈÎÎñÀ´´¦Àí
+				// æ‰¾ä¸åˆ°ä»»åŠ¡çš„æ—¶å€™æˆ‘ä»¬å°±è®©çº¿ç¨‹ç­‰å¾…ç›´åˆ°å¯ä»¥æ‰¾åˆ°ä»»åŠ¡æ¥å¤„ç†
 				Queue.StallRestartEvent->Wait(MAX_uint32, bCountAsStall);
 				bDidStall = true;
 			}
 
 			if (Queue.QuitForShutdown || !bIsMultithread)
 			{
-				// ¶ÓÁÐÒªÇóÍË³öÏß³ÌµÄ»°£¬±ÈÈç¹Ø»úÁ÷³Ì
+				// é˜Ÿåˆ—è¦æ±‚é€€å‡ºçº¿ç¨‹çš„è¯ï¼Œæ¯”å¦‚å…³æœºæµç¨‹
 				break;
 			}
 
@@ -60,8 +60,8 @@ uint64 FTaskThreadAnyThread::ProcessTasks()
 		}
 
 		/*
-		 * Windows µÄÏß³Ìµ÷¶ÈÆ÷ÓÐÊ±ºòÐÐÎª²»¼Ñ£¬»áÈÃµÍÓÅÏÈ¼¶µÄºóÌ¨Ïß³Ì£¨BackgroundThreadPriority£©¼ÌÐøÔËÐÐ£¬¼´Ê¹ÆäËû¸ßÓÅÏß³ÌÒÑ¾­×¼±¸ºÃ¡£
-		 * ÎÒÃÇÕâÀïÊÖ¶¯ÈÃ³öÊ±¼äÆ¬ Èç¹ûÏß³ÌÊÇ¡°ºóÌ¨ÓÅÏÈ¼¶¡±£¬ÇÒ±¾ÂÖÃ»ÓÐ¡°¹ÒÆðµÈ´ýÈÎÎñ¡±£¬¾ÍÖ÷¶¯ÈÃ³ö CPU ¸øÆäËûÏß³Ì¡£
+		 * Windows çš„çº¿ç¨‹è°ƒåº¦å™¨æœ‰æ—¶å€™è¡Œä¸ºä¸ä½³ï¼Œä¼šè®©ä½Žä¼˜å…ˆçº§çš„åŽå°çº¿ç¨‹ï¼ˆBackgroundThreadPriorityï¼‰ç»§ç»­è¿è¡Œï¼Œå³ä½¿å…¶ä»–é«˜ä¼˜çº¿ç¨‹å·²ç»å‡†å¤‡å¥½ã€‚
+		 * æˆ‘ä»¬è¿™é‡Œæ‰‹åŠ¨è®©å‡ºæ—¶é—´ç‰‡ å¦‚æžœçº¿ç¨‹æ˜¯â€œåŽå°ä¼˜å…ˆçº§â€ï¼Œä¸”æœ¬è½®æ²¡æœ‰â€œæŒ‚èµ·ç­‰å¾…ä»»åŠ¡â€ï¼Œå°±ä¸»åŠ¨è®©å‡º CPU ç»™å…¶ä»–çº¿ç¨‹ã€‚
 		 */
 		if (!bDidStall && PriorityIndex == (ENamedThreads::BackgroundThreadPriority >> ENamedThreads::ThreadPriorityShift))
 		{
@@ -88,7 +88,7 @@ void FTaskThreadAnyThread::WakeUp(int32 QueueIndex)
 
 void FTaskThreadAnyThread::StallForTuning(bool Stall)
 {
-	// todo ÎÒÃÇÔÝÊ±Ã»ÓÐÓÃÓÚstatµÄ¶«Î÷ÔÚ
+	// todo æˆ‘ä»¬æš‚æ—¶æ²¡æœ‰ç”¨äºŽstatçš„ä¸œè¥¿åœ¨
 	/*if (Stall)
 	{
 		Queue.StallForTuning.Lock();

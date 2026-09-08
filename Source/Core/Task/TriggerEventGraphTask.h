@@ -1,8 +1,8 @@
 #pragma once
 #include "TaskGraphInterfaces.h"
 #include "Threads/Event.h"
-/**·â×°Ò»¸ö¡°´¥·¢ FEvent µÄÈÎÎñ¡±¡£
-µ±Õâ¸öÈÎÎñ±» TaskGraph µ÷¶ÈÖ´ÐÐÊ±£¬Ëü»áµ÷ÓÃ Event->Trigger()£¬´Ó¶ø»½ÐÑµÈ´ýÕâ¸ö FEvent µÄÆäËûÏß³Ì¡£
+/**å°è£…ä¸€ä¸ªâ€œè§¦å‘ FEvent çš„ä»»åŠ¡â€ã€‚
+å½“è¿™ä¸ªä»»åŠ¡è¢« TaskGraph è°ƒåº¦æ‰§è¡Œæ—¶ï¼Œå®ƒä¼šè°ƒç”¨ Event->Trigger()ï¼Œä»Žè€Œå”¤é†’ç­‰å¾…è¿™ä¸ª FEvent çš„å…¶ä»–çº¿ç¨‹ã€‚
  */
 class FTriggerEventGraphTask
 {

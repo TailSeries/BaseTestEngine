@@ -53,7 +53,7 @@ namespace WindowsPlatformProcessImpl
 #pragma warning( pop )
 
 		/*
-		 * windows ÉÏÉèÖÃÏß³ÌÃû±ØĞë¿í×Ö·û´®
+		 * windows ä¸Šè®¾ç½®çº¿ç¨‹åå¿…é¡»å®½å­—ç¬¦ä¸²
 		 */
 		int len = MultiByteToWideChar(CP_UTF8, 0, lpThreadDescription, -1, nullptr, 0);
 		if (len > 0 && RealSetThreadDescription) {
@@ -67,7 +67,7 @@ namespace WindowsPlatformProcessImpl
 
 bool FGenericPlatformProcess::SupportsMultithreading()
 {
-	//todo ÎÒÃÇÄ¬ÈÏ¾ÍÊÇÖ§³Ö¶àÏß³Ì¾ÍĞĞ,ºóĞø¸Ä³Éini»òÕßÆô¶¯²ÎÊı¿ØÖÆ
+	//todo æˆ‘ä»¬é»˜è®¤å°±æ˜¯æ”¯æŒå¤šçº¿ç¨‹å°±è¡Œ,åç»­æ”¹æˆiniæˆ–è€…å¯åŠ¨å‚æ•°æ§åˆ¶
 	return true;
 }
 
@@ -115,7 +115,7 @@ void FWindowsPlatformProcess::SetThreadAffinityMask(uint64 AffinityMask)
 void FWindowsPlatformProcess::SetThreadName(const char* ThreadName)
 {
 	/*
-	 * ÎÒÃÇÊ¹ÓÃvs2022 Ã»±ØÒªÊ¹ÓÃÕâÖÖÀÏÊ½µÄ·½Ê½À´ÉèÖÃÏß³ÌÃû
+	 * æˆ‘ä»¬ä½¿ç”¨vs2022 æ²¡å¿…è¦ä½¿ç”¨è¿™ç§è€å¼çš„æ–¹å¼æ¥è®¾ç½®çº¿ç¨‹å
 	 */
 	 //WindowsPlatformProcessImpl::SetThreadDescription(ThreadName);
 
@@ -138,16 +138,16 @@ void FWindowsPlatformProcess::Sleep(float Seconds)
 
 int32 FWindowsPlatformProcess::NumberOfWorkerThreadsToSpawn()
 {
-	//·şÎñÆ÷Ä£Ê½×î¶àÆôÓÃ 4 ¸ö¹¤×÷Ïß³Ì£¨Í¨³£·şÎñÆ÷¿É·ÖÅäµÄºËĞÄÉÙ£¬¸ºÔØÌØµã²»Í¬£©
+	//æœåŠ¡å™¨æ¨¡å¼æœ€å¤šå¯ç”¨ 4 ä¸ªå·¥ä½œçº¿ç¨‹ï¼ˆé€šå¸¸æœåŠ¡å™¨å¯åˆ†é…çš„æ ¸å¿ƒå°‘ï¼Œè´Ÿè½½ç‰¹ç‚¹ä¸åŒï¼‰
 	static int32 MaxServerWorkerThreads = 4;
-	static int32 MaxWorkerThreads = 26; // ÆÕÍ¨¿Í»§¶Ë×î¶àÆôÓÃ 26 ¸ö¹¤×÷Ïß³Ì£¨Ò»°ãÊÇ¸ù¾İ×î´óËøÁ´³¤¶È»òºÏÀíÏß³Ì³Ø´óĞ¡¶¨µÄ£©¡£
+	static int32 MaxWorkerThreads = 26; // æ™®é€šå®¢æˆ·ç«¯æœ€å¤šå¯ç”¨ 26 ä¸ªå·¥ä½œçº¿ç¨‹ï¼ˆä¸€èˆ¬æ˜¯æ ¹æ®æœ€å¤§é”é“¾é•¿åº¦æˆ–åˆç†çº¿ç¨‹æ± å¤§å°å®šçš„ï¼‰ã€‚
 	int32 NumberOfCores = FWindowsPlatformProcess::NumberOfCores();
 	int32 NumberOfCoresIncludingHyperthreads = FWindowsPlatformProcess::NumberOfCoresIncludingHyperthreads();
 	int32 NumberOfThreads = 0;
 	/*
-	 * Èç¹û´æÔÚ³¬Ïß³Ì£¨Âß¼­ºËĞÄÊı¶àÓÚÎïÀíºËĞÄÊı£©£¬ÔòÓÃÂß¼­ºËĞÄÊı-2 À´È·¶¨Ïß³ÌÊı¡£
-	 * ·ñÔòÓÃÎïÀíºËĞÄÊı¼õ 1¡£
-	 * ¼õÈ¥ 1 »ò 2 ÊÇÎªÁËÁô³öÒ»¸ö»òÁ½¸öºËĞÄ¸øÖ÷Ïß³Ì»òÏµÍ³£¬±ÜÃâ±¥ºÍ¡£
+	 * å¦‚æœå­˜åœ¨è¶…çº¿ç¨‹ï¼ˆé€»è¾‘æ ¸å¿ƒæ•°å¤šäºç‰©ç†æ ¸å¿ƒæ•°ï¼‰ï¼Œåˆ™ç”¨é€»è¾‘æ ¸å¿ƒæ•°-2 æ¥ç¡®å®šçº¿ç¨‹æ•°ã€‚
+	 * å¦åˆ™ç”¨ç‰©ç†æ ¸å¿ƒæ•°å‡ 1ã€‚
+	 * å‡å» 1 æˆ– 2 æ˜¯ä¸ºäº†ç•™å‡ºä¸€ä¸ªæˆ–ä¸¤ä¸ªæ ¸å¿ƒç»™ä¸»çº¿ç¨‹æˆ–ç³»ç»Ÿï¼Œé¿å…é¥±å’Œã€‚
 	 */
 	if (NumberOfCoresIncludingHyperthreads > NumberOfCores)
 	{
@@ -278,10 +278,10 @@ int32 FWindowsPlatformProcess::NumberOfCores()
 	static int32 CoreCount = 0;
 	if (CoreCount == 0)
 	{
-		uint32 NumGroups = 0; // CPU ×éµÄÊıÁ¿£¨±ÈÈç Windows ÏÂ³¬¶àºËµÄ CPU »á±»·ÖÎª¶à¸ö×é£©¡£
-		uint32 NumaNodeCount = 0; // NUMA ½ÚµãÊıÁ¿£¨ÓÃÓÚÄÚ´æ·ÃÎÊÓÅ»¯£©¡£ÏÖ´ú£¬Ò»×é CPU ÓµÓĞ×Ô¼º±¾µØÁ¬½ÓµÄÄÚ´æ£¨RAM£©³ÆÎªÒ»¸öNUMA½Úµã¡£±ÈÈç£º¡¾½Úµã0 CPU 0~3 16 GB¡¿¡¾½Úµã1 CPU 4~7 16 GB¡¿  
-		uint32 NumCores = 0; // ÎïÀíºËĞÄÊı¡£
-		uint32 LogicalProcessorCount = 0; // Âß¼­´¦ÀíÆ÷Êı£¬¼´°üÀ¨³¬Ïß³Ì£¨Hyper-Threading£©ºóµÄ×ÜÏß³ÌÊı¡£
+		uint32 NumGroups = 0; // CPU ç»„çš„æ•°é‡ï¼ˆæ¯”å¦‚ Windows ä¸‹è¶…å¤šæ ¸çš„ CPU ä¼šè¢«åˆ†ä¸ºå¤šä¸ªç»„ï¼‰ã€‚
+		uint32 NumaNodeCount = 0; // NUMA èŠ‚ç‚¹æ•°é‡ï¼ˆç”¨äºå†…å­˜è®¿é—®ä¼˜åŒ–ï¼‰ã€‚ç°ä»£ï¼Œä¸€ç»„ CPU æ‹¥æœ‰è‡ªå·±æœ¬åœ°è¿æ¥çš„å†…å­˜ï¼ˆRAMï¼‰ç§°ä¸ºä¸€ä¸ªNUMAèŠ‚ç‚¹ã€‚æ¯”å¦‚ï¼šã€èŠ‚ç‚¹0 CPU 0~3 16 GBã€‘ã€èŠ‚ç‚¹1 CPU 4~7 16 GBã€‘  
+		uint32 NumCores = 0; // ç‰©ç†æ ¸å¿ƒæ•°ã€‚
+		uint32 LogicalProcessorCount = 0; // é€»è¾‘å¤„ç†å™¨æ•°ï¼Œå³åŒ…æ‹¬è¶…çº¿ç¨‹ï¼ˆHyper-Threadingï¼‰åçš„æ€»çº¿ç¨‹æ•°ã€‚
 		QueryCpuInformation(NumGroups, NumaNodeCount, NumCores, LogicalProcessorCount);
 		////if (FCommandLine::IsInitialized() && FParse::Param(FCommandLine::Get(), TEXT("usehyperthreading")))
 		//{
@@ -289,7 +289,7 @@ int32 FWindowsPlatformProcess::NumberOfCores()
 		//}
 		//else
 		{
-			// ÎÒÃÇÏÈÄ¬ÈÏ²»Ê¹ÓÃ³¬Ïß³Ì£¬¸Ğ¾õÊÇ¸ö¿Ó
+			// æˆ‘ä»¬å…ˆé»˜è®¤ä¸ä½¿ç”¨è¶…çº¿ç¨‹ï¼Œæ„Ÿè§‰æ˜¯ä¸ªå‘
 			CoreCount = NumCores;
 		}
 		int32 LimitCount = 32768;

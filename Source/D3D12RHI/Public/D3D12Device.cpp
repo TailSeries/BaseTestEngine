@@ -1,5 +1,5 @@
 #include "D3D12Device.h"
-#include "D3DAdapter.h"
+#include "D3D12Adapter.h"
 FD3D12Device::FD3D12Device(FD3D12Adapter* InAdapter, uint32 InGPUIndex)
     : Adapter(InAdapter)
     , GPUIndex(InGPUIndex)
@@ -16,5 +16,5 @@ FD3D12Device::~FD3D12Device() = default;
 
 ID3D12Device* FD3D12Device::GetDevice()
 {
-    return Adapter->GetD3DDevice();   
+    return Adapter->GetD3DDevice();
 }

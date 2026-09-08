@@ -34,6 +34,12 @@ public:
 	static bool FindAdapter(FD3D12AdapterDesc& OutDesc);
 	// UE 同名：建 RootDevice + 创建 FD3D12Device 节点
 	void InitializeDevices();
+	FD3D12Device* GetDevice() const { return Device; }
+	ID3D12Device* GetD3DDevice() const { return RootDevice.Get(); }
+	ComPtr<IDXGIFactory4> GetDXGIFactory() const
+	{
+		return DxgiFactory;
+	}
 
 
 private:

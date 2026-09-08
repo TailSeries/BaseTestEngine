@@ -18,7 +18,7 @@ void FTaskThreadBase::Setup(ENamedThreads::Type InThreadId, uint32 InPerThreadID
 
 void FTaskThreadBase::InitializeForCurrentThread()
 {
-	// ×¢ÒâÕâÀïÉèÖÃµÄ²»ÊÇthis ¶øÊÇOwnerWorker
+	// æ³¨æ„è¿™é‡Œè®¾ç½®çš„ä¸æ˜¯this è€Œæ˜¯OwnerWorker
 	FPlatformTLS::SetTlsValue(PerThreadIDTLSSlot, OwnerWorker);
 }
 
@@ -43,11 +43,11 @@ uint32 FTaskThreadBase::Run()
 	ProcessTasksUntilQuit(0);
 
 	/*
-	 * Õâ²»ÊÇÇåÀíÄãÍ¨¹ı FPlatformTLS::SetTlsValue ÉèÖÃµÄ ×Ô¶¨Òå TLS Öµ£¬¶øÊÇ×¨ÃÅÓÃÓÚÇåÀíUE ÄÚ²¿µÄÏß³Ì±¾µØ»º´æÏµÍ³£¬ÀıÈç£º
-	 * FMalloc Ïß³Ì¾Ö²¿»º´æ£¨±ÈÈçÏß³ÌË½ÓĞµÄ TBB, Binned ·ÖÅäÆ÷»º´æ£©£»
-	 * Ğ¡¶ÔÏóÄÚ´æ³ØÖĞµÄ per-thread block cache£»
-	 * FSlowHeartBeatScope »ò FStatsThreadState ÖĞµÄ»º´æ×´Ì¬£»
-	 * Ä³Ğ©Æ½Ì¨ÉÏ·ÖÅäÆ÷ÎªÁËĞÔÄÜÎ¬»¤µÄ thread-local free list¡£
+	 * è¿™ä¸æ˜¯æ¸…ç†ä½ é€šè¿‡ FPlatformTLS::SetTlsValue è®¾ç½®çš„ è‡ªå®šä¹‰ TLS å€¼ï¼Œè€Œæ˜¯ä¸“é—¨ç”¨äºæ¸…ç†UE å†…éƒ¨çš„çº¿ç¨‹æœ¬åœ°ç¼“å­˜ç³»ç»Ÿï¼Œä¾‹å¦‚ï¼š
+	 * FMalloc çº¿ç¨‹å±€éƒ¨ç¼“å­˜ï¼ˆæ¯”å¦‚çº¿ç¨‹ç§æœ‰çš„ TBB, Binned åˆ†é…å™¨ç¼“å­˜ï¼‰ï¼›
+	 * å°å¯¹è±¡å†…å­˜æ± ä¸­çš„ per-thread block cacheï¼›
+	 * FSlowHeartBeatScope æˆ– FStatsThreadState ä¸­çš„ç¼“å­˜çŠ¶æ€ï¼›
+	 * æŸäº›å¹³å°ä¸Šåˆ†é…å™¨ä¸ºäº†æ€§èƒ½ç»´æŠ¤çš„ thread-local free listã€‚
 	 */
 	//FMemory::ClearAndDisableTLSCachesOnCurrentThread();
 	return 0;

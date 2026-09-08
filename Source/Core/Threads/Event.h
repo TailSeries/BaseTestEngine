@@ -1,17 +1,17 @@
 #pragma once
 /*
- * Ä£ÄâwindowsÉÏµÄeventhandleµÄ»úÖÆ
- * 1.windows Event ÓĞÁ½ÖÖÀàĞÍ
- *	1.1 Manual-reset Event ÊÂ¼ş±»ÉèÖÃÎªĞÅºÅÌ¬ºó£¬±£³ÖĞÅºÅÌ¬£¬Ö±µ½ÏÔÊ½ÖØÖÃ.ÓÃÓÚ¶à¸öÏß³ÌµÈ´ıÄ³¸öÈ«¾ÖÌõ¼ş³ÉÁ¢£¬ÀıÈç¡°×ÊÔ´¼ÓÔØÍê±Ï¡±¡£
- *		±ÈÈçÏÖÔÚÄãÓĞÁ½¸ö wait£¬ÔÚÏß³ÌÀïµ÷ÓÃÒ»´ÎSetEvent
- *		WaitForSingleObject(gEvent, INFINITE); // µÚÒ»´Î£ºÄÜÊÕµ½£¬
-		WaitForSingleObject(gEvent, INFINITE); // µÚ¶ş´Î£ºÒ²ÄÜÊÕµ½
- *	1.2 Auto-reset Event 	Ò»µ©ÓĞÏß³ÌµÈ´ı²¢±»»½ĞÑ£¬ÊÂ¼ş»á×Ô¶¯ÖØÖÃÎª·ÇĞÅºÅÌ¬¡£ÓÃÓÚ ÊÊºÏµ¥¸öÏß³ÌµÈ´ıµÄ³¡¾°£¬±ÈÈçÉú²úÕßÏû·ÑÕß¡£
- *		±ÈÈçÏÖÔÚÄãÓĞÁ½¸ö wait£¬ÔÚÏß³ÌÀïµ÷ÓÃÒ»´ÎSetEvent
- *		WaitForSingleObject(gEvent, INFINITE); // µÚÒ»´Î£ºÄÜÊÕµ½£¬Ëæºóevent±»×Ô¶¯ÖØÖÃÎª·ÇĞÅºÅÌ¬
-		WaitForSingleObject(gEvent, INFINITE); // µÚ¶ş´Î£º»áÒ»Ö±¿¨×¡£¬Ö±µ½ÔÙ´Î SetEvent
+ * æ¨¡æ‹Ÿwindowsä¸Šçš„eventhandleçš„æœºåˆ¶
+ * 1.windows Event æœ‰ä¸¤ç§ç±»å‹
+ *	1.1 Manual-reset Event äº‹ä»¶è¢«è®¾ç½®ä¸ºä¿¡å·æ€åï¼Œä¿æŒä¿¡å·æ€ï¼Œç›´åˆ°æ˜¾å¼é‡ç½®.ç”¨äºå¤šä¸ªçº¿ç¨‹ç­‰å¾…æŸä¸ªå…¨å±€æ¡ä»¶æˆç«‹ï¼Œä¾‹å¦‚â€œèµ„æºåŠ è½½å®Œæ¯•â€ã€‚
+ *		æ¯”å¦‚ç°åœ¨ä½ æœ‰ä¸¤ä¸ª waitï¼Œåœ¨çº¿ç¨‹é‡Œè°ƒç”¨ä¸€æ¬¡SetEvent
+ *		WaitForSingleObject(gEvent, INFINITE); // ç¬¬ä¸€æ¬¡ï¼šèƒ½æ”¶åˆ°ï¼Œ
+		WaitForSingleObject(gEvent, INFINITE); // ç¬¬äºŒæ¬¡ï¼šä¹Ÿèƒ½æ”¶åˆ°
+ *	1.2 Auto-reset Event 	ä¸€æ—¦æœ‰çº¿ç¨‹ç­‰å¾…å¹¶è¢«å”¤é†’ï¼Œäº‹ä»¶ä¼šè‡ªåŠ¨é‡ç½®ä¸ºéä¿¡å·æ€ã€‚ç”¨äº é€‚åˆå•ä¸ªçº¿ç¨‹ç­‰å¾…çš„åœºæ™¯ï¼Œæ¯”å¦‚ç”Ÿäº§è€…æ¶ˆè´¹è€…ã€‚
+ *		æ¯”å¦‚ç°åœ¨ä½ æœ‰ä¸¤ä¸ª waitï¼Œåœ¨çº¿ç¨‹é‡Œè°ƒç”¨ä¸€æ¬¡SetEvent
+ *		WaitForSingleObject(gEvent, INFINITE); // ç¬¬ä¸€æ¬¡ï¼šèƒ½æ”¶åˆ°ï¼Œéšåeventè¢«è‡ªåŠ¨é‡ç½®ä¸ºéä¿¡å·æ€
+		WaitForSingleObject(gEvent, INFINITE); // ç¬¬äºŒæ¬¡ï¼šä¼šä¸€ç›´å¡ä½ï¼Œç›´åˆ°å†æ¬¡ SetEvent
 
-	ÀàËÆ±ê×¼¿âµÄcondition_variable
+	ç±»ä¼¼æ ‡å‡†åº“çš„condition_variable
 
  */
 
@@ -28,41 +28,41 @@ class COREMODULE FEvent
 public:
 	/**
 	 * 
-	 * @param bIsManualReset ¿ØÖÆÊÂ¼şÊÇ·ñÊÖ¶¯ÖØÖÃ
+	 * @param bIsManualReset æ§åˆ¶äº‹ä»¶æ˜¯å¦æ‰‹åŠ¨é‡ç½®
 	 * @return 
 	 */
 	virtual bool Create(bool bIsManualReset = false) = 0;
 
 	
 	/**
-	 *  ÊÂ¼şÊÇ·ñĞèÒªÊÖ¶¯ÖØÖÃ
+	 *  äº‹ä»¶æ˜¯å¦éœ€è¦æ‰‹åŠ¨é‡ç½®
 	 * @return 
 	 */
 	virtual bool IsManualReset() = 0;
 
 
 	/**
-	 * ´¥·¢ÊÂ¼ş,»½ĞÑµÈ´ıÕâ¸öÊÂ¼şµÄÏß³Ì
+	 * è§¦å‘äº‹ä»¶,å”¤é†’ç­‰å¾…è¿™ä¸ªäº‹ä»¶çš„çº¿ç¨‹
 	 */
 	virtual void Trigger() = 0;
 
 
 	/**
-	 * Ïàµ±ÓÚ ResetEvent
+	 * ç›¸å½“äº ResetEvent
 	 */
 	virtual void Reset() = 0;
 
 	/**
-	 * µÈ´ıÒ»¶¨Ê±¼ä£¬Ò»Ö±µ½Õâ¸öevent±»´¥·¢
-	 * @param WaitTime ĞèÒªµÈ´ıµÄºÁÃëÊı
-	 * @param bIgnoreThreadIdleStats ÊÇ·ñºöÂÔÍ³¼Æµ±Ç°Ïß³Ì¿ÕÏĞÊ±¼ä
+	 * ç­‰å¾…ä¸€å®šæ—¶é—´ï¼Œä¸€ç›´åˆ°è¿™ä¸ªeventè¢«è§¦å‘
+	 * @param WaitTime éœ€è¦ç­‰å¾…çš„æ¯«ç§’æ•°
+	 * @param bIgnoreThreadIdleStats æ˜¯å¦å¿½ç•¥ç»Ÿè®¡å½“å‰çº¿ç¨‹ç©ºé—²æ—¶é—´
 	 * @return 
 	 */
 	virtual bool Wait(uint32 WaitTime, const bool bIgnoreThreadIdleStats = false) = 0;
 
 
 	/*
-	 * ÎŞÏŞµÈ´ıÒ»¸ö·Ç³£³¤µÄÊ±¼ä
+	 * æ— é™ç­‰å¾…ä¸€ä¸ªéå¸¸é•¿çš„æ—¶é—´
 	 */
 	bool Wait()
 	{
@@ -84,12 +84,12 @@ protected:
 
 
 protected:
-	/*ÓÃÓÚ¸øÃ¿¸ö´´½¨µÄÊÂ¼şÉú³ÉÒ»¸ö¶ÀÁ¢µÄÎ¨Ò»±êÊ¶·û£¨ID£©¡£*/
+	/*ç”¨äºç»™æ¯ä¸ªåˆ›å»ºçš„äº‹ä»¶ç”Ÿæˆä¸€ä¸ªç‹¬ç«‹çš„å”¯ä¸€æ ‡è¯†ç¬¦ï¼ˆIDï¼‰ã€‚*/
 	static TAtomic<uint32> EventUniqueId;
 	uint32 EventId;
-	/*¼ÇÂ¼Õâ¸öÊÂ¼şµÄcpuµÄµÈ´ıÁË¶àÉÙcpuÖÜÆÚ 0.2 ~ 1 ns*/
+	/*è®°å½•è¿™ä¸ªäº‹ä»¶çš„cpuçš„ç­‰å¾…äº†å¤šå°‘cpuå‘¨æœŸ 0.2 ~ 1 ns*/
 	/*
-	 * Ö»ÄÜ¼ÇÂ¼¼¸Ãë£¬µ«²»µÈÓÚEventÖ»ÄÜµÈ´ıÕâÃ´µãÊ±¼ä£¬ÕâÖ»ÊÇÓÃÀ´ĞÔÄÜ·ÖÎöµÄ
+	 * åªèƒ½è®°å½•å‡ ç§’ï¼Œä½†ä¸ç­‰äºEventåªèƒ½ç­‰å¾…è¿™ä¹ˆç‚¹æ—¶é—´ï¼Œè¿™åªæ˜¯ç”¨æ¥æ€§èƒ½åˆ†æçš„
 	 */
 	TAtomic<uint32> EventStartCycles;
 

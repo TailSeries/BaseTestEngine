@@ -12,7 +12,7 @@
 #endif
 #endif
 /*
- * ±àÒëÆÚÉ¸Ñ¡³öµ±Ç°ÊÇ32Î»»¹ÊÇ64Î»ÏµÍ³
+ * ç¼–è¯‘æœŸç­›é€‰å‡ºå½“å‰æ˜¯32ä½è¿˜æ˜¯64ä½ç³»ç»Ÿ
  */
 template<typename T32, typename  T64, int pointersize>
 struct SelectIntPointerType
@@ -92,7 +92,7 @@ struct FGenericPlatformTypes
 	typedef decltype(nullptr)		TYPE_OF_NULLPTR;
 };
 
-//ÎÒÃÇÏÖÔÚÖ»ÓĞwindowsÆ½Ì¨
+//æˆ‘ä»¬ç°åœ¨åªæœ‰windowså¹³å°
 #if defined(_WIN64) || defined(_WIN32)
 struct FWindowsPlatformTypes : public FGenericPlatformTypes
 {
@@ -116,7 +116,7 @@ using FPlatformTypes = FWindowsPlatformTypes;
 #endif
 
 
-//¿çÆ½Ì¨¶¨ÒåÔÚÕâÀï
+//è·¨å¹³å°å®šä¹‰åœ¨è¿™é‡Œ
 
 //~ Unsigned base types.
 /// An 8-bit unsigned integer.
@@ -168,10 +168,10 @@ typedef FPlatformTypes::TYPE_OF_NULL	TYPE_OF_NULL;
 /// The type of the C++ nullptr keyword.
 typedef FPlatformTypes::TYPE_OF_NULLPTR	TYPE_OF_NULLPTR;
 
-//ÎÒÃÇÖ±½ÓÓÃstd::string ´úÀíFString
+//æˆ‘ä»¬ç›´æ¥ç”¨std::string ä»£ç†FString
 using FString = std::string;
 
-//ÎÒÃÇÖ±½ÓÓÃstd::chrono::duration À´±íÊ¾FTimeSpan  Nime/Dime±íÊ¾¼ä¸ô¶àÉÙÃë
+//æˆ‘ä»¬ç›´æ¥ç”¨std::chrono::duration æ¥è¡¨ç¤ºFTimeSpan  Nime/Dimeè¡¨ç¤ºé—´éš”å¤šå°‘ç§’
 template<int64 Nime = 1, int64 Dime = 10'000'000>
 using FTimespan = std::chrono::duration<int64, std::ratio<Nime, Dime>>;
 template<int64 Nime = 1, int64 Dime = 10'000'000, typename Rep, typename Period>
@@ -186,9 +186,9 @@ using TFunction = std::function<T>;
 
 
 /*
- * std::shared_ptrµÄÒıÓÃ¼ÆÊı±¾ÉíÒ²ÊÇatomicµÄ£¬ÕâµãºÍTRefCountPtrÒ»ÖÂ¡£
- * ²»¹ıTRefCountPtr ÒªÇóµÄÒıÓÃ¼ÆÊıÊÇÇÖÈëÊ½µÄ£¬Í¬Ê±Ëü»¹Ö§³ÖĞòÁĞ»¯,
- * ÎÒÃÇºóÃæÔÙÊµÏÖĞòÁĞ»¯£¬ËùÒÔÕâÀïÏÈÓÃ  TRefCountPtr = std::shared_ptr, ×öÍêĞòÁĞ»¯ÔÙÓÃ×Ô¼ºµÄsharedptr
+ * std::shared_ptrçš„å¼•ç”¨è®¡æ•°æœ¬èº«ä¹Ÿæ˜¯atomicçš„ï¼Œè¿™ç‚¹å’ŒTRefCountPträ¸€è‡´ã€‚
+ * ä¸è¿‡TRefCountPtr è¦æ±‚çš„å¼•ç”¨è®¡æ•°æ˜¯ä¾µå…¥å¼çš„ï¼ŒåŒæ—¶å®ƒè¿˜æ”¯æŒåºåˆ—åŒ–,
+ * æˆ‘ä»¬åé¢å†å®ç°åºåˆ—åŒ–ï¼Œæ‰€ä»¥è¿™é‡Œå…ˆç”¨  TRefCountPtr = std::shared_ptr, åšå®Œåºåˆ—åŒ–å†ç”¨è‡ªå·±çš„sharedptr
  */
 template<typename T>
 using TRefCountPtr = std::shared_ptr<T>;

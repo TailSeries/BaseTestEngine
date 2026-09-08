@@ -13,7 +13,8 @@ target_include_directories(D3D12RHI PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/.."
     "${CMAKE_CURRENT_SOURCE_DIR}/Public"
 )
-target_link_libraries(D3D12RHI RHI Core d3d12 dxgi d3dcompiler)
+# 注：RHI 现为空壳（无导出符号 → 不生成 RHI.lib），暂不链接；第2章 RHI 有资源类后再加回 RHI
+target_link_libraries(D3D12RHI Core d3d12 dxgi d3dcompiler)
 set_target_properties(${target_name} PROPERTIES LINK_FLAGS
     "/NODEFAULTLIB:LIBCMT.lib /NODEFAULTLIB:LIBCMTD.lib /ignore:4099"
 )

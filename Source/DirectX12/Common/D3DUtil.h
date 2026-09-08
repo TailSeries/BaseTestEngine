@@ -88,28 +88,28 @@ public:
     static std::wstring ToWString(const std::string& str);
 
 	/**
-     * ´´½¨µÄÊ±ºò¾Í½«³õÊ¼»¯Êı¾İinitdata·Å½øÄ¬ÈÏ¶ÑÖĞ£¬È»ºó·µ»ØÄ¬ÈÏ¶Ñ£¬×îºóÒ»¸ö²ÎÊı·µ»ØÉÏ´«¶Ñ
+     * åˆ›å»ºçš„æ—¶å€™å°±å°†åˆå§‹åŒ–æ•°æ®initdataæ”¾è¿›é»˜è®¤å †ä¸­ï¼Œç„¶åè¿”å›é»˜è®¤å †ï¼Œæœ€åä¸€ä¸ªå‚æ•°è¿”å›ä¸Šä¼ å †
      * @param device 
      * @param cmdList 
      * @param initData 
      * @param byteSize 
      * @param uploadBuffer 
      * @return 
-     * ¹Ø¼üÀí½âµã
+     * å…³é”®ç†è§£ç‚¹
 
-  1. ¡°Á¢¼´¡±¸´ÖÆµ½ÉÏ´«¶Ñ£ºÊÇµÄ£¬UpdateSubresources ÄÚ²¿»áÍ¨¹ı Map/memcpy ½« initData ¸´ÖÆµ½ÉÏ´«¶Ñ£¨ÒòÎªÉÏ´«¶ÑÖ§³Ö CPU Ğ´Èë£©¡£
-  2. ¡°ÑÓ³Ù¡±¸´ÖÆµ½Ä¬ÈÏ¶Ñ£º¸´ÖÆµ½Ä¬ÈÏ¶ÑµÄÃüÁîÖ»ÊÇ±»¼ÇÂ¼µ½ cmdList ÖĞ£¬ĞèÒªµ÷ÓÃ ExecuteCommandLists ºó GPU ²Å»áÖ´ĞĞ¡£
-  3. ÎªÊ²Ã´ÕâÑùÉè¼Æ£º
-    - ÅúÁ¿Ìá½»ÃüÁî£¬¼õÉÙ CPU-GPU Í¬²½¿ªÏú¡£
-    - ÔÊĞíÔÚµ¥¸öÃüÁîÁĞ±íÖĞ¼ÇÂ¼¶à¸ö×ÊÔ´ÉÏ´«ÃüÁî£¬Ò»´ÎĞÔÌá½»¡£
-    - ·ûºÏ DirectX12 µÄÏÔÊ½¿ØÖÆÉè¼ÆÕÜÑ§¡£
-  4. ÉÏ´«¶ÑµÄÉúÃüÖÜÆÚ£º
-    - ÔÚ CreateDefaultBuffer ÖĞ£¬ÉÏ´«¶ÑÍ¨¹ı uploadBuffer ²ÎÊı·µ»Ø¡£
-    - ÔÚ MeshGeometry ÖĞ±£´æÎª VertexBufferUploader/IndexBufferUploader¡£
-    - ¸´ÖÆÍê³Éºó²»ÄÜÁ¢¼´ÊÍ·Å£¬ÒòÎª GPU ¿ÉÄÜ»¹ÔÚ¶ÁÈ¡£¨ĞèÒªÍ¬²½£©¡£
-    - Í¨³£ÔÚÈ·¶¨ GPU Ê¹ÓÃÍê³Éºó²ÅÊÍ·Å£¨ÈçÖ¡½áÊøºó£©¡£
+  1. â€œç«‹å³â€å¤åˆ¶åˆ°ä¸Šä¼ å †ï¼šæ˜¯çš„ï¼ŒUpdateSubresources å†…éƒ¨ä¼šé€šè¿‡ Map/memcpy å°† initData å¤åˆ¶åˆ°ä¸Šä¼ å †ï¼ˆå› ä¸ºä¸Šä¼ å †æ”¯æŒ CPU å†™å…¥ï¼‰ã€‚
+  2. â€œå»¶è¿Ÿâ€å¤åˆ¶åˆ°é»˜è®¤å †ï¼šå¤åˆ¶åˆ°é»˜è®¤å †çš„å‘½ä»¤åªæ˜¯è¢«è®°å½•åˆ° cmdList ä¸­ï¼Œéœ€è¦è°ƒç”¨ ExecuteCommandLists å GPU æ‰ä¼šæ‰§è¡Œã€‚
+  3. ä¸ºä»€ä¹ˆè¿™æ ·è®¾è®¡ï¼š
+    - æ‰¹é‡æäº¤å‘½ä»¤ï¼Œå‡å°‘ CPU-GPU åŒæ­¥å¼€é”€ã€‚
+    - å…è®¸åœ¨å•ä¸ªå‘½ä»¤åˆ—è¡¨ä¸­è®°å½•å¤šä¸ªèµ„æºä¸Šä¼ å‘½ä»¤ï¼Œä¸€æ¬¡æ€§æäº¤ã€‚
+    - ç¬¦åˆ DirectX12 çš„æ˜¾å¼æ§åˆ¶è®¾è®¡å“²å­¦ã€‚
+  4. ä¸Šä¼ å †çš„ç”Ÿå‘½å‘¨æœŸï¼š
+    - åœ¨ CreateDefaultBuffer ä¸­ï¼Œä¸Šä¼ å †é€šè¿‡ uploadBuffer å‚æ•°è¿”å›ã€‚
+    - åœ¨ MeshGeometry ä¸­ä¿å­˜ä¸º VertexBufferUploader/IndexBufferUploaderã€‚
+    - å¤åˆ¶å®Œæˆåä¸èƒ½ç«‹å³é‡Šæ”¾ï¼Œå› ä¸º GPU å¯èƒ½è¿˜åœ¨è¯»å–ï¼ˆéœ€è¦åŒæ­¥ï¼‰ã€‚
+    - é€šå¸¸åœ¨ç¡®å®š GPU ä½¿ç”¨å®Œæˆåæ‰é‡Šæ”¾ï¼ˆå¦‚å¸§ç»“æŸåï¼‰ã€‚
 
-  ËùÒÔ£¬ÄãµÄÀí½âÊÇ¶ÔµÄ£ºÊı¾İ¡°Á¢¼´¡±½øÈëÁËÉÏ´«¶Ñ£¨CPU ¿É·ÃÎÊ£©£¬µ«½øÈëÄ¬ÈÏ¶Ñ£¨GPU ×¨ÓÃ£©ÊÇÑÓ³ÙµÄ£¬ĞèÒªÃüÁîÁĞ±íÖ´ĞĞºó²Å»á·¢Éú¡£
+  æ‰€ä»¥ï¼Œä½ çš„ç†è§£æ˜¯å¯¹çš„ï¼šæ•°æ®â€œç«‹å³â€è¿›å…¥äº†ä¸Šä¼ å †ï¼ˆCPU å¯è®¿é—®ï¼‰ï¼Œä½†è¿›å…¥é»˜è®¤å †ï¼ˆGPU ä¸“ç”¨ï¼‰æ˜¯å»¶è¿Ÿçš„ï¼Œéœ€è¦å‘½ä»¤åˆ—è¡¨æ‰§è¡Œåæ‰ä¼šå‘ç”Ÿã€‚
      */
     static Microsoft::WRL::ComPtr<ID3D12Resource> CreateDefaultBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const void* initData, UINT64 byteSize, Microsoft::WRL::ComPtr<ID3D12Resource>& uploadBuffer);
 
@@ -126,17 +126,17 @@ public:
 
 
 /*
- * ½«Íø¸ñÊı¾İ½øĞĞ·â×°
- * SubMeshGeometry Ë÷ÒıÊıÁ¿£¬ÆğÊ¼Ë÷ÒıÎ»ÖÃ£¬ÆğÊ¼¶¥µãÎ»ÖÃ
- * MeshGeometry£º³ÖÓĞgpu×ÊÔ´
+ * å°†ç½‘æ ¼æ•°æ®è¿›è¡Œå°è£…
+ * SubMeshGeometry ç´¢å¼•æ•°é‡ï¼Œèµ·å§‹ç´¢å¼•ä½ç½®ï¼Œèµ·å§‹é¡¶ç‚¹ä½ç½®
+ * MeshGeometryï¼šæŒæœ‰gpuèµ„æº
  */
 
 struct SubMeshGeometry
 {
     UINT IndexCount = 0;
-    UINT StartIndexLocation = 0;//Index Buffer ÖĞµÄÆ«ÒÆÎ»ÖÃ
-    INT BaseVertexLocation = 0;//vertex BufferÖĞµÄÆ«ÒÆÎ»ÖÃ
-    DirectX::BoundingBox Bounds; // ÓÃÓÚºóĞøµÄÊÓ×µÌŞ³ı
+    UINT StartIndexLocation = 0;//Index Buffer ä¸­çš„åç§»ä½ç½®
+    INT BaseVertexLocation = 0;//vertex Bufferä¸­çš„åç§»ä½ç½®
+    DirectX::BoundingBox Bounds; // ç”¨äºåç»­çš„è§†æ¤å‰”é™¤
 };
 
 struct MeshGeometry
@@ -144,41 +144,41 @@ struct MeshGeometry
     std::string name;
 
     /*
-     * CPU²àµÄ¶¥µãºÍË÷ÒıÊı¾İ
-     * ID3DBlob dxÌá¹©µÄÒ»¸ö°ü×°ÁË¶ÔÄÚ´æ¿éµÄÒıÓÃµÄ¹¤¾ß½Ó¿Ú£¬ÄÚ²¿ÒÔmallocºÍfree¹ÜÀíÄÚ´æ
-     * dx²»ÉÙ¸úcpu²àÊı¾İ´ò½»µÀµÄ½Ó¿ÚÓÃµÄ¾ÍÊÇID3DBlob
+     * CPUä¾§çš„é¡¶ç‚¹å’Œç´¢å¼•æ•°æ®
+     * ID3DBlob dxæä¾›çš„ä¸€ä¸ªåŒ…è£…äº†å¯¹å†…å­˜å—çš„å¼•ç”¨çš„å·¥å…·æ¥å£ï¼Œå†…éƒ¨ä»¥mallocå’Œfreeç®¡ç†å†…å­˜
+     * dxä¸å°‘è·Ÿcpuä¾§æ•°æ®æ‰“äº¤é“çš„æ¥å£ç”¨çš„å°±æ˜¯ID3DBlob
      */
     Microsoft::WRL::ComPtr<ID3DBlob> VertexBufferCPU = nullptr;
     Microsoft::WRL::ComPtr<ID3DBlob> IndexBufferCPU = nullptr;
 
     /*
-     * GPU ²àµÄ¶¥µãºÍË÷ÒıÊı¾İ£¨default£©
+     * GPU ä¾§çš„é¡¶ç‚¹å’Œç´¢å¼•æ•°æ®ï¼ˆdefaultï¼‰
      */
     Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferGPU = nullptr;
     Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferGPU = nullptr;
 	/*
-     * GPU ²àµÄ¶¥µãºÍË÷ÒıÊı¾İ£¨uploader£©
+     * GPU ä¾§çš„é¡¶ç‚¹å’Œç´¢å¼•æ•°æ®ï¼ˆuploaderï¼‰
      */
     Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferUploader = nullptr;
     Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferUploader = nullptr;
 
-    //»º³åÇøµÄ¹Ø¼üĞÅÏ¢
-    UINT VertexByteStride = 0;//Ã¿¸ö¶¥µãµÄÊı¾İ´óĞ¡
-    UINT VertexBufferByteSize = 0;//¶¥µã»º³å×Ü×Ö½ÚÊı
-    DXGI_FORMAT IndexFormat = DXGI_FORMAT_R16_UINT;//16Î»Ë÷Òı£¬×ÜË÷ÒıÊı65535
-    UINT IndexBufferByteSize = 0;//Ë÷Òı»º³å×Ü×Ö½ÚÊı
+    //ç¼“å†²åŒºçš„å…³é”®ä¿¡æ¯
+    UINT VertexByteStride = 0;//æ¯ä¸ªé¡¶ç‚¹çš„æ•°æ®å¤§å°
+    UINT VertexBufferByteSize = 0;//é¡¶ç‚¹ç¼“å†²æ€»å­—èŠ‚æ•°
+    DXGI_FORMAT IndexFormat = DXGI_FORMAT_R16_UINT;//16ä½ç´¢å¼•ï¼Œæ€»ç´¢å¼•æ•°65535
+    UINT IndexBufferByteSize = 0;//ç´¢å¼•ç¼“å†²æ€»å­—èŠ‚æ•°
 
 
-    //äÖÈ¾Ê±Í¨¹ıÃû×Ö²éÕÒ×ÓÍø¸ñÈ»ºóDrawIndexInstanced
+    //æ¸²æŸ“æ—¶é€šè¿‡åå­—æŸ¥æ‰¾å­ç½‘æ ¼ç„¶åDrawIndexInstanced
     std::unordered_map<std::string, SubMeshGeometry> DrawArgs;
 
-    //»ñÈ¡VertexBuferView
+    //è·å–VertexBuferView
     D3D12_VERTEX_BUFFER_VIEW VertexBufferView() const;
-    //»ñÈ¡IndexBufferView
+    //è·å–IndexBufferView
     D3D12_INDEX_BUFFER_VIEW IndexBufferView() const;
 
-    //ÔÚÉÏ´«Êı¾İÍê³É²¢Ö´ĞĞ CopyBufferRegion() »ò UpdateSubresources() ºó£¬
-    //ÉÏ´«Æ÷¾Í¿ÉÒÔÊÍ·Å£¬ÒÔ½ÚÊ¡ÄÚ´æ¡£(ÆäÊµÖ»ÊÇÊÍ·ÅÎÒÃÇÕâÒ»²àµÄComÖ¸Õë°ÕÁË
+    //åœ¨ä¸Šä¼ æ•°æ®å®Œæˆå¹¶æ‰§è¡Œ CopyBufferRegion() æˆ– UpdateSubresources() åï¼Œ
+    //ä¸Šä¼ å™¨å°±å¯ä»¥é‡Šæ”¾ï¼Œä»¥èŠ‚çœå†…å­˜ã€‚(å…¶å®åªæ˜¯é‡Šæ”¾æˆ‘ä»¬è¿™ä¸€ä¾§çš„ComæŒ‡é’ˆç½¢äº†
     void DisposeUploaders();
 
 };
@@ -202,7 +202,7 @@ struct MaterialConstants
     DirectX::XMFLOAT3 FresnelR0 = { 0.01f, 0.01f, 0.01f };
     float Roughness = 0.25f;
 
-    // ÔÚtexture mappingÖĞÎÒÃÇÊ¹ÓÃÕâ¸ö¶«Î÷
+    // åœ¨texture mappingä¸­æˆ‘ä»¬ä½¿ç”¨è¿™ä¸ªä¸œè¥¿
     DirectX::XMFLOAT4X4 MatTransform = MathHelper::Identity4x4();
 };
 
