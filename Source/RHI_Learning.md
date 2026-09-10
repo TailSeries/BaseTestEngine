@@ -230,7 +230,7 @@ class FD3D12Queue {
   - `D3D12RootSignature`（序列化 + 创建；三角形用空签名 + `ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT`）
   - `D3D12PipelineState`（CreateGraphicsPipelineState；手填光栅/混合/深度关/RTV格式=swapchain）
 - [x] **画三角形（整合）**：RHITest 顶点(pos+color) → VB → 编译VS/PS → RootSig → PSO → 每帧 clear + DrawInstanced，蓝底彩色三角形。**≈ 达成 A3-M3（Test 只调 RHI 画出图元）**
-- [ ] 下一阶段（对照 UE_Rendering_Learning_Roadmap.md 的 A3 里程碑）：
+- [ ] 下一阶段（对照 UE_Render_learn.md 的 A3 里程碑）：
   - [ ] M2 补齐：DSV（深度）+ Texture + SRV + Sampler（第7章纹理）
   - [ ] M4：状态追踪 + 自动 Barrier + 描述符管理 + 多帧同步（N分配器+每帧fence，去掉每帧Flush）+ Fence保护延迟释放
   - [x] M5（基础）：常量缓冲让三角形转起来
