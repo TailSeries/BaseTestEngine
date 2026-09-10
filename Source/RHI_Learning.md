@@ -43,6 +43,8 @@ Source/D3D12RHI/                   ← 对应 UE: Runtime/D3D12RHI/
 > **重要修正（原计划作废）**：早先想把 Adapter+Device 合并成一个类，已否决。
 > 复刻要**贴合 UE 三层骨架**：`FD3D12Adapter`(物理GPU/工厂/Device容器) → `FD3D12Device`(GPU节点/Queues) → `FD3D12Queue`(D3DCommandQueue+Fence)，单 GPU 也不合并。
 > 只精简内部细节：接口多版本数组→留基础版；多GPU数组→单个；多线程提交管线(Payload/对象池/Timing)→去掉。
+>
+> **文件位置简化（对照 UE 源码时注意）**：UE 里 `FD3D12Queue` 类在 `D3D12Device.h`（约 85 行起）、`FD3D12Fence` 在 `D3D12Submission.h`、`D3D12Queue.h` 本身只放 `ED3D12QueueType` 枚举 + 辅助函数（`GetD3DCommandListType` 等）。本项目把这三处**合并进一个 `D3D12Queue.h`**，属"文件位置简化"，类的层级/命名不变。
 
 ### UE 源码参考路径
 - 接口层：`F:\workspace\UnrealEngine58\Engine\Source\Runtime\RHI\` 或者可能在这儿 `F:\shakervon_engine_merge\Engine\Source\Runtime\RHI\`
@@ -130,8 +132,11 @@ FD3D12UploadHeapAllocator*       UploadHeapAllocator;   // Upload 堆分配器
 TStaticArray<FD3D12Device*, MAX_NUM_GPUS> Devices;      // 每节点 Device
 ```
 
-**我们简化版只需要**：DxgiAdapter、RootDevice、FrameFence。
-Viewports 挪到 D3D12Viewport 自己管，PSO/RootSignature 后续章节再加。
+**我们简化版只需要**：DxgiAdapter、RootDevice。
+
+> **FrameFence 澄清**：UE 的 `FrameFence`（`FD3D12ManualFence`）是"每帧 +1"的帧级同步，服务于交换链 BackBuffer 循环 / `EndFrame`；第1章已有 queue 级 `FD3D12Fence`，同步自洽。**FrameFence 第1章不建，留到第8章整合（画三角形）时再加**——所以下面 FD3D12Adapter 成员表里不含 FrameFence。
+
+> **Viewports 澄清**：UE 的 `TArray<FD3D12Viewport*> Viewports` 是挂在 **Adapter 上**的注册表（`D3D12Adapter.h`），不是 Viewport 自管。第1章单 GPU 单 viewport，**先在 Adapter 上不建 Viewports 注册表，Viewport 由调用方持有**；PSO/RootSignature 后续章节再加。
 
 #### 4. FD3D12AdapterDesc — 硬件能力描述
 
