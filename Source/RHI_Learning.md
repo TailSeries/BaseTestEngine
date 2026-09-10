@@ -228,8 +228,15 @@ class FD3D12Queue {
 - [ ] 下一阶段（对照 UE_Rendering_Learning_Roadmap.md 的 A3 里程碑）：
   - [ ] M2 补齐：DSV（深度）+ Texture + SRV + Sampler（第7章纹理）
   - [ ] M4：状态追踪 + 自动 Barrier + 描述符管理 + 多帧同步（N分配器+每帧fence，去掉每帧Flush）+ Fence保护延迟释放
-  - [ ] M5：动态常量数据 / ring buffer（传 MVP 让三角形动/变换）
+  - [x] M5（基础）：常量缓冲让三角形转起来
+    - `CreateBuffer` 加 ConstantBuffer 分支（256 对齐）；`FD3D12Buffer::GetMappedData()` 持久映射
+    - 根签名加 root CBV 参数（b0）；shader `cbuffer` + `mul(pos, WVP)`
+    - 每帧：DirectXMath 旋转矩阵 + **转置上传**（HLSL 默认列主序坑）+ memcpy + `SetGraphicsRootConstantBufferView(index, GPU_VA)`
+    - 关键认知：root CBV 不建描述符对象，直接传资源 GPU VA（view 坍缩成地址，只对 buffer 成立；纹理必须建真描述符进堆）
+    - 单 CB 够用因每帧 Flush 无重叠；多帧重叠时才需 **ring buffer**（M5 进阶，随 M4 一起做）
+  - [ ] M4：去每帧 Flush（多帧同步：N 分配器/CB ring + 每帧 fence）+ 自动 Barrier + 状态追踪 + 描述符管理 + Fence 保护延迟释放
   - [ ] A2：`FDynamicRHI` 抽象（把 CreateBuffer 等从 Device 挪上去，Renderer 不知后端）
+  - [ ] 第7章：纹理（DSV + Texture + SRV + Sampler + descriptor table，第一次 CreateShaderResourceView）
 
 **新增通用工具**：`Core/Base/EnumClassFlags.h`（`ENUM_CLASS_FLAGS` 宏 + EnumHasAnyFlags 等，仿 UE）。
 

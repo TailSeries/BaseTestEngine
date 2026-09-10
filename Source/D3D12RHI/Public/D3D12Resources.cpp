@@ -16,3 +16,15 @@ FD3D12Resource::FD3D12Resource(FD3D12Device* InParent, ID3D12Resource* InResourc
 }
 
 FD3D12Resource::~FD3D12Resource() = default;
+
+void* FD3D12Buffer::GetMappedData()
+{
+	if (!MappedData && ResourcePtr)
+	{
+		D3D12_RANGE ReadRange{ 0,0 };
+		VERIFY_D3D12(ResourcePtr->GetResource()->Map(0, &ReadRange, &MappedData));
+
+	}
+
+	return MappedData;
+}

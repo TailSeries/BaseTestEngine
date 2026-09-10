@@ -34,7 +34,8 @@ TRefCountPtr<FD3D12Buffer> FD3D12Device::CreateBuffer(const FRHIBufferDesc& Desc
     uint32 AllocSize = Desc.Size;
     if (EnumHasAnyFlags(Desc.Usage, EBufferUsageFlags::ConstantBuffer))
     {
-	    // 
+	    // ① 256 对齐:常量缓冲的 size 必须是 256 倍数(之前讲的硬件要求)。
+        AllocSize = (AllocSize + 255) & ~255u;
     }
 
 
@@ -57,7 +58,7 @@ TRefCountPtr<FD3D12Buffer> FD3D12Device::CreateBuffer(const FRHIBufferDesc& Desc
     D3D12_RESOURCE_DESC ResDesc;
     ResDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
     ResDesc.Alignment = 0;//资源对齐要求。0 表示使用默认对齐，buffer默认是64kb
-    ResDesc.Width = Desc.Size; // 对于buffer width = size,对于texture width = 像素宽度
+    ResDesc.Width = AllocSize; // 对于buffer width = size,对于texture width = 像素宽度
     ResDesc.Height = 1;// buffer 没有固定高度，直接来个1
     ResDesc.DepthOrArraySize = 1;//buffer 没有深度
     ResDesc.MipLevels = 1;// buffer 没有mipmap
@@ -81,7 +82,7 @@ TRefCountPtr<FD3D12Buffer> FD3D12Device::CreateBuffer(const FRHIBufferDesc& Desc
         VERIFY_D3D12(D3DResource->Map(0, &ReadRange, &Mapped));
         // Mapped是一份指向upload堆的cpu空间下的虚拟地址，但请注意Upload堆实际位于L0（系统ram上）
         memcpy(Mapped, InitialData, Desc.Size);
-        D3DResource->Unmap(0, nullptr);
+        D3DResource->Unmap(0, nullptr);// 只是取消映射，并不会导致资源被销毁
     }
     // 注：DEFAULT 堆 + 初始数据 需 staging + copy command list（第6章），本章先只支持 UPLOAD 上传
 

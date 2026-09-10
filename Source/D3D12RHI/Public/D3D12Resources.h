@@ -55,12 +55,14 @@ public:
 	{}
 	~FD3D12Buffer() = default;
 	FD3D12Resource* GetResource()     const { return ResourcePtr.get(); }
+	void* GetMappedData();
 	FD3D12Device* GetParentDevice() const { return Parent; }
 	void SetResource(std::unique_ptr<FD3D12Resource> InResource) { ResourcePtr = std::move(InResource); }
-
+	
 private:
 	FD3D12Device* Parent = nullptr;
 	std::unique_ptr<FD3D12Resource> ResourcePtr;// UE: FD3D12ResourceLocation 里的 TRefCountPtr<FD3D12Resource>
+	void* MappedData = nullptr;
 };
 
 
