@@ -4,6 +4,6 @@
 
 void TestTransfer(MainTest* mainPtr)
 {
-	//mainPtr->MainTestFunc(); // ·ÇĞéº¯Êı»á±¨Á´½Ó´íÎó
-	mainPtr->VirtualMainTestFunc(); //Ğéº¯Êı ²»»á±¨Á´½Ó´íÎó
+	//mainPtr->MainTestFunc(); // éè™šå‡½æ•°ä¼šæŠ¥é“¾æ¥é”™è¯¯
+	mainPtr->VirtualMainTestFunc(); //è™šå‡½æ•° ä¸ä¼šæŠ¥é“¾æ¥é”™è¯¯
 }

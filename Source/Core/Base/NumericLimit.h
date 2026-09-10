@@ -28,8 +28,8 @@
 
 
 /*
- * ÎÒÃÇ²»±ØÖØĞ´ueµÄTNumericLimits£¬Ö±½ÓÊ¹ÓÃ±ê×¼¿âµÄ std::numeric_limits
- * ÀàËÆ std::numeric_limits
+ * æˆ‘ä»¬ä¸å¿…é‡å†™ueçš„TNumericLimitsï¼Œç›´æ¥ä½¿ç”¨æ ‡å‡†åº“çš„ std::numeric_limits
+ * ç±»ä¼¼ std::numeric_limits
  * 
  */
 template<typename T>

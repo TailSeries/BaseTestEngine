@@ -18,9 +18,9 @@ ESubsequentsMode::Type FReturnGraphTask::GetSubsequentsMode()
 
 void FReturnGraphTask::DoTask(ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
 {
-	// Ö´ĞĞÈÎÎñµÄÏß³ÌºÍÉè¶¨Òª½áÊøÈÎÎñµÄÏß³Ì±ØĞëÊÇÍ¬Ò»¸öÏß³Ì
+	// æ‰§è¡Œä»»åŠ¡çš„çº¿ç¨‹å’Œè®¾å®šè¦ç»“æŸä»»åŠ¡çš„çº¿ç¨‹å¿…é¡»æ˜¯åŒä¸€ä¸ªçº¿ç¨‹
 	assert(ENamedThreads::GetThreadIndex(ThreadToReturnFrom) == ENamedThreads::GetThreadIndex(CurrentThread));
-	//Ïò TaskGraph ·¢³öĞÅºÅ£º¡°ÈÃÕâ¸öÏß³ÌÍË³ö ProcessThreadUntilRequestReturn() Ñ­»·¡£¡±
+	//å‘ TaskGraph å‘å‡ºä¿¡å·ï¼šâ€œè®©è¿™ä¸ªçº¿ç¨‹é€€å‡º ProcessThreadUntilRequestReturn() å¾ªç¯ã€‚â€
 	FTaskGraphInterface::Get().RequestReturn(ThreadToReturnFrom);
 }
 

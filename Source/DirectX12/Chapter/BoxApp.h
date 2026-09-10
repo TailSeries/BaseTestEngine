@@ -16,11 +16,11 @@ class DXMODULE BoxApp:public D3DApp
 public:
 	struct Vertex
 	{
-		DirectX::XMFLOAT3 Pos; // ¶¥µãÎ»ÖÃ
-		DirectX::XMFLOAT4 Color; // Ã¿¸ö¶¥µãµÄÑÕÉ«ĞÅÏ¢
+		DirectX::XMFLOAT3 Pos; // é¡¶ç‚¹ä½ç½®
+		DirectX::XMFLOAT4 Color; // æ¯ä¸ªé¡¶ç‚¹çš„é¢œè‰²ä¿¡æ¯
 	};
 
-	//°Ñ±ä»»¾ØÕóĞÅÏ¢·ÅÔÚconstantbufferÀï,ÕâÀïÎÒÃÇÖ±½ÓÓÃµ¥Î»¾ØÕó
+	//æŠŠå˜æ¢çŸ©é˜µä¿¡æ¯æ”¾åœ¨constantbufferé‡Œ,è¿™é‡Œæˆ‘ä»¬ç›´æ¥ç”¨å•ä½çŸ©é˜µ
 	struct ObjectConstants
 	{
 		DirectX::XMFLOAT4X4 WorldViewProj = MathHelper::Identity4x4();
@@ -50,20 +50,20 @@ private:
 
 
 private:
-	//1. ¶¥µãÊäÈëÔªËØ²¼¾Ö
+	//1. é¡¶ç‚¹è¾“å…¥å…ƒç´ å¸ƒå±€
 	std::vector<D3D12_INPUT_ELEMENT_DESC> InputLayout;
 
-	// cbv ¶Ñ
+	// cbv å †
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> MCbvHeap = nullptr;
 
-	// ¸ùÇ©Ãû£º±ØĞë°ó¶¨cbv
+	// æ ¹ç­¾åï¼šå¿…é¡»ç»‘å®šcbv
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> mRootSignature = nullptr;
 
-	// consttandbuffer ¾ßÌåµÄÒ»¸ö×ÊÔ´
+	// consttandbuffer å…·ä½“çš„ä¸€ä¸ªèµ„æº
 	std::unique_ptr<UploadBuffer<ObjectConstants>> MObjectCB = nullptr;
 
 
-	// ±àÒëµÄ¶ş½øÖÆshader´úÂë
+	// ç¼–è¯‘çš„äºŒè¿›åˆ¶shaderä»£ç 
 	Microsoft::WRL::ComPtr<ID3DBlob> MvsByteCode = nullptr;
 	Microsoft::WRL::ComPtr<ID3DBlob> MpsByteCode = nullptr;
 

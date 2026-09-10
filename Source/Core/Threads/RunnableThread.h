@@ -11,25 +11,25 @@
 class FRunnable;
 
 /*
- * Ïß³Ì»ù´¡µÄ½Ó¿ÚÀà£¬¸ºÔğ¶ÔÒ»¸öÏß³ÌµÄÉúÃüÖÜÆÚµÄ¹ÜÀí¡£¾ßÌåµÄÏß³ÌÀàÊµÏÖÕâ¸ö½Ó¿Ú£¬
- * ÓÃÓÚ´´½¨ºÍ¹ÜÀíºóÌ¨Ïß³Ì¡£ËüÌá¹©ÁËÒ»ÖÖ·½±ãµÄ·½Ê½À´Æô¶¯¡¢ÔİÍ£¡¢»Ö¸´ºÍÍ£Ö¹Ïß³Ì
+ * çº¿ç¨‹åŸºç¡€çš„æ¥å£ç±»ï¼Œè´Ÿè´£å¯¹ä¸€ä¸ªçº¿ç¨‹çš„ç”Ÿå‘½å‘¨æœŸçš„ç®¡ç†ã€‚å…·ä½“çš„çº¿ç¨‹ç±»å®ç°è¿™ä¸ªæ¥å£ï¼Œ
+ * ç”¨äºåˆ›å»ºå’Œç®¡ç†åå°çº¿ç¨‹ã€‚å®ƒæä¾›äº†ä¸€ç§æ–¹ä¾¿çš„æ–¹å¼æ¥å¯åŠ¨ã€æš‚åœã€æ¢å¤å’Œåœæ­¢çº¿ç¨‹
  */
 class COREMODULE FRunnableThread
 {
 	friend class FThreadManager;
-	// TLSµÄË÷Òı²Û Ë÷Òı²ÛµÄÊıÁ¿ÓĞÉÏÏŞµÄ£¬win 1088 linux 1024 mac 512 android 128 ~ 256
+	// TLSçš„ç´¢å¼•æ§½ ç´¢å¼•æ§½çš„æ•°é‡æœ‰ä¸Šé™çš„ï¼Œwin 1088 linux 1024 mac 512 android 128 ~ 256
 	static unsigned int RunnableTlsSlot;
 public:
 
-	/*·µ»ØÒ»¸öĞÂµÄ²ÛÎ»ÓÃÀ´´æ´¢ runnable thread µÄ pointer Ã¿¸öÏß³ÌÓ¦¸ÃÖ»µ÷ÓÃÒ»´Î*/
+	/*è¿”å›ä¸€ä¸ªæ–°çš„æ§½ä½ç”¨æ¥å­˜å‚¨ runnable thread çš„ pointer æ¯ä¸ªçº¿ç¨‹åº”è¯¥åªè°ƒç”¨ä¸€æ¬¡*/
 	static unsigned int GetTlsSlot();
 	FRunnableThread();
 	virtual ~FRunnableThread();
 	/*
-	 * ´´½¨Ò»¸öÏß³Ì²¢ÇÒÖ¸¶¨Ïß³ÌÕ»¿Õ¼äµÄ´óĞ¡ºÍÏß³ÌµÄÓÅÏÈ¼¶¡£
-	 * ×îºóÈı¸ö²ÎÊı£ºÏß³ÌÕ»´óĞ¡
-	 * Òª°ó¶¨µÄÎïÀíºËĞÄ
-	 * ÊÇ·ñÔÊĞíÊ¹ÓÃ³¬Ïß³ÌºËĞÄ
+	 * åˆ›å»ºä¸€ä¸ªçº¿ç¨‹å¹¶ä¸”æŒ‡å®šçº¿ç¨‹æ ˆç©ºé—´çš„å¤§å°å’Œçº¿ç¨‹çš„ä¼˜å…ˆçº§ã€‚
+	 * æœ€åä¸‰ä¸ªå‚æ•°ï¼šçº¿ç¨‹æ ˆå¤§å°
+	 * è¦ç»‘å®šçš„ç‰©ç†æ ¸å¿ƒ
+	 * æ˜¯å¦å…è®¸ä½¿ç”¨è¶…çº¿ç¨‹æ ¸å¿ƒ
 	 */
 	static FRunnableThread* Create(FRunnable* InRunnable, const char* ThreadName, unsigned int InStackSize = 0, EThreadPriority InThreadPri = TPri_Normal, uint64 InThreadAffinityMask = GetNoAffinityMask(), EThreadCreateFlags InCreateFlags = EThreadCreateFlags::None);
 	virtual void SetThreadPriority(EThreadPriority NewPriority) = 0;
@@ -55,7 +55,7 @@ public:
 		FRunnableThread* RunnableThread = (FRunnableThread*)FPlatformTLS::GetTlsValue(RunnableTlsSlot);
 		return RunnableThread;
 	}
-	//µ±Ç°Ïß³Ì±ØĞëÏú»ÙµÄÒ»Ğ©ÊµÀı
+	//å½“å‰çº¿ç¨‹å¿…é¡»é”€æ¯çš„ä¸€äº›å®ä¾‹
 	std::vector<FTlsAutoCleanup*> TlsInstances;
 protected:
 
@@ -68,21 +68,21 @@ protected:
 
 
 	std::string ThreadName;
-	FRunnable* Runnable{ nullptr }; // Ïß³ÌÒª×öµÄÊÂµÄÂß¼­Àà
+	FRunnable* Runnable{ nullptr }; // çº¿ç¨‹è¦åšçš„äº‹çš„é€»è¾‘ç±»
 
-	// Ïß³ÌÍ¬²½ÊÂ¼ş£¬ÀàËÆÓÚwindowsµÄevent»úÖÆ£¬»òÕßÀàËÆ±ê×¼¿âµÄcondition_variable
+	// çº¿ç¨‹åŒæ­¥äº‹ä»¶ï¼Œç±»ä¼¼äºwindowsçš„eventæœºåˆ¶ï¼Œæˆ–è€…ç±»ä¼¼æ ‡å‡†åº“çš„condition_variable
 	FEvent* ThreadInitSyncEvent;
 
-	//´¦ÀíÆ÷ºËĞÄÑÚÂë
+	//å¤„ç†å™¨æ ¸å¿ƒæ©ç 
 	uint64 ThreadAffinityMask;
 
 
 
-	//Ïß³ÌÓÅÏÈ¼¶
+	//çº¿ç¨‹ä¼˜å…ˆçº§
 	EThreadPriority ThreadPriority;
 
 
-	//Ïß³Ìid
+	//çº¿ç¨‹id
 	uint32 ThreadID;
 
 
@@ -92,19 +92,19 @@ protected:
 	enum class ThreadType
 	{
 		Real,
-		Fake, // µ¥ºËcpuÏÂµÄ¼ÙÏß³Ì
-		Forkable, // linux»òÕßmacosÏÂ²ÅÓĞµÄ»úÖÆ£¬ÔÚ Linux/macOS ÉÏÊ¹ÓÃ fork() ´´½¨×Ó½ø³ÌÊ±£º
+		Fake, // å•æ ¸cpuä¸‹çš„å‡çº¿ç¨‹
+		Forkable, // linuxæˆ–è€…macosä¸‹æ‰æœ‰çš„æœºåˆ¶ï¼Œåœ¨ Linux/macOS ä¸Šä½¿ç”¨ fork() åˆ›å»ºå­è¿›ç¨‹æ—¶ï¼š
 	/*
-		*linuxÓëmacÉÏ»á´æÔÚforkµÄÎÊÌâ£ºfork¶¼¸´ÖÆÁËÕû¸ö½ø³Ì£¬µ«ÊÇÖ»ÆôÓÃÁËËüËùÔÚµÄÄÇ¸öÖ´ĞĞÂ·¾¶£¬Èç¹ûËüËùÔÚµÄÄÇ¸öÖ´ĞĞÂ·¾¶forkºóÓĞ´´½¨Ïß³ÌµÄ»°£¬×Ó½ø³Ì»á´´½¨Ïß³Ì£»Èç¹ûËüËùÔÚµÄÄÇ¸öÖ´ĞĞÂ·¾¶forkºóÃ»ÓĞ´´½¨Ïß³Ì¶øÔÚforkÖ®Ç°ÓĞ´´½¨Ïß³ÌµÄ»°£¬ÄÇÃ´fork²»»áÆôÓÃforkÖ®Ç°´´½¨µÄÏß³Ì£¬Ö»»áÆôÓÃµ±Ç°ËùÔÚÏß³Ì£¬¼ÌĞøÖ´ĞĞÏÂÈ¥¡£
-		*ÕâÑùµÄ»°£¬ÔÚforkÖ®Ç°´æÔÚÏß³ÌµÄ»°£¬ÎÒÃÇforkÖ®ºó×Ó½ø³Ì²»»á¸ú¸¸½ø³ÌÍêÈ«Ò»Ñù¡£Òò´ËÎÒÃÇÏ£Íû¿ÉÒÔ±»forkableµÄÏß³ÌÔÚÖ÷½ø³ÌÖĞÊÇfakeµÄ£¬ÔÚ×Ó½ø³ÌÖĞ²ÅÕæµÄ´´½¨
+		*linuxä¸macä¸Šä¼šå­˜åœ¨forkçš„é—®é¢˜ï¼šforkéƒ½å¤åˆ¶äº†æ•´ä¸ªè¿›ç¨‹ï¼Œä½†æ˜¯åªå¯ç”¨äº†å®ƒæ‰€åœ¨çš„é‚£ä¸ªæ‰§è¡Œè·¯å¾„ï¼Œå¦‚æœå®ƒæ‰€åœ¨çš„é‚£ä¸ªæ‰§è¡Œè·¯å¾„forkåæœ‰åˆ›å»ºçº¿ç¨‹çš„è¯ï¼Œå­è¿›ç¨‹ä¼šåˆ›å»ºçº¿ç¨‹ï¼›å¦‚æœå®ƒæ‰€åœ¨çš„é‚£ä¸ªæ‰§è¡Œè·¯å¾„forkåæ²¡æœ‰åˆ›å»ºçº¿ç¨‹è€Œåœ¨forkä¹‹å‰æœ‰åˆ›å»ºçº¿ç¨‹çš„è¯ï¼Œé‚£ä¹ˆforkä¸ä¼šå¯ç”¨forkä¹‹å‰åˆ›å»ºçš„çº¿ç¨‹ï¼Œåªä¼šå¯ç”¨å½“å‰æ‰€åœ¨çº¿ç¨‹ï¼Œç»§ç»­æ‰§è¡Œä¸‹å»ã€‚
+		*è¿™æ ·çš„è¯ï¼Œåœ¨forkä¹‹å‰å­˜åœ¨çº¿ç¨‹çš„è¯ï¼Œæˆ‘ä»¬forkä¹‹åå­è¿›ç¨‹ä¸ä¼šè·Ÿçˆ¶è¿›ç¨‹å®Œå…¨ä¸€æ ·ã€‚å› æ­¤æˆ‘ä»¬å¸Œæœ›å¯ä»¥è¢«forkableçš„çº¿ç¨‹åœ¨ä¸»è¿›ç¨‹ä¸­æ˜¯fakeçš„ï¼Œåœ¨å­è¿›ç¨‹ä¸­æ‰çœŸçš„åˆ›å»º
 	*/
 	};
 
 private:
-	/*ÉèÖÃĞÂ´´½¨Ïß³Ì*/
+	/*è®¾ç½®æ–°åˆ›å»ºçº¿ç¨‹*/
 	static void SetupCreatedThread(FRunnableThread*& NewThread, FRunnable* InRunnable, const char* ThreadName, uint32 InStackSize, EThreadPriority InThreadPri, uint64 InThreadAffinityMask, EThreadCreateFlags InCreateFlags);
 
-	//µ¥Ïß³ÌÄ£Ê½ÏÂ£¬ÎÒÃÇÔÊĞíthread managerÀ´
+	//å•çº¿ç¨‹æ¨¡å¼ä¸‹ï¼Œæˆ‘ä»¬å…è®¸thread manageræ¥
 	virtual void Tick() {}
 
 	virtual FRunnableThread::ThreadType GetThreadType() const
@@ -122,7 +122,7 @@ private:
 };
 
 
-/*Fake Thread ÒªÓÃµÄÖ´ĞĞ½á¹¹Ìå*/
+/*Fake Thread è¦ç”¨çš„æ‰§è¡Œç»“æ„ä½“*/
 class COREMODULE FSingleThreadRunnable
 {
 public:
@@ -140,7 +140,7 @@ protected:
 	bool bIsSuspended;
 	FSingleThreadRunnable* SingleThreadRunnable;
 public:
-	//Îª ĞéÄâÏß³Ì ID£¨fake thread ID£© Ô¤ÁôÒ»¸öÎ»£¬ÓÃÓÚ±ê¼ÇÕâĞ© ID Óë ÕæÊµµÄÏµÍ³Ïß³Ì ID Çø·Ö¿ªÀ´£¬±ÜÃâ³åÍ»
+	//ä¸º è™šæ‹Ÿçº¿ç¨‹ IDï¼ˆfake thread IDï¼‰ é¢„ç•™ä¸€ä¸ªä½ï¼Œç”¨äºæ ‡è®°è¿™äº› ID ä¸ çœŸå®çš„ç³»ç»Ÿçº¿ç¨‹ ID åŒºåˆ†å¼€æ¥ï¼Œé¿å…å†²çª
 	static constexpr uint32 FakeIdReservedBit = 1 << 31;
 	FFakeThread();
 	virtual ~FFakeThread();

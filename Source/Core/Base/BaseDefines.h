@@ -34,7 +34,7 @@ extern uint32		GRenderThreadId;
     } while(0)
 #endif
 
-// TaskGraph 中s 是否分配高优先级任务的线程以及后台任务的线程
+// TaskGraph 涓璼 鏄惁鍒嗛厤楂樹紭鍏堢骇浠诲姟鐨勭嚎绋嬩互鍙婂悗鍙颁换鍔＄殑绾跨▼
 #define CREATE_HIPRI_TASK_THREADS (1)
 #define CREATE_BACKGROUND_TASK_THREADS (1)
 

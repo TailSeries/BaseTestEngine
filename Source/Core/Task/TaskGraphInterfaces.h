@@ -4,19 +4,19 @@
 #include "Core.h"
 #include "Threads/ScopeLock.h"
 
-// ¿ØÖÆäÖÈ¾Ïß³ÌµÄÂÖÑ¯¼°ÆäÖÜÆÚ
+// æ§åˆ¶æ¸²æŸ“çº¿ç¨‹çš„è½®è¯¢åŠå…¶å‘¨æœŸ
 extern COREMODULE bool GRenderThreadPollingOn;	
 extern COREMODULE int32 GRenderThreadPollPeriodMs;	
 namespace ENamedThreads
 {
 	/*
-	 * °´bitÎ»À´ÅäÖÃÏß³ÌµÄ¸÷ÖÖ¹¦ÄÜ
+	 * æŒ‰bitä½æ¥é…ç½®çº¿ç¨‹çš„å„ç§åŠŸèƒ½
 	 *								 NamedThread
 	 * 0000 0000,0000 0000,0000 0000,0000 0000
-	 * 8Î»£ºÁô¸ø¸÷ÖÖnamedThread
-	 * 9: NamedThreadµÄ¶ÓÁĞQueue Ë÷Òı 0 MainQueue 1£ºLocalQueue
-	 * 10£ºTaskµÄÓÅÏÈ¼¶ 0 NormalTaskPriority, 1: HighTaskPriority
-	 * 11 12:Ïß³ÌµÄÓÅÏÈ¼¶£º00£ºNormalThreadPriority£¬01£ºHighThreadPriority£¬10£ºBackgroundThreadPriority
+	 * 8ä½ï¼šç•™ç»™å„ç§namedThread
+	 * 9: NamedThreadçš„é˜Ÿåˆ—Queue ç´¢å¼• 0 MainQueue 1ï¼šLocalQueue
+	 * 10ï¼šTaskçš„ä¼˜å…ˆçº§ 0 NormalTaskPriority, 1: HighTaskPriority
+	 * 11 12:çº¿ç¨‹çš„ä¼˜å…ˆçº§ï¼š00ï¼šNormalThreadPriorityï¼Œ01ï¼šHighThreadPriorityï¼Œ10ï¼šBackgroundThreadPriority
 	 *
 	 */
 	enum Type : int32
@@ -30,7 +30,7 @@ namespace ENamedThreads
 		GameThread,
 		ActualRenderingThread = GameThread + 1,
 		AnyThread = 0xff,
-		ThreadIndexMask = 0xff,//¸¨ÖúÔËËãÉÏÃæµÄThread
+		ThreadIndexMask = 0xff,//è¾…åŠ©è¿ç®—ä¸Šé¢çš„Thread
 
 		MainQueue = 0x000,
 		LocalQueue = 0x100,
@@ -38,7 +38,7 @@ namespace ENamedThreads
 		NumQueues = 2,
 
 		QueueIndexMask = 0x100,
-		QueueIndexShift = 8, //¸¨ÖúÔËËãÉÏÃæµÄqueue
+		QueueIndexShift = 8, //è¾…åŠ©è¿ç®—ä¸Šé¢çš„queue
 
 		NormalTaskPriority = 0x000,
 		HighTaskPriority = 0x200,
@@ -76,7 +76,7 @@ namespace ENamedThreads
 	extern COREMODULE int32 bHasBackgroundThreads;
 	extern COREMODULE int32 bHasHighPriorityThreads;
 
-	//»ñÈ¡µ±Ç°ÊÇÄÄÒ»¸öThreadIndex
+	//è·å–å½“å‰æ˜¯å“ªä¸€ä¸ªThreadIndex
 	FORCEINLINE Type GetThreadIndex(Type ThreadAndIndex)
 	{
 		return ((ThreadAndIndex & ThreadIndexMask) == AnyThread) ? AnyThread : Type(ThreadAndIndex & ThreadIndexMask);
@@ -140,12 +140,12 @@ namespace ENamedThreads
 
 namespace ESubsequentsMode
 {
-	//ÈÎÎñÏµÍ³µ÷¶È²ßÂÔ
+	//ä»»åŠ¡ç³»ç»Ÿè°ƒåº¦ç­–ç•¥
 	enum Type
 	{
-		/* »á±»ºóĞøÈÎÎñÒÀÀµ£¬±ØĞë×·×Ù */
+		/* ä¼šè¢«åç»­ä»»åŠ¡ä¾èµ–ï¼Œå¿…é¡»è¿½è¸ª */
 		TrackSubsequents,
-		/** ²»»á±»ÒÀÀµ£¬²»ĞèÒª×·×Ù£¬½ÚÊ¡¿ªÏú£¬ÈÎÎñÍê³É¾ÍÏú»Ù */
+		/** ä¸ä¼šè¢«ä¾èµ–ï¼Œä¸éœ€è¦è¿½è¸ªï¼ŒèŠ‚çœå¼€é”€ï¼Œä»»åŠ¡å®Œæˆå°±é”€æ¯ */
 		FireAndForget
 	};
 }
@@ -158,7 +158,7 @@ using FGraphEventArray = std::vector<FGraphEventRef>;
 
 
 /*
- * TaskGraph µÄ½Ó¿ÚÀà£¬¿ÉÒÔÍ¨¹ıFTaskGraphInterface::Get() À´·ÃÎÊ
+ * TaskGraph çš„æ¥å£ç±»ï¼Œå¯ä»¥é€šè¿‡FTaskGraphInterface::Get() æ¥è®¿é—®
  */
 class COREMODULE FTaskGraphInterface
 {
@@ -170,17 +170,17 @@ public:
 
 
 	/**
-	 * ÏÔÊ½µØ³õÊ¼»¯ Task Graph ÏµÍ³ºÍÆä¹¤×÷Ïß³Ì³Ø£¬ÊÇÕû¸öÒì²½ÈÎÎñÏµÍ³µÄÆô¶¯Èë¿Ú¡£
+	 * æ˜¾å¼åœ°åˆå§‹åŒ– Task Graph ç³»ç»Ÿå’Œå…¶å·¥ä½œçº¿ç¨‹æ± ï¼Œæ˜¯æ•´ä¸ªå¼‚æ­¥ä»»åŠ¡ç³»ç»Ÿçš„å¯åŠ¨å…¥å£ã€‚
 	 * @param NumThreads
-	 * 	Ò»°ã¶øÑÔ£º
-		½ûÓÃ TaskGraph£¨µ¥Ïß³ÌÖ´ĞĞ£©	NumThreads = 0
-		ÆôÓÃµ«²»ÆôÓÃäÖÈ¾Ïß³Ì£¨·Ç threaded rendering£©	ÖÁÉÙ 2
-		ÆôÓÃ²¢ÆôÓÃäÖÈ¾Ïß³Ì	ÖÁÉÙ 3£¨Ö÷Ïß³Ì¡¢äÖÈ¾Ïß³Ì¡¢ÖÁÉÙÒ»¸ö worker£©
+	 * 	ä¸€èˆ¬è€Œè¨€ï¼š
+		ç¦ç”¨ TaskGraphï¼ˆå•çº¿ç¨‹æ‰§è¡Œï¼‰	NumThreads = 0
+		å¯ç”¨ä½†ä¸å¯ç”¨æ¸²æŸ“çº¿ç¨‹ï¼ˆé threaded renderingï¼‰	è‡³å°‘ 2
+		å¯ç”¨å¹¶å¯ç”¨æ¸²æŸ“çº¿ç¨‹	è‡³å°‘ 3ï¼ˆä¸»çº¿ç¨‹ã€æ¸²æŸ“çº¿ç¨‹ã€è‡³å°‘ä¸€ä¸ª workerï¼‰
 	 */
 	static void Startup(int32 NumThreads);
 
 	/**
-	 * Shutdown() »áÔÚÏµÍ³¿ÕÏĞÊ±ÇåÀíÈÎÎñÍ¼ÏµÍ³£¨°üÀ¨ worker Ïß³Ì¡¢ÈÎÎñ¶ÓÁĞºÍÄÚ²¿µ¥Àı£©£¬±ØĞëÔÚÃ»ÓĞÈÎÎñÕıÔÚÖ´ĞĞÊ±µ÷ÓÃ£¬·ñÔòĞĞÎªÎ´¶¨Òå»ò¿ÉÄÜ±ÀÀ£¡£
+	 * Shutdown() ä¼šåœ¨ç³»ç»Ÿç©ºé—²æ—¶æ¸…ç†ä»»åŠ¡å›¾ç³»ç»Ÿï¼ˆåŒ…æ‹¬ worker çº¿ç¨‹ã€ä»»åŠ¡é˜Ÿåˆ—å’Œå†…éƒ¨å•ä¾‹ï¼‰ï¼Œå¿…é¡»åœ¨æ²¡æœ‰ä»»åŠ¡æ­£åœ¨æ‰§è¡Œæ—¶è°ƒç”¨ï¼Œå¦åˆ™è¡Œä¸ºæœªå®šä¹‰æˆ–å¯èƒ½å´©æºƒã€‚
 	 */
 	static void Shutdown();
 
@@ -189,25 +189,25 @@ public:
 	static bool IsMultithread();
 
 	/**
-	 * »ñÈ¡µ±Ç°Ïß³ÌÔÚ Task Graph ÏµÍ³ÖĞµÄ±êÊ¶£¨ENamedThreads::Type£©£¬Èç¹ûÖªµÀµÄ»°¡£
-	 * @param bLocalQueue  ±íÊ¾ÊÇ·ñÏ£Íû·µ»ØÖµ¿¼ÂÇ¡°¾Ö²¿¶ÓÁĞ¡±µÄÉÏÏÂÎÄ£¨ÓÃÓÚµ÷¶ÈÓÅ»¯£¬Ä¬ÈÏ false,
-	 *			ÔÚÒ»Ğ©ÊµÏÖÖĞ£¬Èç¹û bLocalQueue = true£¬¿ÉÄÜ·µ»Ø±ÈÊµ¼ÊÏß³Ì ID ¸ü¾ßÌåµÄÖµ£¬±ÈÈç¡°±¾µØ¶ÓÁĞµÄÈÎÎñÕıÔÚÖ´ĞĞ¡±¡£
+	 * è·å–å½“å‰çº¿ç¨‹åœ¨ Task Graph ç³»ç»Ÿä¸­çš„æ ‡è¯†ï¼ˆENamedThreads::Typeï¼‰ï¼Œå¦‚æœçŸ¥é“çš„è¯ã€‚
+	 * @param bLocalQueue  è¡¨ç¤ºæ˜¯å¦å¸Œæœ›è¿”å›å€¼è€ƒè™‘â€œå±€éƒ¨é˜Ÿåˆ—â€çš„ä¸Šä¸‹æ–‡ï¼ˆç”¨äºè°ƒåº¦ä¼˜åŒ–ï¼Œé»˜è®¤ false,
+	 *			åœ¨ä¸€äº›å®ç°ä¸­ï¼Œå¦‚æœ bLocalQueue = trueï¼Œå¯èƒ½è¿”å›æ¯”å®é™…çº¿ç¨‹ ID æ›´å…·ä½“çš„å€¼ï¼Œæ¯”å¦‚â€œæœ¬åœ°é˜Ÿåˆ—çš„ä»»åŠ¡æ­£åœ¨æ‰§è¡Œâ€ã€‚
 	 * @return
 	 */
 	virtual ENamedThreads::Type GetCurrentThreadIfKnown(bool bLocalQueue = false) = 0;
 
 
 	/**
-	 * ·µ»Ø Ã¿¸öÓÅÏÈ¼¶¼¯£¨Priority Set£©ÖĞ¿ÉÓÃµÄ worker thread ÊıÁ¿¡£
-		ÕâÊÇ ·ÇÃüÃûÏß³Ì£¨¼´ÆÕÍ¨µÄºóÌ¨ worker£©£¬²»°üÀ¨ GameThread¡¢RenderThread µÈ.Ä¬ÈÏÃ¿¸öÓÅÏÈ¼¶ÏÂµÄÏß³ÌÊıÄ¿ÊÇÏàÍ¬µÄ
+	 * è¿”å› æ¯ä¸ªä¼˜å…ˆçº§é›†ï¼ˆPriority Setï¼‰ä¸­å¯ç”¨çš„ worker thread æ•°é‡ã€‚
+		è¿™æ˜¯ éå‘½åçº¿ç¨‹ï¼ˆå³æ™®é€šçš„åå° workerï¼‰ï¼Œä¸åŒ…æ‹¬ GameThreadã€RenderThread ç­‰.é»˜è®¤æ¯ä¸ªä¼˜å…ˆçº§ä¸‹çš„çº¿ç¨‹æ•°ç›®æ˜¯ç›¸åŒçš„
 	 * @return
 	 */
 	virtual	int32 GetNumWorkerThreads() = 0;
 
 
 	/**
-	 * Õâ¸öº¯ÊıÖ÷ÒªÓÃÓÚµ÷ÊÔ»òµ÷¶ÈÓÅ»¯£¬·µ»ØÖµÎª true ±íÊ¾Õâ¸öÏß³ÌÕıÔÚ´¦Àí task graph ÖĞµÄÈÎÎñ¡£
-	 * @param ThreadToCheck £ºÊÇÒ»¸ö ENamedThreads::Type ÀàĞÍ£¬±êÊ¶Ò»¸öÃüÃûÏß³Ì»ò worker Ïß³Ì
+	 * è¿™ä¸ªå‡½æ•°ä¸»è¦ç”¨äºè°ƒè¯•æˆ–è°ƒåº¦ä¼˜åŒ–ï¼Œè¿”å›å€¼ä¸º true è¡¨ç¤ºè¿™ä¸ªçº¿ç¨‹æ­£åœ¨å¤„ç† task graph ä¸­çš„ä»»åŠ¡ã€‚
+	 * @param ThreadToCheck ï¼šæ˜¯ä¸€ä¸ª ENamedThreads::Type ç±»å‹ï¼Œæ ‡è¯†ä¸€ä¸ªå‘½åçº¿ç¨‹æˆ– worker çº¿ç¨‹
 	 * @return
 	 */
 	virtual bool IsThreadProcessingTasks(ENamedThreads::Type ThreadToCheck) = 0;
@@ -215,17 +215,17 @@ public:
 
 
 	/**
-	 * ½«µ±Ç°ÕıÔÚÔËĞĞµÄÏß³Ì×¢²áµ½ TaskGraph ÏµÍ³ÖĞ£¬Ê¹Æä¿ÉÒÔÕı³£²ÎÓëÈÎÎñÍ¼ÈÎÎñ£¨TaskGraph tasks£©µÄµ÷¶ÈÓëÖ´ĞĞ¡£Ã¿¸öÏß³Ì±ØĞëÔÚ×Ô¼ºÏß³ÌÉÏÏÂÎÄÖĞµ÷ÓÃ AttachToThread£¬¼´£º
+	 * å°†å½“å‰æ­£åœ¨è¿è¡Œçš„çº¿ç¨‹æ³¨å†Œåˆ° TaskGraph ç³»ç»Ÿä¸­ï¼Œä½¿å…¶å¯ä»¥æ­£å¸¸å‚ä¸ä»»åŠ¡å›¾ä»»åŠ¡ï¼ˆTaskGraph tasksï¼‰çš„è°ƒåº¦ä¸æ‰§è¡Œã€‚æ¯ä¸ªçº¿ç¨‹å¿…é¡»åœ¨è‡ªå·±çº¿ç¨‹ä¸Šä¸‹æ–‡ä¸­è°ƒç”¨ AttachToThreadï¼Œå³ï¼š
 	 * @param CurrentThread
 	 */
 	virtual void AttachToThread(ENamedThreads::Type CurrentThread) = 0;
 
 
 	/**
-	 * ÈÃµ÷ÓÃËüµÄÄÇ¸öÏß³Ì£¨±ØĞëÓë CurrentThread ²ÎÊı±íÊ¾µÄÏß³ÌÀàĞÍÒ»ÖÂ£©È¥´¦Àí×Ô¼º¶ÔÓ¦µÄÈÎÎñ¶ÓÁĞ£¬Ö±µ½¿ÕÏĞ¡£
-	 *	×¢Òâ±ØĞëÊÇÓë CurrentThread ÀàĞÍÒ»ÖÂ£¬²»ÄÜÊÇÈÎÒâµÄÏß³ÌÈ¥·ÃÎÊ¶ÓÁĞ
-	 *	ËùÒÔÖ÷Ïß³Ì¾Íµ÷ÓÃ ProcessThreadUntilIdle(ENamedThreads::GameThread); Anythread¾Íµ÷ÓÃ ProcessThreadUntilIdle(ENamedThreads::AnyThread);
-	 * ËüÊÇÏß³ÌÖ÷¶¯¡°À­È¡¡±ÈÎÎñµÄ»úÖÆ£¬¶ø²»ÊÇÈÎÎñÏµÍ³×Ô¶¯ÍÆËÍÈÎÎñ¡£
+	 * è®©è°ƒç”¨å®ƒçš„é‚£ä¸ªçº¿ç¨‹ï¼ˆå¿…é¡»ä¸ CurrentThread å‚æ•°è¡¨ç¤ºçš„çº¿ç¨‹ç±»å‹ä¸€è‡´ï¼‰å»å¤„ç†è‡ªå·±å¯¹åº”çš„ä»»åŠ¡é˜Ÿåˆ—ï¼Œç›´åˆ°ç©ºé—²ã€‚
+	 *	æ³¨æ„å¿…é¡»æ˜¯ä¸ CurrentThread ç±»å‹ä¸€è‡´ï¼Œä¸èƒ½æ˜¯ä»»æ„çš„çº¿ç¨‹å»è®¿é—®é˜Ÿåˆ—
+	 *	æ‰€ä»¥ä¸»çº¿ç¨‹å°±è°ƒç”¨ ProcessThreadUntilIdle(ENamedThreads::GameThread); Anythreadå°±è°ƒç”¨ ProcessThreadUntilIdle(ENamedThreads::AnyThread);
+	 * å®ƒæ˜¯çº¿ç¨‹ä¸»åŠ¨â€œæ‹‰å–â€ä»»åŠ¡çš„æœºåˆ¶ï¼Œè€Œä¸æ˜¯ä»»åŠ¡ç³»ç»Ÿè‡ªåŠ¨æ¨é€ä»»åŠ¡ã€‚
 	 * @param CurrentThread
 	 * @return
 	 */
@@ -234,26 +234,26 @@ public:
 
 
 	/**
-	 *  Õâ¸öº¯Êı»áÈÃµ÷ÓÃÏß³Ì³ÖĞøÔËĞĞÈÎÎñÍ¼ÈÎÎñ£¬Ö±µ½±»Íâ²¿ÏÔÊ½Í¨Öª¡°Í£Ö¹¡±²Å·µ»Ø¡£
-		»»¾ä»°Ëµ£¬Ëü»á½øÈëÒ»¸ö¡°³ÖĞø´¦ÀíÈÎÎñ¡±µÄÑ­»·£¬²»»á×Ô¶¯·µ»Ø£¬Ö±µ½ÊÕµ½Í£Ö¹ĞÅºÅ¡£
-		ÕâÊÇ±È ProcessThreadUntilIdle ¸ü¡°³Ö¾Ã¡±µÄÈÎÎñ´¦Àí·½Ê½£¬ÊÊºÏÓÃ×÷¹¤×÷Ïß³ÌµÄÖ÷Ñ­»·¡£
-		Í¬Ñùµ÷ÓÃÕßÓ¦¸ÃÊÇµ±Ç°Ïß³ÌµÄÍ¬ÀàĞÍtype
+	 *  è¿™ä¸ªå‡½æ•°ä¼šè®©è°ƒç”¨çº¿ç¨‹æŒç»­è¿è¡Œä»»åŠ¡å›¾ä»»åŠ¡ï¼Œç›´åˆ°è¢«å¤–éƒ¨æ˜¾å¼é€šçŸ¥â€œåœæ­¢â€æ‰è¿”å›ã€‚
+		æ¢å¥è¯è¯´ï¼Œå®ƒä¼šè¿›å…¥ä¸€ä¸ªâ€œæŒç»­å¤„ç†ä»»åŠ¡â€çš„å¾ªç¯ï¼Œä¸ä¼šè‡ªåŠ¨è¿”å›ï¼Œç›´åˆ°æ”¶åˆ°åœæ­¢ä¿¡å·ã€‚
+		è¿™æ˜¯æ¯” ProcessThreadUntilIdle æ›´â€œæŒä¹…â€çš„ä»»åŠ¡å¤„ç†æ–¹å¼ï¼Œé€‚åˆç”¨ä½œå·¥ä½œçº¿ç¨‹çš„ä¸»å¾ªç¯ã€‚
+		åŒæ ·è°ƒç”¨è€…åº”è¯¥æ˜¯å½“å‰çº¿ç¨‹çš„åŒç±»å‹type
 	 * @param CurrentThread
 	 */
 	virtual void ProcessThreadUntilRequestReturn(ENamedThreads::Type CurrentThread) = 0;
 
 
 	/**
-	 * ÕâÊÇÏòÈÎÎñÍ¼ÏµÍ³·¢³öÇëÇó£¬ÈÃÖ¸¶¨µÄÏß³Ì£¨ÓÉ CurrentThread ±êÊ¶£©ÔÚÍê³Éµ±Ç°ÈÎÎñºó£¬²¢ÇÒ´¦ÓÚ¿ÕÏĞ×´Ì¬Ê±Í£Ö¹ÔËĞĞ£¨·µ»Ø£©¡£
+	 * è¿™æ˜¯å‘ä»»åŠ¡å›¾ç³»ç»Ÿå‘å‡ºè¯·æ±‚ï¼Œè®©æŒ‡å®šçš„çº¿ç¨‹ï¼ˆç”± CurrentThread æ ‡è¯†ï¼‰åœ¨å®Œæˆå½“å‰ä»»åŠ¡åï¼Œå¹¶ä¸”å¤„äºç©ºé—²çŠ¶æ€æ—¶åœæ­¢è¿è¡Œï¼ˆè¿”å›ï¼‰ã€‚
 	 * @param CurrentThread
 	 */
 	virtual void RequestReturn(ENamedThreads::Type CurrentThread) = 0;
 
 
 	/**
-	 * ÈÃµ÷ÓÃ¸Ãº¯ÊıµÄÏß³Ì£¨Éí·İÓÉ CurrentThreadIfKnown Ö¸¶¨£¬±ØĞëÊÇ¡°ÃüÃûÏß³Ì¡±£©×èÈûµÈ´ı£¬Ö±µ½´«ÈëµÄÈÎÎñÁĞ±í Tasks ÖĞµÄËùÓĞÈÎÎñ¶¼Ö´ĞĞÍê³É¡£
-		ÔÚµÈ´ıÆÚ¼ä£¬µ÷ÓÃÏß³Ì»á´¦Àí×Ô¼º¸ºÔğµÄÈÎÎñ¶ÓÁĞ£¬ÒÔ±ÜÃâËÀËø¡£
-		ÕâÊÇÒ»¸öÍ¬²½µÈ´ı½Ó¿Ú£¬±£Ö¤ËùÓĞÒÀÀµµÄÈÎÎñÍê³ÉºóÔÙ¼ÌĞøÖ´ĞĞ¡£
+	 * è®©è°ƒç”¨è¯¥å‡½æ•°çš„çº¿ç¨‹ï¼ˆèº«ä»½ç”± CurrentThreadIfKnown æŒ‡å®šï¼Œå¿…é¡»æ˜¯â€œå‘½åçº¿ç¨‹â€ï¼‰é˜»å¡ç­‰å¾…ï¼Œç›´åˆ°ä¼ å…¥çš„ä»»åŠ¡åˆ—è¡¨ Tasks ä¸­çš„æ‰€æœ‰ä»»åŠ¡éƒ½æ‰§è¡Œå®Œæˆã€‚
+		åœ¨ç­‰å¾…æœŸé—´ï¼Œè°ƒç”¨çº¿ç¨‹ä¼šå¤„ç†è‡ªå·±è´Ÿè´£çš„ä»»åŠ¡é˜Ÿåˆ—ï¼Œä»¥é¿å…æ­»é”ã€‚
+		è¿™æ˜¯ä¸€ä¸ªåŒæ­¥ç­‰å¾…æ¥å£ï¼Œä¿è¯æ‰€æœ‰ä¾èµ–çš„ä»»åŠ¡å®Œæˆåå†ç»§ç»­æ‰§è¡Œã€‚
 	 * @param Tasks
 	 * @param CurrentThreadIfKnown
 	 */
@@ -261,19 +261,19 @@ public:
 
 
 	/**
-	 * µ± Tasks ÖĞµÄËùÓĞÈÎÎñÍê³Éºó£¬´¥·¢£¨signal£©´«ÈëµÄÍ¬²½ÊÂ¼ş InEvent¡£
-	 * ´¥·¢ÊÂ¼şµÄ²Ù×÷»áÔÚÖ¸¶¨µÄÏß³Ì TriggerThread ÉÏÖ´ĞĞ¡£
-	 * µ÷ÓÃ´Ëº¯ÊıµÄÏß³ÌÉí·İÊÇ CurrentThreadIfKnown£¬ÓÃÓÚÈÎÎñÍ¼ÄÚ²¿µ÷¶ÈÓëÓÅ»¯¡£
-	 * @param InEvent Òª´¥·¢µÄÍ¬²½ÊÂ¼ş£¨Èç FEvent£©£¬Í¨³£ÓÃÓÚÏß³Ì¼äĞÅºÅÍ¨Öª¡£
-	 * @param Tasks 	ĞèÒªµÈ´ıÍê³ÉµÄÈÎÎñÊı×é¡£
-	 * @param CurrentThreadIfKnown µ÷ÓÃ¸Ã½Ó¿ÚµÄÏß³ÌÀàĞÍ¡£Ä¬ÈÏ AnyThread¡£
-	 * @param TriggerThread ´¥·¢ÊÂ¼ş²Ù×÷ÒªÖ´ĞĞµÄÏß³ÌÀàĞÍ¡£Ä¬ÈÏÎª¸ßÓÅÏÈ¼¶Ïß³Ì¡££¨Ö¸¶¨ÔÚÄÄ¸öÏß³ÌÉÏsignal event£©
+	 * å½“ Tasks ä¸­çš„æ‰€æœ‰ä»»åŠ¡å®Œæˆåï¼Œè§¦å‘ï¼ˆsignalï¼‰ä¼ å…¥çš„åŒæ­¥äº‹ä»¶ InEventã€‚
+	 * è§¦å‘äº‹ä»¶çš„æ“ä½œä¼šåœ¨æŒ‡å®šçš„çº¿ç¨‹ TriggerThread ä¸Šæ‰§è¡Œã€‚
+	 * è°ƒç”¨æ­¤å‡½æ•°çš„çº¿ç¨‹èº«ä»½æ˜¯ CurrentThreadIfKnownï¼Œç”¨äºä»»åŠ¡å›¾å†…éƒ¨è°ƒåº¦ä¸ä¼˜åŒ–ã€‚
+	 * @param InEvent è¦è§¦å‘çš„åŒæ­¥äº‹ä»¶ï¼ˆå¦‚ FEventï¼‰ï¼Œé€šå¸¸ç”¨äºçº¿ç¨‹é—´ä¿¡å·é€šçŸ¥ã€‚
+	 * @param Tasks 	éœ€è¦ç­‰å¾…å®Œæˆçš„ä»»åŠ¡æ•°ç»„ã€‚
+	 * @param CurrentThreadIfKnown è°ƒç”¨è¯¥æ¥å£çš„çº¿ç¨‹ç±»å‹ã€‚é»˜è®¤ AnyThreadã€‚
+	 * @param TriggerThread è§¦å‘äº‹ä»¶æ“ä½œè¦æ‰§è¡Œçš„çº¿ç¨‹ç±»å‹ã€‚é»˜è®¤ä¸ºé«˜ä¼˜å…ˆçº§çº¿ç¨‹ã€‚ï¼ˆæŒ‡å®šåœ¨å“ªä¸ªçº¿ç¨‹ä¸Šsignal eventï¼‰
 	 */
 	virtual void TriggerEventWhenTasksComplete(FEvent* InEvent, const FGraphEventArray& Tasks, ENamedThreads::Type CurrentThreadIfKnown = ENamedThreads::AnyThread, ENamedThreads::Type TriggerThread = ENamedThreads::AnyHiPriThreadHiPriTask) = 0;
 
 
 	/**
-	 * Õâ¸öº¯ÊıÈÃµ÷ÓÃÏß³Ì×èÈûµÈ´ıÖ¸¶¨µÄµ¥¸öÈÎÎñ Task Íê³É¡£
+	 * è¿™ä¸ªå‡½æ•°è®©è°ƒç”¨çº¿ç¨‹é˜»å¡ç­‰å¾…æŒ‡å®šçš„å•ä¸ªä»»åŠ¡ Task å®Œæˆã€‚
 	 * @param Task
 	 * @param CurrentThreadIfKnown
 	 */
@@ -288,7 +288,7 @@ public:
 
 
 	/**
-	 * Õâ¸öº¯Êı»áÔÚÖ¸¶¨µÄµ¥¸öÈÎÎñ Task Íê³ÉÊ±£¬´¥·¢Í¬²½ÊÂ¼ş InEvent
+	 * è¿™ä¸ªå‡½æ•°ä¼šåœ¨æŒ‡å®šçš„å•ä¸ªä»»åŠ¡ Task å®Œæˆæ—¶ï¼Œè§¦å‘åŒæ­¥äº‹ä»¶ InEvent
 	 * @param InEvent
 	 * @param Task
 	 * @param CurrentThreadIfKnown
@@ -303,26 +303,26 @@ public:
 
 
 	/**
-	 * ÔÊĞíÄã×¢²áÒ»¸ö»Øµ÷º¯Êı£¨Callback£©£¬Õâ¸öº¯Êı»áÔÚÈÎÎñÍ¼ÏµÍ³×¼±¸¹Ø±ÕÖ®Ç°±»µ÷ÓÃ
+	 * å…è®¸ä½ æ³¨å†Œä¸€ä¸ªå›è°ƒå‡½æ•°ï¼ˆCallbackï¼‰ï¼Œè¿™ä¸ªå‡½æ•°ä¼šåœ¨ä»»åŠ¡å›¾ç³»ç»Ÿå‡†å¤‡å…³é—­ä¹‹å‰è¢«è°ƒç”¨
 	 * @param Callback
 	 */
 	virtual void AddShutdownCallback(TFunction<void()>& Callback) = 0;
 
 
 	/**
-	 * Õâ¸öº¯ÊıÓÃÓÚ»½ĞÑÖ¸¶¨µÄÃüÃûÏß³Ì£¬Í¨³£ÊÇÈÃÄÇ¸öÏß³Ì´ÓµÈ´ı×´Ì¬»òĞİÃß×´Ì¬»Ö¸´£¬¼ÌĞø´¦ÀíÈÎÎñ¡£
-	 * @param ThreadToWake ÊÇÒª»½ĞÑµÄÏß³ÌÀàĞÍ£¬ÀıÈç ENamedThreads::GameThread¡¢
+	 * è¿™ä¸ªå‡½æ•°ç”¨äºå”¤é†’æŒ‡å®šçš„å‘½åçº¿ç¨‹ï¼Œé€šå¸¸æ˜¯è®©é‚£ä¸ªçº¿ç¨‹ä»ç­‰å¾…çŠ¶æ€æˆ–ä¼‘çœ çŠ¶æ€æ¢å¤ï¼Œç»§ç»­å¤„ç†ä»»åŠ¡ã€‚
+	 * @param ThreadToWake æ˜¯è¦å”¤é†’çš„çº¿ç¨‹ç±»å‹ï¼Œä¾‹å¦‚ ENamedThreads::GameThreadã€
 	 */
 	virtual void WakeNamedThread(ENamedThreads::Type ThreadToWake) = 0;
 
 
 	/**
-	 * ¸Ãº¯Êı»á±éÀúËùÓĞÒÑÖªµÄÏß³ÌÀàĞÍ£¬°üÀ¨ÃüÃûÏß³ÌºÍ¹¤×÷Ïß³Ì£¬¸ù¾İ²ÎÊıÑ¡ÔñÊÇ·ñ°üº¬ÈÎÎñÏß³ÌºÍºóÌ¨Ïß³Ì¡£\
-	 * ¶ÔÃ¿¸öÏß³Ì£¬¶¼»áµ÷ÓÃ´«ÈëµÄ Callback£¬²¢´«Èëµ±Ç°Ïß³ÌµÄ ENamedThreads::Type¡£
-	 * ÓÉÓÚĞèÒª±éÀúºÜ¶àÏß³Ì£¬ÇÒÉæ¼°¿çÏß³Ìµ÷ÓÃµÈ£¬º¯ÊıÖ´ĞĞ½ÏÂı£¬¹Ê´øÓĞÃ÷ÏÔÌáÊ¾¡°½öÏŞÌØÊâÓÃÍ¾¡±¡£
-	 * @param bDoTaskThreads ÊÇ·ñ°üÀ¨ÈÎÎñÍ¼ÖĞµÄ¹¤×÷Ïß³Ì
-	 * @param bDoBackgroundThreads ÊÇ·ñ°üÀ¨ºóÌ¨Ïß³Ì
-	 * @param Callback 	Õë¶ÔÃ¿¸öÏß³Ìµ÷ÓÃµÄº¯Êı£¬²ÎÊıÊÇ¸ÃÏß³ÌµÄÀàĞÍ
+	 * è¯¥å‡½æ•°ä¼šéå†æ‰€æœ‰å·²çŸ¥çš„çº¿ç¨‹ç±»å‹ï¼ŒåŒ…æ‹¬å‘½åçº¿ç¨‹å’Œå·¥ä½œçº¿ç¨‹ï¼Œæ ¹æ®å‚æ•°é€‰æ‹©æ˜¯å¦åŒ…å«ä»»åŠ¡çº¿ç¨‹å’Œåå°çº¿ç¨‹ã€‚\
+	 * å¯¹æ¯ä¸ªçº¿ç¨‹ï¼Œéƒ½ä¼šè°ƒç”¨ä¼ å…¥çš„ Callbackï¼Œå¹¶ä¼ å…¥å½“å‰çº¿ç¨‹çš„ ENamedThreads::Typeã€‚
+	 * ç”±äºéœ€è¦éå†å¾ˆå¤šçº¿ç¨‹ï¼Œä¸”æ¶‰åŠè·¨çº¿ç¨‹è°ƒç”¨ç­‰ï¼Œå‡½æ•°æ‰§è¡Œè¾ƒæ…¢ï¼Œæ•…å¸¦æœ‰æ˜æ˜¾æç¤ºâ€œä»…é™ç‰¹æ®Šç”¨é€”â€ã€‚
+	 * @param bDoTaskThreads æ˜¯å¦åŒ…æ‹¬ä»»åŠ¡å›¾ä¸­çš„å·¥ä½œçº¿ç¨‹
+	 * @param bDoBackgroundThreads æ˜¯å¦åŒ…æ‹¬åå°çº¿ç¨‹
+	 * @param Callback 	é’ˆå¯¹æ¯ä¸ªçº¿ç¨‹è°ƒç”¨çš„å‡½æ•°ï¼Œå‚æ•°æ˜¯è¯¥çº¿ç¨‹çš„ç±»å‹
 
 	 */
 	static void BroadcastSlow_OnlyUseForSpecialPurposes(bool bDoTaskThreads, bool bDoBackgroundThreads, TFunction<void(ENamedThreads::Type CurrentThread)>& Callback);
@@ -330,24 +330,24 @@ public:
 private:
 
 	/**
-	 * TaskGraph ÖĞ½«ÈÎÎñ°²ÅÅµ½ÕıÈ·Ïß³Ì»òÏß³Ì³ØµÄºËĞÄ½Ó¿Ú¡£
-	 * @param Task Òªµ÷¶ÈµÄÈÎÎñ
-	 * @param ThreadToExecuteOn ±íÊ¾Õâ¸öÈÎÎñÒªÔÚÄÄ¸öÏß³ÌÉÏÖ´ĞĞ£¨¿ÉÄÜÊÇ GameThread¡¢RenderThread)
-	 * @param CurrentThreadIfKnown Èç¹ûµ÷ÓÃÕßÖªµÀ×Ô¼ºµ±Ç°Ïß³Ì£¬¿ÉÒÔÌîÕâ¸öÖµ£¬ÓÃÓÚÓÅ»¯µ÷¶ÈÂ·¾¶£»·ñÔòÄ¬ÈÏÌî AnyThread
+	 * TaskGraph ä¸­å°†ä»»åŠ¡å®‰æ’åˆ°æ­£ç¡®çº¿ç¨‹æˆ–çº¿ç¨‹æ± çš„æ ¸å¿ƒæ¥å£ã€‚
+	 * @param Task è¦è°ƒåº¦çš„ä»»åŠ¡
+	 * @param ThreadToExecuteOn è¡¨ç¤ºè¿™ä¸ªä»»åŠ¡è¦åœ¨å“ªä¸ªçº¿ç¨‹ä¸Šæ‰§è¡Œï¼ˆå¯èƒ½æ˜¯ GameThreadã€RenderThread)
+	 * @param CurrentThreadIfKnown å¦‚æœè°ƒç”¨è€…çŸ¥é“è‡ªå·±å½“å‰çº¿ç¨‹ï¼Œå¯ä»¥å¡«è¿™ä¸ªå€¼ï¼Œç”¨äºä¼˜åŒ–è°ƒåº¦è·¯å¾„ï¼›å¦åˆ™é»˜è®¤å¡« AnyThread
 
 	 */
 	virtual void QueueTask(class FBaseGraphTask* Task, ENamedThreads::Type ThreadToExecuteOn, ENamedThreads::Type CurrentThreadIfKnown = ENamedThreads::AnyThread) = 0;
 };
 
 
-/*ÈÎÎñÖ´ĞĞµÄºËĞÄµ¥Ôª
- * ÈÎÎñÍ¼ÏµÍ³ÖĞËùÓĞÒì²½Ö´ĞĞµÄµ¥Ôª¶¼¼Ì³Ğ×ÔËü¡£
- * ¹ÜÀíÈÎÎñµÄÉúÃüÖÜÆÚ¡¢ÒÀÀµ¼ÆÊı¡¢Ïß³Ìµ÷¶È¡¢Ö´ĞĞÂß¼­¡£
+/*ä»»åŠ¡æ‰§è¡Œçš„æ ¸å¿ƒå•å…ƒ
+ * ä»»åŠ¡å›¾ç³»ç»Ÿä¸­æ‰€æœ‰å¼‚æ­¥æ‰§è¡Œçš„å•å…ƒéƒ½ç»§æ‰¿è‡ªå®ƒã€‚
+ * ç®¡ç†ä»»åŠ¡çš„ç”Ÿå‘½å‘¨æœŸã€ä¾èµ–è®¡æ•°ã€çº¿ç¨‹è°ƒåº¦ã€æ‰§è¡Œé€»è¾‘ã€‚
  */
 class COREMODULE FBaseGraphTask
 {
 public:
-	//Ğ¡ÈÎÎñ·ÖÅäµÄ´óĞ¡¾Í256×Ö½Ú£¬·½±ãÊ¹ÓÃ×Ô¶¨Òå·ÖÅäÆ÷µÄÇé¿ö
+	//å°ä»»åŠ¡åˆ†é…çš„å¤§å°å°±256å­—èŠ‚ï¼Œæ–¹ä¾¿ä½¿ç”¨è‡ªå®šä¹‰åˆ†é…å™¨çš„æƒ…å†µ
 	enum
 	{
 		SMALL_TASK_SIZE = 256
@@ -355,9 +355,9 @@ public:
 
 
 	/**
-	 *ThreadToExecuteOn 	±íÊ¾¸ÃÈÎÎñÏ£ÍûÔÚÄÄ¸öÏß³ÌÉÏÖ´ĞĞ£¬ÓÉµ÷¶ÈÆ÷¸ù¾İËü½øĞĞ·Ö·¢
-	 * nNumberOfPrerequistitesOutstanding + 1ÁË ÒÀÀµÈÎÎñÊıÁ¿+1£¬ÒÔÃâÒì²½Ê±£¬ÈÎÎñÖ´ĞĞÍêÁË£¬Õâ¸ö¶«Î÷»¹Ã»¹¹ÔìÍê³É¡£
-	 * @param InNumberOfPrerequistitesOutstanding  ÒÀÀµÊıÄ¿
+	 *ThreadToExecuteOn 	è¡¨ç¤ºè¯¥ä»»åŠ¡å¸Œæœ›åœ¨å“ªä¸ªçº¿ç¨‹ä¸Šæ‰§è¡Œï¼Œç”±è°ƒåº¦å™¨æ ¹æ®å®ƒè¿›è¡Œåˆ†å‘
+	 * nNumberOfPrerequistitesOutstanding + 1äº† ä¾èµ–ä»»åŠ¡æ•°é‡+1ï¼Œä»¥å…å¼‚æ­¥æ—¶ï¼Œä»»åŠ¡æ‰§è¡Œå®Œäº†ï¼Œè¿™ä¸ªä¸œè¥¿è¿˜æ²¡æ„é€ å®Œæˆã€‚
+	 * @param InNumberOfPrerequistitesOutstanding  ä¾èµ–æ•°ç›®
 	 */
 	FBaseGraphTask(int32 InNumberOfPrerequistitesOutstanding)
 		: ThreadToExecuteOn(ENamedThreads::AnyThread)
@@ -368,10 +368,10 @@ public:
 
 
 	/**
-	 * ÔÚÈÎÎñ¹¹ÔìÖ®ºó¡¢µ÷¶ÈÖ®Ç°£¬ÉèÖÃ¸ÃÈÎÎñÆÚÍûÔÚÄÄ¸öÏß³ÌÉÏÖ´ĞĞ¡£
-	 * ÎªÊ²Ã´²»ÊÇÔÚ¹¹Ôìº¯ÊıÀïÉèÖÃ£¿¹¹Ôì FBaseGraphTask Ê±£¬ÈÎÎñµÄÖ´ĞĞÏß³ÌĞÅÏ¢ÍùÍù»¹Î´È·¶¨¡£
-	 * ±ÈÈçÄ³Ğ©ÈÎÎñĞèÒª¸ù¾İÒÀÀµÈÎÎñµÄ½á¹û£¬»òµ÷¶È²ßÂÔ£¬¶¯Ì¬¾ö¶¨ÔÚÄÄ¸öÏß³ÌÉÏÔËĞĞ¡£
-	 * ËùÒÔÉè¼ÆÉÏ½«ÆäÑÓ³Ùµ½¹¹ÔìÖ®ºóÉèÖÃ£¬±ÜÃâÒ»¿ªÊ¼¾Í°ó¶¨ËÀÏß³ÌÀàĞÍ
+	 * åœ¨ä»»åŠ¡æ„é€ ä¹‹åã€è°ƒåº¦ä¹‹å‰ï¼Œè®¾ç½®è¯¥ä»»åŠ¡æœŸæœ›åœ¨å“ªä¸ªçº¿ç¨‹ä¸Šæ‰§è¡Œã€‚
+	 * ä¸ºä»€ä¹ˆä¸æ˜¯åœ¨æ„é€ å‡½æ•°é‡Œè®¾ç½®ï¼Ÿæ„é€  FBaseGraphTask æ—¶ï¼Œä»»åŠ¡çš„æ‰§è¡Œçº¿ç¨‹ä¿¡æ¯å¾€å¾€è¿˜æœªç¡®å®šã€‚
+	 * æ¯”å¦‚æŸäº›ä»»åŠ¡éœ€è¦æ ¹æ®ä¾èµ–ä»»åŠ¡çš„ç»“æœï¼Œæˆ–è°ƒåº¦ç­–ç•¥ï¼ŒåŠ¨æ€å†³å®šåœ¨å“ªä¸ªçº¿ç¨‹ä¸Šè¿è¡Œã€‚
+	 * æ‰€ä»¥è®¾è®¡ä¸Šå°†å…¶å»¶è¿Ÿåˆ°æ„é€ ä¹‹åè®¾ç½®ï¼Œé¿å…ä¸€å¼€å§‹å°±ç»‘å®šæ­»çº¿ç¨‹ç±»å‹
 	 * @param InThreadToExecuteOn
 	 */
 	void SetThreadToExecuteOn(ENamedThreads::Type InThreadToExecuteOn)
@@ -383,7 +383,7 @@ public:
 
 
 	/**
-	 * ÈÎÎñÔÚÏÈ¾öÌõ¼ş£¨Prerequisites£©¶¼Âú×ãÖ®ºó£¬ÊÇ·ñÁ¢¼´ÅÅ¶ÓÖ´ĞĞ£¬È¡¾öÓÚÕâ¸öº¯ÊıÊÇ·ñ±»µ÷ÓÃ¡¢ÒÔ¼° bUnlock ÊÇ·ñÎª true¡£
+	 * ä»»åŠ¡åœ¨å…ˆå†³æ¡ä»¶ï¼ˆPrerequisitesï¼‰éƒ½æ»¡è¶³ä¹‹åï¼Œæ˜¯å¦ç«‹å³æ’é˜Ÿæ‰§è¡Œï¼Œå–å†³äºè¿™ä¸ªå‡½æ•°æ˜¯å¦è¢«è°ƒç”¨ã€ä»¥åŠ bUnlock æ˜¯å¦ä¸º trueã€‚
 	 * @param CurrentThread
 	 * @param NumAlreadyFinishedPrequistes
 	 * @param bUnlock
@@ -399,12 +399,12 @@ public:
 	}
 
 
-	/**µ±Ò»¸öÇ°ÖÃÈÎÎñÍê³ÉÊ±£¬³¢ÊÔ¼õÉÙÊ£ÓàÇ°ÖÃÈÎÎñ¼ÆÊı£»Èç¹ûÕâÊÇ×îºóÒ»¸ö£¬Ôò½«ÈÎÎñÈë¶ÓÖ´ĞĞ¡£
+	/**å½“ä¸€ä¸ªå‰ç½®ä»»åŠ¡å®Œæˆæ—¶ï¼Œå°è¯•å‡å°‘å‰©ä½™å‰ç½®ä»»åŠ¡è®¡æ•°ï¼›å¦‚æœè¿™æ˜¯æœ€åä¸€ä¸ªï¼Œåˆ™å°†ä»»åŠ¡å…¥é˜Ÿæ‰§è¡Œã€‚
 	 * @param CurrentThread
 	 */
 	void ConditionalQueueTask(ENamedThreads::Type CurrentThread)
 	{
-		if (--NumberOfPrerequistitesOutstanding == 0) //CPP20  ÕâÊÇ¸öÔ­×Ó²Ù×÷
+		if (--NumberOfPrerequistitesOutstanding == 0) //CPP20  è¿™æ˜¯ä¸ªåŸå­æ“ä½œ
 		{
 			QueueTask(CurrentThread);
 		}
@@ -429,15 +429,15 @@ private:
 
 
 	/**
-	 * Êµ¼ÊÖ´ĞĞ¸ÃÈÎÎñµÄÂß¼­¡£ÈÎÎñÏµÍ³µ÷¶ÈÏß³ÌÔÚ×¼±¸Ö´ĞĞÈÎÎñÊ±£¬»áµ÷ÓÃÕâ¸öº¯Êı¡£
-	 * @param NewTasks ÔÊĞíÔÚÖ´ĞĞµ±Ç°ÈÎÎñ¹ı³ÌÖĞ²úÉúĞÂµÄÈÎÎñ£¬Ìí¼Óµ½ÕâÀï£¬ÈÎÎñÏµÍ³»áºóĞø´¦ÀíËüÃÇ
-	 * @param CurrentThread µ±Ç°Ö´ĞĞÈÎÎñµÄÏß³ÌÀàĞÍ£¨±ÈÈçÓÎÏ·Ïß³Ì¡¢ºóÌ¨Ïß³ÌµÈ£©£¬±ãÓÚÈÎÎñ¸ù¾İÏß³Ì×ö²»Í¬´¦Àí»òµ÷¶È¡£±íÊ¾µ±Ç°ÕıÔÚÖ´ĞĞÈÎÎñµÄÏß³ÌÀàĞÍ£¬Í¨³£Ëü¾ÍÊÇµ÷ÓÃÕâ¸ö½Ó¿ÚµÄÏß³ÌµÄÀàĞÍ¡£
+	 * å®é™…æ‰§è¡Œè¯¥ä»»åŠ¡çš„é€»è¾‘ã€‚ä»»åŠ¡ç³»ç»Ÿè°ƒåº¦çº¿ç¨‹åœ¨å‡†å¤‡æ‰§è¡Œä»»åŠ¡æ—¶ï¼Œä¼šè°ƒç”¨è¿™ä¸ªå‡½æ•°ã€‚
+	 * @param NewTasks å…è®¸åœ¨æ‰§è¡Œå½“å‰ä»»åŠ¡è¿‡ç¨‹ä¸­äº§ç”Ÿæ–°çš„ä»»åŠ¡ï¼Œæ·»åŠ åˆ°è¿™é‡Œï¼Œä»»åŠ¡ç³»ç»Ÿä¼šåç»­å¤„ç†å®ƒä»¬
+	 * @param CurrentThread å½“å‰æ‰§è¡Œä»»åŠ¡çš„çº¿ç¨‹ç±»å‹ï¼ˆæ¯”å¦‚æ¸¸æˆçº¿ç¨‹ã€åå°çº¿ç¨‹ç­‰ï¼‰ï¼Œä¾¿äºä»»åŠ¡æ ¹æ®çº¿ç¨‹åšä¸åŒå¤„ç†æˆ–è°ƒåº¦ã€‚è¡¨ç¤ºå½“å‰æ­£åœ¨æ‰§è¡Œä»»åŠ¡çš„çº¿ç¨‹ç±»å‹ï¼Œé€šå¸¸å®ƒå°±æ˜¯è°ƒç”¨è¿™ä¸ªæ¥å£çš„çº¿ç¨‹çš„ç±»å‹ã€‚
 	 */
 	virtual void ExecuteTask(std::vector<FBaseGraphTask*>& NewTasks, ENamedThreads::Type CurrentThread) = 0;
 
 
 	/**
-	 *  ÊÇÏµÍ³µ÷ÓÃµÄ½Ó¿Ú£¬ÓÃÓÚ Ö´ĞĞÈÎÎñ Í¬ÉÏ
+	 *  æ˜¯ç³»ç»Ÿè°ƒç”¨çš„æ¥å£ï¼Œç”¨äº æ‰§è¡Œä»»åŠ¡ åŒä¸Š
 	 * @param NewTasks
 	 * @param CurrentThread
 	 */
@@ -449,8 +449,8 @@ private:
 
 
 	/**
-	 * ÊÇÈÎÎñÍ¼ÏµÍ³ÖĞÓÃÓÚ½«Ò»¸öÈÎÎñÈë¶Ó¡¢µÈ´ıÖ´ĞĞµÄºËĞÄÂß¼­Ö®Ò»¡£Õâ¸öº¯ÊıÊÇÈÎÎñÍ¼ÏµÍ³ÖĞ°Ñ¡°×¼±¸¾ÍĞ÷¡±µÄÈÎÎñËÍÈëµ÷¶È¶ÓÁĞµÄ²½Öè¡£
-	 * @param CurrentThreadIfKnown Ò»°ã¾ÍÊÇµ÷ÓÃÕâ¸ö½Ó¿ÚÏß³ÌµÄType ´«´íÒ»°ã²»»áÓ°ÏìÈÎÎñÖ´ĞĞÕıÈ·ĞÔ£¨Ò»°ãÀ´Ëµ£©£»µ«¿ÉÄÜ»áÊ§È¥Ò»Ğ©Ïß³ÌÇ×ºÍĞÔÓÅ»¯£»
+	 * æ˜¯ä»»åŠ¡å›¾ç³»ç»Ÿä¸­ç”¨äºå°†ä¸€ä¸ªä»»åŠ¡å…¥é˜Ÿã€ç­‰å¾…æ‰§è¡Œçš„æ ¸å¿ƒé€»è¾‘ä¹‹ä¸€ã€‚è¿™ä¸ªå‡½æ•°æ˜¯ä»»åŠ¡å›¾ç³»ç»Ÿä¸­æŠŠâ€œå‡†å¤‡å°±ç»ªâ€çš„ä»»åŠ¡é€å…¥è°ƒåº¦é˜Ÿåˆ—çš„æ­¥éª¤ã€‚
+	 * @param CurrentThreadIfKnown ä¸€èˆ¬å°±æ˜¯è°ƒç”¨è¿™ä¸ªæ¥å£çº¿ç¨‹çš„Type ä¼ é”™ä¸€èˆ¬ä¸ä¼šå½±å“ä»»åŠ¡æ‰§è¡Œæ­£ç¡®æ€§ï¼ˆä¸€èˆ¬æ¥è¯´ï¼‰ï¼›ä½†å¯èƒ½ä¼šå¤±å»ä¸€äº›çº¿ç¨‹äº²å’Œæ€§ä¼˜åŒ–ï¼›
 	 */
 	void QueueTask(ENamedThreads::Type CurrentThreadIfKnown)
 	{
@@ -462,7 +462,7 @@ private:
 	std::atomic<int32> NumberOfPrerequistitesOutstanding;
 
 
-	//¼ÇÂ¼Ò»¸öÈÎÎñµÄÉúÃüÖÜÆÚ
+	//è®°å½•ä¸€ä¸ªä»»åŠ¡çš„ç”Ÿå‘½å‘¨æœŸ
 	enum ELifeStage
 	{
 		LS_BaseContructed = 0,
@@ -481,10 +481,10 @@ public:
 
 
 /**
- * ÊÇ Ò»¸öÍ¬²½ÊÂ¼ş£¬¿ÉÒÔÈÏÎªÊÇ¡°¶àÈÎÎñµÄµÈ´ıÄ¿±ê¡±£»
- * ±¾ÖÊÉÏÊÇÒ»¸öÇ°ÖÃÈÎÎñÍê³ÉµÄ±êÖ¾£»
- * Ò»¸öÈÎÎñÍê³ÉÊ±£¬¿ÉÒÔÍ¨¹ı FGraphEvent Í¨Öª¶à¸öºó¼ÌÈÎÎñ£»
- * ÉúÃüÖÜÆÚÓÉ ÒıÓÃ¼ÆÊı ¹ÜÀí
+ * æ˜¯ ä¸€ä¸ªåŒæ­¥äº‹ä»¶ï¼Œå¯ä»¥è®¤ä¸ºæ˜¯â€œå¤šä»»åŠ¡çš„ç­‰å¾…ç›®æ ‡â€ï¼›
+ * æœ¬è´¨ä¸Šæ˜¯ä¸€ä¸ªå‰ç½®ä»»åŠ¡å®Œæˆçš„æ ‡å¿—ï¼›
+ * ä¸€ä¸ªä»»åŠ¡å®Œæˆæ—¶ï¼Œå¯ä»¥é€šè¿‡ FGraphEvent é€šçŸ¥å¤šä¸ªåç»§ä»»åŠ¡ï¼›
+ * ç”Ÿå‘½å‘¨æœŸç”± å¼•ç”¨è®¡æ•° ç®¡ç†
  */
 class COREMODULE FGraphEvent:public std::enable_shared_from_this<FGraphEvent>
 {
@@ -492,7 +492,7 @@ public:
 
 	/**
 	 *
-	 * @return ´´½¨Ò»¸öÈÎÎñÍ¼ÊÂ¼ş£¨GraphEvent£©¶ÔÏó£¬²¢·µ»ØÒ»¸öÒıÓÃ¼ÆÊıÖÇÄÜÖ¸Õë FGraphEventRef¡£
+	 * @return åˆ›å»ºä¸€ä¸ªä»»åŠ¡å›¾äº‹ä»¶ï¼ˆGraphEventï¼‰å¯¹è±¡ï¼Œå¹¶è¿”å›ä¸€ä¸ªå¼•ç”¨è®¡æ•°æ™ºèƒ½æŒ‡é’ˆ FGraphEventRefã€‚
 	 */
 	static FGraphEventRef CreateGraphEvent();
 
@@ -504,14 +504,14 @@ public:
 
 	/**
 	 *
-	 * @return CreateGraphEventWithInlineStorage() »á´´½¨Ò»¸ö FGraphEvent* Ö¸Õë£¬µ«²»»á**×Ô¶¯Ôö¼ÓÒıÓÃ¼ÆÊı£¨ReferenceCount = 0£©¡£
+	 * @return CreateGraphEventWithInlineStorage() ä¼šåˆ›å»ºä¸€ä¸ª FGraphEvent* æŒ‡é’ˆï¼Œä½†ä¸ä¼š**è‡ªåŠ¨å¢åŠ å¼•ç”¨è®¡æ•°ï¼ˆReferenceCount = 0ï¼‰ã€‚
 	 */
 	static FGraphEvent* CreateGraphEventWithInlineStorage();
 
 
 	bool AddSubsequent(FBaseGraphTask* Task)
 	{
-		// UE µÄTClosableLockFreePointerListUnorderedSingleConsumer ÓĞclosed×´Ì¬¹¦ÄÜ£¬ÎÒÃÇÕâÀïIsClosed ¼Ù×°Ò»ÏÂ
+		// UE çš„TClosableLockFreePointerListUnorderedSingleConsumer æœ‰closedçŠ¶æ€åŠŸèƒ½ï¼Œæˆ‘ä»¬è¿™é‡ŒIsClosed å‡è£…ä¸€ä¸‹
 		if (IsClosed.load())
 		{
 			return false;
@@ -530,9 +530,9 @@ public:
 
 
 	/**
-	 * ÑÓ³Ùµ±Ç°ÊÂ¼şµÄ´¥·¢£¬Ö±µ½Ö¸¶¨µÄÊÂ¼ş´¥·¢Íê³É¡£
-	 * ÕâÀïÊµ¼ÊÉÏÖ»ÊÇ°ÑÊÂ¼ş¼Ó½øÊı×é£¬Ã»ÓĞÖ±½ÓÔÚÕâ¸öº¯ÊıÀïµÈ´ı
-	 * @param EventToWaitFor  ĞèÒªµÈ´ıÍê³ÉµÄÊÂ¼ş¡£
+	 * å»¶è¿Ÿå½“å‰äº‹ä»¶çš„è§¦å‘ï¼Œç›´åˆ°æŒ‡å®šçš„äº‹ä»¶è§¦å‘å®Œæˆã€‚
+	 * è¿™é‡Œå®é™…ä¸Šåªæ˜¯æŠŠäº‹ä»¶åŠ è¿›æ•°ç»„ï¼Œæ²¡æœ‰ç›´æ¥åœ¨è¿™ä¸ªå‡½æ•°é‡Œç­‰å¾…
+	 * @param EventToWaitFor  éœ€è¦ç­‰å¾…å®Œæˆçš„äº‹ä»¶ã€‚
 	 */
 	void DontCompleteUtil(FGraphEventRef EventToWaitFor)
 	{
@@ -541,16 +541,16 @@ public:
 
 
 	/**
-	 * ±ê¼Çµ±Ç°ÊÂ¼şÒÑ¾­Íê³É£¨ËùÓĞÇ°ÖÃÌõ¼şÂú×ã£¬ÈÎÎñÖ´ĞĞÍê±Ï£©
-	 * »ñÈ¡ËùÓĞÒÀÀµÓÚµ±Ç°ÊÂ¼şµÄºóĞøÈÎÎñÁĞ±í£¬²¢½«¸ÃÁĞ±í¡°¹Ø±Õ¡±£¬ÒâÎ¶×Å²»ÔÊĞíÔÙÌí¼ÓĞÂµÄºóĞøÈÎÎñ¡£
-	 * ¶ÔÃ¿¸öºóĞøÈÎÎñ£¬¼õÉÙËüÃÇµÈ´ıµÄÇ°ÖÃÈÎÎñ¼ÆÊı£¨Ê£ÓàÎ´Íê³ÉµÄÒÀÀµÊı£©
-	 * Èç¹ûÄ³¸öºóĞøÈÎÎñµÄÊ£ÓàÒÀÀµÊıÎªÁã£¬ËµÃ÷ËüµÄËùÓĞÇ°ÖÃÈÎÎñÒÑÍê³É£¬Ôò½«¸ÃÈÎÎñ·ÅÈëÈÎÎñ¶ÓÁĞµÈ´ıÖ´ĞĞ¡£
-	 * @param CurrentThreadIfKnown ÊÇ¸öÓÅ»¯Ñ¡Ïî£¬¸æËßµ÷¶ÈÆ÷¡°µ±Ç°ÔËĞĞÏß³ÌÊÇÄÄ¸ö¡±£¬±ÜÃâÄÚ²¿Í¨¹ı TLS ²éÑ¯£¬ÌáÉıĞÔÄÜ¡£
+	 * æ ‡è®°å½“å‰äº‹ä»¶å·²ç»å®Œæˆï¼ˆæ‰€æœ‰å‰ç½®æ¡ä»¶æ»¡è¶³ï¼Œä»»åŠ¡æ‰§è¡Œå®Œæ¯•ï¼‰
+	 * è·å–æ‰€æœ‰ä¾èµ–äºå½“å‰äº‹ä»¶çš„åç»­ä»»åŠ¡åˆ—è¡¨ï¼Œå¹¶å°†è¯¥åˆ—è¡¨â€œå…³é—­â€ï¼Œæ„å‘³ç€ä¸å…è®¸å†æ·»åŠ æ–°çš„åç»­ä»»åŠ¡ã€‚
+	 * å¯¹æ¯ä¸ªåç»­ä»»åŠ¡ï¼Œå‡å°‘å®ƒä»¬ç­‰å¾…çš„å‰ç½®ä»»åŠ¡è®¡æ•°ï¼ˆå‰©ä½™æœªå®Œæˆçš„ä¾èµ–æ•°ï¼‰
+	 * å¦‚æœæŸä¸ªåç»­ä»»åŠ¡çš„å‰©ä½™ä¾èµ–æ•°ä¸ºé›¶ï¼Œè¯´æ˜å®ƒçš„æ‰€æœ‰å‰ç½®ä»»åŠ¡å·²å®Œæˆï¼Œåˆ™å°†è¯¥ä»»åŠ¡æ”¾å…¥ä»»åŠ¡é˜Ÿåˆ—ç­‰å¾…æ‰§è¡Œã€‚
+	 * @param CurrentThreadIfKnown æ˜¯ä¸ªä¼˜åŒ–é€‰é¡¹ï¼Œå‘Šè¯‰è°ƒåº¦å™¨â€œå½“å‰è¿è¡Œçº¿ç¨‹æ˜¯å“ªä¸ªâ€ï¼Œé¿å…å†…éƒ¨é€šè¿‡ TLS æŸ¥è¯¢ï¼Œæå‡æ€§èƒ½ã€‚
 	 */
 	void  DispatchSubsequents(ENamedThreads::Type CurrentThreadIfKnown = ENamedThreads::AnyThread);
 
 
-	/**ÉÏÒ»°æ±¾µÄÔöÇ¿°æ£¬²»½ö´¦ÀíÔ­±¾µÄºóĞøÈÎÎñ£¬»¹¿ÉÒÔÒ»´ÎĞÔÌí¼ÓÒ»ÅúĞÂµÄºóĞøÈÎÎñ NewTasks¡£
+	/**ä¸Šä¸€ç‰ˆæœ¬çš„å¢å¼ºç‰ˆï¼Œä¸ä»…å¤„ç†åŸæœ¬çš„åç»­ä»»åŠ¡ï¼Œè¿˜å¯ä»¥ä¸€æ¬¡æ€§æ·»åŠ ä¸€æ‰¹æ–°çš„åç»­ä»»åŠ¡ NewTasksã€‚
 	 *
 	 * @param NewTasks
 	 * @param CurrentThreadIfKnown
@@ -559,7 +559,7 @@ public:
 
 
 	/**
-	 * ÎªÊ²Ã´²»Ö±½ÓÊ¹ÓÃ SubsequentList == 0 À´ÅĞ¶ÏÄØ£¿ ÒòÎª¿ÉÄÜ»¹Ã»ÓĞÈÎºÎÈÎÎñÌí¼Ó½øÀ´
+	 * ä¸ºä»€ä¹ˆä¸ç›´æ¥ä½¿ç”¨ SubsequentList == 0 æ¥åˆ¤æ–­å‘¢ï¼Ÿ å› ä¸ºå¯èƒ½è¿˜æ²¡æœ‰ä»»ä½•ä»»åŠ¡æ·»åŠ è¿›æ¥
 	 * @return
 	 */
 	bool IsComplete() const
@@ -574,7 +574,7 @@ public:
 private:
 	friend TRefCountPtr<FGraphEvent>;
 	/**
-	 * ¸ºÔğ½«Ò»¸öÒÑ¾­Íê³ÉÉúÃüÖÜÆÚµÄ FGraphEvent »ØÊÕµ½ÈÎÎñÍ¼ÏµÍ³µÄÊÂ¼ş³ØÖĞ£¬¹©ºóĞø¸´ÓÃ¡£
+	 * è´Ÿè´£å°†ä¸€ä¸ªå·²ç»å®Œæˆç”Ÿå‘½å‘¨æœŸçš„ FGraphEvent å›æ”¶åˆ°ä»»åŠ¡å›¾ç³»ç»Ÿçš„äº‹ä»¶æ± ä¸­ï¼Œä¾›åç»­å¤ç”¨ã€‚
 	 * @param ToRecycle
 	 */
 	static void Recycle(FGraphEvent* ToRecycle);
@@ -583,22 +583,22 @@ private:
 
 private:
 
-	//todo ÔİÊ±Ã»ÓĞÎŞËø½á¹¹£¬ÕâÀïÓÃRWLock±£Ö¤°²È«ÏÈ
+	//todo æš‚æ—¶æ²¡æœ‰æ— é”ç»“æ„ï¼Œè¿™é‡Œç”¨RWLockä¿è¯å®‰å…¨å…ˆ
 	/**
-	 * ÓÃÓÚ´æ´¢ËùÓĞÒÀÀµ´ËÊÂ¼şµÄºó¼ÌÈÎÎñ£¨Subsequents£©¡£
-	 * ÓÃÍ¾£ºµ±µ±Ç° FGraphEvent Íê³ÉÊ±£¬»á±éÀúÕâ¸öÁ´±í£¬°ÑËùÓĞºó¼ÌÈÎÎñÅÅ¶Óµ÷¶È¡£
-	 * ÎŞËø½á¹¹£ºÊÊºÏÔÚ¶à¸öÏß³ÌÖĞÌí¼Óºó¼ÌÈÎÎñ£¬µ«Ö»ÔÊĞí µ¥¸öÏû·ÑÕßÏß³ÌÈ¡³ö£¨Í¨³£ÊÇÊÂ¼şÍê³ÉÊ±µÄÄÇ¸öÏß³Ì£©¡£
-	 * Ô­À´µÄÀïÃæ»¹ÓĞ¸öclosedµÄ±êÖ¾£¬ÎÒÃÇÃ»ÓĞ£¬ËùÒÔÎÒÃÇÓÃÒ»¸öÔ­×Ó±êÖ¾Î»
+	 * ç”¨äºå­˜å‚¨æ‰€æœ‰ä¾èµ–æ­¤äº‹ä»¶çš„åç»§ä»»åŠ¡ï¼ˆSubsequentsï¼‰ã€‚
+	 * ç”¨é€”ï¼šå½“å½“å‰ FGraphEvent å®Œæˆæ—¶ï¼Œä¼šéå†è¿™ä¸ªé“¾è¡¨ï¼ŒæŠŠæ‰€æœ‰åç»§ä»»åŠ¡æ’é˜Ÿè°ƒåº¦ã€‚
+	 * æ— é”ç»“æ„ï¼šé€‚åˆåœ¨å¤šä¸ªçº¿ç¨‹ä¸­æ·»åŠ åç»§ä»»åŠ¡ï¼Œä½†åªå…è®¸ å•ä¸ªæ¶ˆè´¹è€…çº¿ç¨‹å–å‡ºï¼ˆé€šå¸¸æ˜¯äº‹ä»¶å®Œæˆæ—¶çš„é‚£ä¸ªçº¿ç¨‹ï¼‰ã€‚
+	 * åŸæ¥çš„é‡Œé¢è¿˜æœ‰ä¸ªclosedçš„æ ‡å¿—ï¼Œæˆ‘ä»¬æ²¡æœ‰ï¼Œæ‰€ä»¥æˆ‘ä»¬ç”¨ä¸€ä¸ªåŸå­æ ‡å¿—ä½
 	 */
 	std::forward_list<FBaseGraphTask*> SubsequentList;
 	FRWLock SubsequentListLock;
 	std::atomic_bool IsClosed;
 
-	// Ç°ÖÃÊÂ¼şÁĞ±í
+	// å‰ç½®äº‹ä»¶åˆ—è¡¨
 	FGraphEventArray EventsToWaitFor;
 	/*
-	 * Ö¸¶¨ÔÚÄÄ¸öÏß³ÌÖ´ĞĞ¡¸ºó¼ÌÈÎÎñÊÕ¼¯¡¹²Ù×÷¡£
-	 * ¿ÉÓÃÓÚ°ó¶¨ gather ²Ù×÷µ½ÌØ¶¨Ïß³Ì¡£
+	 * æŒ‡å®šåœ¨å“ªä¸ªçº¿ç¨‹æ‰§è¡Œã€Œåç»§ä»»åŠ¡æ”¶é›†ã€æ“ä½œã€‚
+	 * å¯ç”¨äºç»‘å®š gather æ“ä½œåˆ°ç‰¹å®šçº¿ç¨‹ã€‚
 	 */
 	ENamedThreads::Type	ThreadToDoGatherOn;
 
@@ -610,10 +610,10 @@ private:
 
 
 /**
- * TGraphTask ÊÇÒ»¸öÄ£°åÀà£¬°ü×°ÁËÒ»¸öÓÃ»§×Ô¶¨ÒåµÄÈÎÎñ£¨TTask£©¡£
- * Ëü½«Õâ¸öÈÎÎñÇ¶ÈëÈÎÎñÍ¼ÏµÍ³ÖĞ£¬²¢Ìá¹©ÁËÉèÖÃÇ°ÖÃÈÎÎñ£¨prerequisites£©ºÍºóĞøÈÎÎñ£¨subsequents£©µÄ¹¦ÄÜ¡£
- * ËùÓĞÍ¼ÈÎÎñ¶¼»á¼Ì³Ğ×Ô FBaseGraphTask£¬ËüÌá¹©ÁËµ÷¶È¡¢ÒıÓÃ¼ÆÊıµÈµ×²ã»úÖÆ¡£
- * @tparam TTask Êµ¼ÊÈÎÎñÀàĞÍ£¬±ÈÈçÒ»¸ö¼Ì³ĞÁËÄ³Ğ©½Ó¿Ú¡¢ÊµÏÖÁË DoTask µÄ½á¹¹Ìå¡£
+ * TGraphTask æ˜¯ä¸€ä¸ªæ¨¡æ¿ç±»ï¼ŒåŒ…è£…äº†ä¸€ä¸ªç”¨æˆ·è‡ªå®šä¹‰çš„ä»»åŠ¡ï¼ˆTTaskï¼‰ã€‚
+ * å®ƒå°†è¿™ä¸ªä»»åŠ¡åµŒå…¥ä»»åŠ¡å›¾ç³»ç»Ÿä¸­ï¼Œå¹¶æä¾›äº†è®¾ç½®å‰ç½®ä»»åŠ¡ï¼ˆprerequisitesï¼‰å’Œåç»­ä»»åŠ¡ï¼ˆsubsequentsï¼‰çš„åŠŸèƒ½ã€‚
+ * æ‰€æœ‰å›¾ä»»åŠ¡éƒ½ä¼šç»§æ‰¿è‡ª FBaseGraphTaskï¼Œå®ƒæä¾›äº†è°ƒåº¦ã€å¼•ç”¨è®¡æ•°ç­‰åº•å±‚æœºåˆ¶ã€‚
+ * @tparam TTask å®é™…ä»»åŠ¡ç±»å‹ï¼Œæ¯”å¦‚ä¸€ä¸ªç»§æ‰¿äº†æŸäº›æ¥å£ã€å®ç°äº† DoTask çš„ç»“æ„ä½“ã€‚
  */
 template<typename TTask>
 class TGraphTask final :public FBaseGraphTask
@@ -622,13 +622,13 @@ public:
 
 
 	/**
-	 * Ò»¸ö ¸¨Öú¹¹ÔìÀà£¬ÓÃÀ´Íê³ÉÈÎÎñ¹¹½¨ºÍµ÷¶ÈµÄÂß¼­¡£
+	 * ä¸€ä¸ª è¾…åŠ©æ„é€ ç±»ï¼Œç”¨æ¥å®Œæˆä»»åŠ¡æ„å»ºå’Œè°ƒåº¦çš„é€»è¾‘ã€‚
 	 */
 	class FConstructor
 	{
 	public:
 		/**
-		 * ¹¹ÔìÈÎÎñºóÁ¢¿Ìµ÷¶È£¨Èç¹ûÂú×ãÌõ¼ş£©¡£
+		 * æ„é€ ä»»åŠ¡åç«‹åˆ»è°ƒåº¦ï¼ˆå¦‚æœæ»¡è¶³æ¡ä»¶ï¼‰ã€‚
 		 * @tparam T 
 		 * @param Args 
 		 * @return 
@@ -642,7 +642,7 @@ public:
 
 
 		/**
-		 * ¹¹ÔìÈÎÎñ£¬±ê¼ÇÎª¿ÉÖ´ĞĞ»ò¹ÒÆğ×´Ì¬£¨µÈ´ıÇ°ÖÃÈÎÎñÍê³É£©¡£
+		 * æ„é€ ä»»åŠ¡ï¼Œæ ‡è®°ä¸ºå¯æ‰§è¡Œæˆ–æŒ‚èµ·çŠ¶æ€ï¼ˆç­‰å¾…å‰ç½®ä»»åŠ¡å®Œæˆï¼‰ã€‚
 		 * @tparam T 
 		 * @param Args 
 		 * @return 
@@ -659,15 +659,15 @@ public:
 		friend class TGraphTask;
 
 		/**
-		 * Ö¸ÏòÍâ²¿µÄ TGraphTask<TTask> ÊµÀıµÄÖ¸Õë¡£
+		 * æŒ‡å‘å¤–éƒ¨çš„ TGraphTask<TTask> å®ä¾‹çš„æŒ‡é’ˆã€‚
 		 */
 		TGraphTask* Owner;
 
-		//Ö¸ÏòÇ°ÖÃÈÎÎñÊÂ¼şµÄÊı×é µ±Ç°ÈÎÎñÔÚÔËĞĞÇ°±ØĞëµÈ´ıÍê³ÉµÄËùÓĞÒÀÀµÈÎÎñ¡£ÕâĞ©Ç°ÖÃÈÎÎñÍê³Éºó£¬µ±Ç°ÈÎÎñ²ÅÄÜ±»°²ÅÅÖ´ĞĞ¡£
+		//æŒ‡å‘å‰ç½®ä»»åŠ¡äº‹ä»¶çš„æ•°ç»„ å½“å‰ä»»åŠ¡åœ¨è¿è¡Œå‰å¿…é¡»ç­‰å¾…å®Œæˆçš„æ‰€æœ‰ä¾èµ–ä»»åŠ¡ã€‚è¿™äº›å‰ç½®ä»»åŠ¡å®Œæˆåï¼Œå½“å‰ä»»åŠ¡æ‰èƒ½è¢«å®‰æ’æ‰§è¡Œã€‚
 		const FGraphEventArray* Prerequisites;
 
 		/**
-		 * Èç¹ûÄãÒÑ¾­ÖªµÀµ±Ç°Ïß³ÌµÄÏß³Ì ID£¬¿ÉÒÔ´«ÈëËüÒÔÓÅ»¯µ÷¶ÈÁ÷³Ì£¬±ÜÃâ»¹Òª´ÓTlsÖĞ²éÑ¯ÀË·ÑĞÔÄÜ
+		 * å¦‚æœä½ å·²ç»çŸ¥é“å½“å‰çº¿ç¨‹çš„çº¿ç¨‹ IDï¼Œå¯ä»¥ä¼ å…¥å®ƒä»¥ä¼˜åŒ–è°ƒåº¦æµç¨‹ï¼Œé¿å…è¿˜è¦ä»Tlsä¸­æŸ¥è¯¢æµªè´¹æ€§èƒ½
 		 */
 		ENamedThreads::Type CurrentThreadIfKnown;
 
@@ -678,7 +678,7 @@ public:
 		{
 			
 		}
-		// ²»ÔÊĞí¸´ÖÆ¿½±´
+		// ä¸å…è®¸å¤åˆ¶æ‹·è´
 		FConstructor(const FConstructor& Other) = delete;
 		void operator=(const FConstructor& Other) = delete;
 
@@ -699,10 +699,10 @@ public:
 	}
 
 
-	/**´´½¨Ò»¸öÍ¼ÈÎÎñ£¨Graph Task£©
+	/**åˆ›å»ºä¸€ä¸ªå›¾ä»»åŠ¡ï¼ˆGraph Taskï¼‰
 	 * 
-	 * @param Prerequistes ÏÈ¾öÈÎÎñÊı×é£¬±íÊ¾´ËÈÎÎñÒÀÀµÄÄĞ©Ç°ÖÃÈÎÎñÍê³Éºó²ÅÄÜÖ´ĞĞ¡£
-	 * @param CurrentThreadIfKnown µ±Ç°Ïß³ÌµÄ±êÊ¶£¨ÈçÔÚÖ÷Ïß³Ì/äÖÈ¾Ïß³ÌÉÏµ÷ÓÃ£©¡£Èç¹û²»È·¶¨£¬´« AnyThread¡£
+	 * @param Prerequistes å…ˆå†³ä»»åŠ¡æ•°ç»„ï¼Œè¡¨ç¤ºæ­¤ä»»åŠ¡ä¾èµ–å“ªäº›å‰ç½®ä»»åŠ¡å®Œæˆåæ‰èƒ½æ‰§è¡Œã€‚
+	 * @param CurrentThreadIfKnown å½“å‰çº¿ç¨‹çš„æ ‡è¯†ï¼ˆå¦‚åœ¨ä¸»çº¿ç¨‹/æ¸²æŸ“çº¿ç¨‹ä¸Šè°ƒç”¨ï¼‰ã€‚å¦‚æœä¸ç¡®å®šï¼Œä¼  AnyThreadã€‚
 	 * @return 
 	 */
 	static FConstructor CreateTask(const FGraphEventArray* InPrerequistes = nullptr, ENamedThreads::Type CurrentThreadIfKnown = ENamedThreads::Type::AnyThread)
@@ -712,10 +712,10 @@ public:
 	}
 
 
-	/**×¨ÃÅÓÃÓÚ´´½¨Ò»ÖÖÌØÊâÈÎÎñ£ºGather Task£¬Ò²½Ğ¡°ºÏ²¢ÈÎÎñ¡±»ò¡°ÈÎÎñºÏÁ÷Æ÷¡±¡£
-	 * Ä¿µÄ²»ÊÇÖ´ĞĞÄ³¸öÂß¼­±¾Éí£¬¶øÊÇºÏ²¢¶à¸öÈÎÎñµÄ Subsequents£¨ºó¼ÌÈÎÎñÁĞ±í£©£¬´Ó¶øÖ§³Ö£ºÔÚÄ³¸öÈÎÎñÖĞµ÷ÓÃ WaitFor() µÈ´ıÆäËûÈÎÎñ£¬²¢½«×Ô¼ºµÄºó¼Ì¹Òµ½±»µÈ´ıÈÎÎñÖ®ºó¡£
-	 * @param SubsequentsToAssume Ö¸ÏòÄ³¸öÈÎÎñµÄ FGraphEvent£¬´ÓÖĞ¡°½Ó¹Ü¡±ËüµÄËùÓĞºó¼ÌÈÎÎñ¡£
-	 * @param Prerequisites ±¾ÈÎÎñµÄÒÀÀµÈÎÎñ£¨¿ÉÑ¡£©¡£
+	/**ä¸“é—¨ç”¨äºåˆ›å»ºä¸€ç§ç‰¹æ®Šä»»åŠ¡ï¼šGather Taskï¼Œä¹Ÿå«â€œåˆå¹¶ä»»åŠ¡â€æˆ–â€œä»»åŠ¡åˆæµå™¨â€ã€‚
+	 * ç›®çš„ä¸æ˜¯æ‰§è¡ŒæŸä¸ªé€»è¾‘æœ¬èº«ï¼Œè€Œæ˜¯åˆå¹¶å¤šä¸ªä»»åŠ¡çš„ Subsequentsï¼ˆåç»§ä»»åŠ¡åˆ—è¡¨ï¼‰ï¼Œä»è€Œæ”¯æŒï¼šåœ¨æŸä¸ªä»»åŠ¡ä¸­è°ƒç”¨ WaitFor() ç­‰å¾…å…¶ä»–ä»»åŠ¡ï¼Œå¹¶å°†è‡ªå·±çš„åç»§æŒ‚åˆ°è¢«ç­‰å¾…ä»»åŠ¡ä¹‹åã€‚
+	 * @param SubsequentsToAssume æŒ‡å‘æŸä¸ªä»»åŠ¡çš„ FGraphEventï¼Œä»ä¸­â€œæ¥ç®¡â€å®ƒçš„æ‰€æœ‰åç»§ä»»åŠ¡ã€‚
+	 * @param Prerequisites æœ¬ä»»åŠ¡çš„ä¾èµ–ä»»åŠ¡ï¼ˆå¯é€‰ï¼‰ã€‚
 	 * @param CurrentThreadIfKnown 
 	 * @return 
 	 */
@@ -739,10 +739,10 @@ private:
 	friend class FGraphEvent;
 
 
-	/**Ö´ĞĞÇ¶ÈëÈÎÎñ£¨TTask::DoTask£©£»
-	 *Ïú»ÙÇ¶ÈëÈÎÎñ£¨ÊÖ¶¯µ÷ÓÃÎö¹¹£©£»Ô­±¾placement new µÄ£¬ÎÒÃÇ²»ĞèÒªÕæµÄdelete
-	 *µ÷¶ÈºóĞøÈÎÎñ£¨µ÷ÓÃ Subsequents->DispatchSubsequents(...)£©£»
-	 *Ïú»Ù×ÔÉí£¨»ØÊÕÄÚ´æ£©¡£
+	/**æ‰§è¡ŒåµŒå…¥ä»»åŠ¡ï¼ˆTTask::DoTaskï¼‰ï¼›
+	 *é”€æ¯åµŒå…¥ä»»åŠ¡ï¼ˆæ‰‹åŠ¨è°ƒç”¨ææ„ï¼‰ï¼›åŸæœ¬placement new çš„ï¼Œæˆ‘ä»¬ä¸éœ€è¦çœŸçš„delete
+	 *è°ƒåº¦åç»­ä»»åŠ¡ï¼ˆè°ƒç”¨ Subsequents->DispatchSubsequents(...)ï¼‰ï¼›
+	 *é”€æ¯è‡ªèº«ï¼ˆå›æ”¶å†…å­˜ï¼‰ã€‚
 	 * 
 	 * @param NewTasks 
 	 * @param CurrentThread 
@@ -752,7 +752,7 @@ private:
 		assert(TaskConstructed);
 		if (TTask::GetSubsequentsMode() == ESubsequentsMode::TrackSubsequents)
 		{
-			// ×¼±¸Ö´ĞĞSubsequents»á±»ºóĞøÈÎÎñÒÀÀµµÄÊ±ºò¼ì²éºóĞøSubsequentsÊÂ¼şµÄÇ°ÖÃÊÂ¼şÊÇ²»ÊÇ¿Õ
+			// å‡†å¤‡æ‰§è¡ŒSubsequentsä¼šè¢«åç»­ä»»åŠ¡ä¾èµ–çš„æ—¶å€™æ£€æŸ¥åç»­Subsequentsäº‹ä»¶çš„å‰ç½®äº‹ä»¶æ˜¯ä¸æ˜¯ç©º
 			Subsequents->CheckDontCompleteUntilIsEmpty();
 		}
 
@@ -765,7 +765,7 @@ private:
 
 		if (TTask::GetSubsequentsMode() == ESubsequentsMode::TrackSubsequents)
 		{
-			// ×¢ÒâÕâÀïÉèÖÃÄÚ´æÆÁÕÏ£¬±£Ö¤cpuÂÒĞòºó£¬ÉÏÃæµÄĞ´Èë¶ÔÏÂÃæµÄÏß³ÌÂß¼­¿É¼û
+			// æ³¨æ„è¿™é‡Œè®¾ç½®å†…å­˜å±éšœï¼Œä¿è¯cpuä¹±åºåï¼Œä¸Šé¢çš„å†™å…¥å¯¹ä¸‹é¢çš„çº¿ç¨‹é€»è¾‘å¯è§
 			FPlatformProcess::SetMemoryBarrier();
 			Subsequents->DispatchSubsequents(NewTasks, CurrentThread);
 		}
@@ -775,32 +775,32 @@ private:
 
 
 
-	/**´«ÈëÇ°ÖÃÈÎÎñÁĞ±í£¨Èç¹ûÓĞµÄ»°£©£»
-	 * Ö¸¶¨µ±Ç°Ïß³Ì±àºÅ£¨¿ÉÓÃÓÚÓÅ»¯£©£»
-	 * ·µ»Øµ±Ç°ÈÎÎñµÄ¡°Íê³ÉÊÂ¼ş¡±£¨Subsequents£©ÒıÓÃ£¬ÓÃÓÚ±»±ğµÄÈÎÎñÒÀÀµ¡£
+	/**ä¼ å…¥å‰ç½®ä»»åŠ¡åˆ—è¡¨ï¼ˆå¦‚æœæœ‰çš„è¯ï¼‰ï¼›
+	 * æŒ‡å®šå½“å‰çº¿ç¨‹ç¼–å·ï¼ˆå¯ç”¨äºä¼˜åŒ–ï¼‰ï¼›
+	 * è¿”å›å½“å‰ä»»åŠ¡çš„â€œå®Œæˆäº‹ä»¶â€ï¼ˆSubsequentsï¼‰å¼•ç”¨ï¼Œç”¨äºè¢«åˆ«çš„ä»»åŠ¡ä¾èµ–ã€‚
 	 * @param Prerequisites 
 	 * @param CurrentThreadIfKnown 
-	 * @return ·µ»Øµ±Ç°ÈÎÎñµÄÍê³ÉÊÂ¼ş£¬ÕâÔÊĞíÆäËûÈÎÎñÊ¹ÓÃµ±Ç°ÈÎÎñ×÷ÎªÇ°ÖÃÌõ¼ş£¬ĞÎ³ÉÒÀÀµÍ¼¡£
+	 * @return è¿”å›å½“å‰ä»»åŠ¡çš„å®Œæˆäº‹ä»¶ï¼Œè¿™å…è®¸å…¶ä»–ä»»åŠ¡ä½¿ç”¨å½“å‰ä»»åŠ¡ä½œä¸ºå‰ç½®æ¡ä»¶ï¼Œå½¢æˆä¾èµ–å›¾ã€‚
 	 */
 	FGraphEventRef Setup(const FGraphEventArray* Prerequisites = nullptr, ENamedThreads::Type CurrentThreadIfKnown = ENamedThreads::AnyThread)
 	{
-		// ±£´æ Subsequents µÄÒıÓÃ¼ÆÊı£¬±ÜÃâ½ÓÏÂÀ´ÕâÍæÒâ¶ùÔÚÈÎÎñÖĞÓĞÊ²Ã´ÎÊÌâ±»Ïú»ÙÁË
+		// ä¿å­˜ Subsequents çš„å¼•ç”¨è®¡æ•°ï¼Œé¿å…æ¥ä¸‹æ¥è¿™ç©æ„å„¿åœ¨ä»»åŠ¡ä¸­æœ‰ä»€ä¹ˆé—®é¢˜è¢«é”€æ¯äº†
 		FGraphEventRef ReturnedEventRef = Subsequents;
-		//×¢Òâ SetupPrereqs ÊÇÃ»ÓĞÓÃµ½ SubsequentsµÄ
+		//æ³¨æ„ SetupPrereqs æ˜¯æ²¡æœ‰ç”¨åˆ° Subsequentsçš„
 		SetupPrereqs(Prerequisites, CurrentThreadIfKnown, true);
 		return ReturnedEventRef;
 	}
 
 	/**
-	 * ½«µ±Ç°ÈÎÎñ×¢²áÎªËùÓĞÇ°ÖÃÈÎÎñ£¨Prerequisites£©µÄºó¼ÌÈÎÎñ£¨Subsequent£©£¬²¢ÔÚÇ°ÖÃÈÎÎñÈ«²¿Íê³Éºó×Ô¶¯½øÈë¿ÉÖ´ĞĞ×´Ì¬¡£
+	 * å°†å½“å‰ä»»åŠ¡æ³¨å†Œä¸ºæ‰€æœ‰å‰ç½®ä»»åŠ¡ï¼ˆPrerequisitesï¼‰çš„åç»§ä»»åŠ¡ï¼ˆSubsequentï¼‰ï¼Œå¹¶åœ¨å‰ç½®ä»»åŠ¡å…¨éƒ¨å®Œæˆåè‡ªåŠ¨è¿›å…¥å¯æ‰§è¡ŒçŠ¶æ€ã€‚
 	 * @param Prerequisites 
 	 * @param CurrentThreadIfKnown 
-	 * @param bUnlock ²ÎÊıÎª true£¬±íÊ¾Èç¹ûËùÓĞÇ°ÖÃÈÎÎñ¶¼ÒÑ¾­Íê³É£¬¿ÉÒÔÁ¢¼´Ö´ĞĞÕâ¸öÈÎÎñ£¨Á¢¼´ unlock£©¡£
+	 * @param bUnlock å‚æ•°ä¸º trueï¼Œè¡¨ç¤ºå¦‚æœæ‰€æœ‰å‰ç½®ä»»åŠ¡éƒ½å·²ç»å®Œæˆï¼Œå¯ä»¥ç«‹å³æ‰§è¡Œè¿™ä¸ªä»»åŠ¡ï¼ˆç«‹å³ unlockï¼‰ã€‚
 	 */
 	void SetupPrereqs(const FGraphEventArray* Prerequisites, ENamedThreads::Type CurrentThreadIfKnown, bool bUnlock)
 	{
 		/*
-		 * ±ê¼ÇÎªÒÑ¹¹Ôì×´Ì¬¡£
+		 * æ ‡è®°ä¸ºå·²æ„é€ çŠ¶æ€ã€‚
 		 */
 		TaskConstructed = true;
 		TTask& Task = *(TTask*)&TaskStorage;
@@ -813,22 +813,22 @@ private:
 				auto& Prerequisite = (*Prerequisites)[index];
 				if (!Prerequisite || !Prerequisite->AddSubsequent(this))
 				{
-					// ¶ÔÓÚ¼ÓÈëÊ§°ÜµÄÇ°ÖÃÈÎÎñ»òÕßÇ°ÖÃÈÎÎñÒÑ¾­Îªnull£¬ÎÒÃÇÖ±½ÓÈÃAlreadyCompletedPrerequisites++
+					// å¯¹äºåŠ å…¥å¤±è´¥çš„å‰ç½®ä»»åŠ¡æˆ–è€…å‰ç½®ä»»åŠ¡å·²ç»ä¸ºnullï¼Œæˆ‘ä»¬ç›´æ¥è®©AlreadyCompletedPrerequisites++
 					AlreadyCompletedPrerequisites++;
 				}
 			}
 		}
-		// ³¢ÊÔÒ»ÏÂÇ°ÖÃÈÎÎñÊÇ²»ÊÇÈ«²¿Íê³ÉÁË¿ÉÒÔÖ´ĞĞµ±Ç°ÈÎÎñÁË
+		// å°è¯•ä¸€ä¸‹å‰ç½®ä»»åŠ¡æ˜¯ä¸æ˜¯å…¨éƒ¨å®Œæˆäº†å¯ä»¥æ‰§è¡Œå½“å‰ä»»åŠ¡äº†
 		PrerequisitesComplete(CurrentThreadIfKnown, AlreadyCompletedPrerequisites, bUnlock);
 	}
 
 	
-	/**µ÷ÓÃÍ¬ÑùµÄÒÀÀµ¹¹½¨º¯Êı SetupPrereqs()£»
-	 * ½« bUnlock = false£¬ÒâÎ¶×Å¼´±ãËùÓĞÇ°ÖÃÈÎÎñ¶¼ÒÑÍê³É£¬Ò²²»»áÁ¢¼´µ÷¶È±¾ÈÎÎñÖ´ĞĞ£»
-	 * Ïàµ±ÓÚ¡°°ÑÈÎÎñ·ÅÔÚÄÇÀï£¬µÈÎÒÊÖ¶¯¸æËßÄã¿ªÊ¼Ö´ĞĞ¡±¡£
+	/**è°ƒç”¨åŒæ ·çš„ä¾èµ–æ„å»ºå‡½æ•° SetupPrereqs()ï¼›
+	 * å°† bUnlock = falseï¼Œæ„å‘³ç€å³ä¾¿æ‰€æœ‰å‰ç½®ä»»åŠ¡éƒ½å·²å®Œæˆï¼Œä¹Ÿä¸ä¼šç«‹å³è°ƒåº¦æœ¬ä»»åŠ¡æ‰§è¡Œï¼›
+	 * ç›¸å½“äºâ€œæŠŠä»»åŠ¡æ”¾åœ¨é‚£é‡Œï¼Œç­‰æˆ‘æ‰‹åŠ¨å‘Šè¯‰ä½ å¼€å§‹æ‰§è¡Œâ€ã€‚
 	 * @param Prerequisites 
 	 * @param CurrentThreadIfKnown 
-	 * @return ·µ»Ø TGraphTask* Ö¸Õë¶ø²»ÊÇ FGraphEventRef£¬±íÃ÷Äã¿ÉÄÜ»áÊÖ¶¯¹ÜÀí»ò¼ÌĞøµ÷ÓÃÆäËûº¯Êı£¨Èç Unlock()£©¡£
+	 * @return è¿”å› TGraphTask* æŒ‡é’ˆè€Œä¸æ˜¯ FGraphEventRefï¼Œè¡¨æ˜ä½ å¯èƒ½ä¼šæ‰‹åŠ¨ç®¡ç†æˆ–ç»§ç»­è°ƒç”¨å…¶ä»–å‡½æ•°ï¼ˆå¦‚ Unlock()ï¼‰ã€‚
 	 */
 	TGraphTask* Hold(const FGraphEventArray* Prerequisites = NULL, ENamedThreads::Type CurrentThreadIfKnown = ENamedThreads::AnyThread)
 	{
@@ -838,20 +838,20 @@ private:
 
 
 	/**
-	 * Ò»¸öÄÚ´æ»º³åÇø£¬´óĞ¡ºÍ¶ÔÆë·½Ê½¶¼ÑÏ¸ñÆ¥ÅäÄ£°å²ÎÊı TTask ÀàĞÍ
-	 * ¶ÔÆë»º³åÇø´óĞ¡ºÍ¶ÔÆë·½Ê½Ö®ºó£¬²ÅÄÜÔÚÕâ¿éÄÚ´æÉÏ·ÅĞÄÊ¹ÓÃplacement new
+	 * ä¸€ä¸ªå†…å­˜ç¼“å†²åŒºï¼Œå¤§å°å’Œå¯¹é½æ–¹å¼éƒ½ä¸¥æ ¼åŒ¹é…æ¨¡æ¿å‚æ•° TTask ç±»å‹
+	 * å¯¹é½ç¼“å†²åŒºå¤§å°å’Œå¯¹é½æ–¹å¼ä¹‹åï¼Œæ‰èƒ½åœ¨è¿™å—å†…å­˜ä¸Šæ”¾å¿ƒä½¿ç”¨placement new
 	 */
 	std::aligned_storage_t<sizeof(TTask), alignof(TTask)> TaskStorage;
 
 
 	/**
-	 * ±ê¼ÇÈÎÎñÊÇ·ñÒÑ¾­¹¹Ôì
+	 * æ ‡è®°ä»»åŠ¡æ˜¯å¦å·²ç»æ„é€ 
 	 */
 	bool TaskConstructed;
 
 	/**
-	 *Èô Subsequents Îª null£¬ËµÃ÷Ã»ÓĞºó¼ÌÈÎÎñ£¬Ò²¿ÉÓÃ×÷ÇáÁ¿ÈÎÎñÓÅ»¯£¨Èç FireAndForget Ä£Ê½£©¡£
-	 * ºóĞøÊÂ¼ş
+	 *è‹¥ Subsequents ä¸º nullï¼Œè¯´æ˜æ²¡æœ‰åç»§ä»»åŠ¡ï¼Œä¹Ÿå¯ç”¨ä½œè½»é‡ä»»åŠ¡ä¼˜åŒ–ï¼ˆå¦‚ FireAndForget æ¨¡å¼ï¼‰ã€‚
+	 * åç»­äº‹ä»¶
 	 */
 	FGraphEventRef Subsequents;
 };
@@ -861,10 +861,10 @@ private:
 
 #pragma region CustomTasks
 /*
- * ¸÷ÖÖ×Ô¶¨ÒåµÄÈÎÎñ
+ * å„ç§è‡ªå®šä¹‰çš„ä»»åŠ¡
  */
 /*
- * stat ÈÎÎñ
+ * stat ä»»åŠ¡
  */
 class FCustomStatIDGraphTaskBase
 {

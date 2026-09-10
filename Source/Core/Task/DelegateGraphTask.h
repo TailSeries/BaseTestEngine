@@ -2,7 +2,7 @@
 #include "TaskGraphInterfaces.h"
 
 /**
- * std::function<void()> µÄ¼òµ¥ÈÎÎñ
+ * std::function<void()> çš„ç®€å•ä»»åŠ¡
  */
 class FSimpleDelegateGraphTask
 {
@@ -28,9 +28,9 @@ public:
 	}
 
 	/**
-	 * ´«Èë¶à¸öÒÀÀµ£¨InPrerequisites£©¡£
-	 * µ±ËùÓĞÒÀÀµÍê³Éºó£¬µ÷¶ÈÖ´ĞĞÕâ¸öÈÎÎñ¡£
-	 * ·µ»Ø FGraphEventRef£¬¿É¹©ºóĞøÈÎÎñÒÀÀµ¡£
+	 * ä¼ å…¥å¤šä¸ªä¾èµ–ï¼ˆInPrerequisitesï¼‰ã€‚
+	 * å½“æ‰€æœ‰ä¾èµ–å®Œæˆåï¼Œè°ƒåº¦æ‰§è¡Œè¿™ä¸ªä»»åŠ¡ã€‚
+	 * è¿”å› FGraphEventRefï¼Œå¯ä¾›åç»­ä»»åŠ¡ä¾èµ–ã€‚
 	 * @param InTaskDelegate 
 	 * @param InPrerequisites 
 	 * @param InDesiredThread 
@@ -45,7 +45,7 @@ public:
 
 
 /**
- *  ËüÔÊĞíÔÚÎ¯ÍĞÀïÖ±½Ó·ÃÎÊ µ±Ç°Ïß³ÌºÍÈÎÎñÍê³ÉÊÂ¼ş£¬
+ *  å®ƒå…è®¸åœ¨å§”æ‰˜é‡Œç›´æ¥è®¿é—® å½“å‰çº¿ç¨‹å’Œä»»åŠ¡å®Œæˆäº‹ä»¶ï¼Œ
  */
 class FDelegateGraphTask
 {

@@ -7,7 +7,7 @@ FWindowsSystemWideCriticalSection::FWindowsSystemWideCriticalSection(const FStri
 
 	Mutex = CreateMutex(NULL, true, NormalizedMutexName.c_str());
 
-	// Èç¹ûÕâ¸ömutexÒÑ¾­±»ÆäËû½ø³ÌÕ¼ÓÃÁË
+	// å¦‚æœè¿™ä¸ªmutexå·²ç»è¢«å…¶ä»–è¿›ç¨‹å ç”¨äº†
 	if (Mutex != NULL && GetLastError() == ERROR_ALREADY_EXISTS)
 	{
 		bool bMutexOwned = false;
@@ -15,14 +15,14 @@ FWindowsSystemWideCriticalSection::FWindowsSystemWideCriticalSection(const FStri
 		if (InTimeout != FTimespan<>::zero())
 		{
 			/*
-			 *µÈ´ıÕâ¸ömutex
+			 *ç­‰å¾…è¿™ä¸ªmutex
 			 */
 			DWORD WaitResult = WaitForSingleObject(Mutex, FTimespanCast<1, 1000>(InTimeout).count());
 
 			/*
-			 * ÄÃµ½ÁË Mutex£¨WAIT_OBJECT_0£©
-			 * Ç°Ò»¸ö³ÖÓĞÕßÒâÍâÍË³ö£¨WAIT_ABANDONED£©
-			 * ³¬Ê±£¨WAIT_TIMEOUT£©
+			 * æ‹¿åˆ°äº† Mutexï¼ˆWAIT_OBJECT_0ï¼‰
+			 * å‰ä¸€ä¸ªæŒæœ‰è€…æ„å¤–é€€å‡ºï¼ˆWAIT_ABANDONEDï¼‰
+			 * è¶…æ—¶ï¼ˆWAIT_TIMEOUTï¼‰
 			 */
 			if (WaitResult == WAIT_ABANDONED || WaitResult == WAIT_OBJECT_0)
 			{
@@ -32,7 +32,7 @@ FWindowsSystemWideCriticalSection::FWindowsSystemWideCriticalSection(const FStri
 
 		if (!bMutexOwned)
 		{
-			// Èç¹ûÊ§°ÜÁË£¬ÇåÀí¾ä±ú±ÜÃâĞ¹Â©
+			// å¦‚æœå¤±è´¥äº†ï¼Œæ¸…ç†å¥æŸ„é¿å…æ³„æ¼
 			CloseHandle(Mutex);
 			Mutex = NULL;
 		}
@@ -55,7 +55,7 @@ void FWindowsSystemWideCriticalSection::Release()
 {
 	if (IsValid())
 	{
-		/*·ÅÆúËùÓĞÈ¨*/
+		/*æ”¾å¼ƒæ‰€æœ‰æƒ*/
 		ReleaseMutex(Mutex);
 		CloseHandle(Mutex);
 		Mutex = NULL;

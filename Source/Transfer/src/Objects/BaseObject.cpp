@@ -3,21 +3,21 @@ template TRANSFERMODULE void BaseObject::Transfer(TransferBase& transfer);
 
 void BaseObject::redirectTransfer(TransferBase& transfer)
 {
-	//Èç¹û½øÀ´µÄÊÇ¸¸ÀàĞÍ
-	transfer.self();//ÕâÒÑ¾­ÁË×ÓtranserÁË
+	//å¦‚æœè¿›æ¥çš„æ˜¯çˆ¶ç±»å‹
+	transfer.self();//è¿™å·²ç»äº†å­transeräº†
 	Transfer(transfer);
 	transfer.TransferDispatch(*this);
 }
 
 
 
-//Ö»ÓĞÍ¨ÓÃÊµÏÖ
+//åªæœ‰é€šç”¨å®ç°
 template<class TransferFunc>
 void BaseObject::Transfer(TransferFunc& transfer)
 {
-	//Õâ¶ùÊµ¼ÊÏàµ±ÓÚÖ»Ìá¹©ÁËTransferBaseµÄÊµÏÖ
+	//è¿™å„¿å®é™…ç›¸å½“äºåªæä¾›äº†TransferBaseçš„å®ç°
 	/*
-	 *ÎÒÃÇÔÚÍâÃæÒÀ´ÎÖØĞ´
+	 *æˆ‘ä»¬åœ¨å¤–é¢ä¾æ¬¡é‡å†™
 	 *
 	 */
 	std::cout << "\nBaseObject Original Transferfunc" << std::endl;

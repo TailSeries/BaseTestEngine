@@ -6,17 +6,17 @@
 
 
 /**
- * Ìá¹©Í³Ò»½Ó¿Ú£¨ÀıÈç QueueTask()¡¢WaitUntilTaskCompletes() µÈ£©
- * ²»´¦Àí¡°Ë­ÒÀÀµË­¡±£¨¼´ÈÎÎñÍ¼ÍØÆË½á¹¹£©
- * Ö»´¦ÀíÈÎÎñµÄ·ÖÅÉ¡¢Ïß³Ì¶ÓÁĞ¹ÜÀí¡¢»½ĞÑ/×èÈûÏß³Ì¡¢²éÕÒ¿ÉÖ´ĞĞÈÎÎñµÈ
+ * æä¾›ç»Ÿä¸€æ¥å£ï¼ˆä¾‹å¦‚ QueueTask()ã€WaitUntilTaskCompletes() ç­‰ï¼‰
+ * ä¸å¤„ç†â€œè°ä¾èµ–è°â€ï¼ˆå³ä»»åŠ¡å›¾æ‹“æ‰‘ç»“æ„ï¼‰
+ * åªå¤„ç†ä»»åŠ¡çš„åˆ†æ´¾ã€çº¿ç¨‹é˜Ÿåˆ—ç®¡ç†ã€å”¤é†’/é˜»å¡çº¿ç¨‹ã€æŸ¥æ‰¾å¯æ‰§è¡Œä»»åŠ¡ç­‰
  */
 class COREMODULE FTaskGraphImplementation:public FTaskGraphInterface
 {
 public:
 
-	/** ÈÎÎñÍ¼ÏµÍ³µÄµ¥Àı·ÃÎÊÆ÷
-	 * µ«ÊÇÎÒÃÇ²¢²»ÊÇÓÃ¾Ö²¿¾²Ì¬±äÁ¿Éú³ÉµÄµ¥Àı£¬¶øÊÇÓÃÒ»¸öÈ«¾ÖµÄTaskGraphImplementationSingleton ÊÇÒ»¸öÖ¸Ïò FTaskGraphImplementation µÄ¾²Ì¬Ö¸Õë
-	 * ÔÚStartupÖĞÈ¥³õÊ¼»¯Õâ¸öÖ¸Õë
+	/** ä»»åŠ¡å›¾ç³»ç»Ÿçš„å•ä¾‹è®¿é—®å™¨
+	 * ä½†æ˜¯æˆ‘ä»¬å¹¶ä¸æ˜¯ç”¨å±€éƒ¨é™æ€å˜é‡ç”Ÿæˆçš„å•ä¾‹ï¼Œè€Œæ˜¯ç”¨ä¸€ä¸ªå…¨å±€çš„TaskGraphImplementationSingleton æ˜¯ä¸€ä¸ªæŒ‡å‘ FTaskGraphImplementation çš„é™æ€æŒ‡é’ˆ
+	 * åœ¨Startupä¸­å»åˆå§‹åŒ–è¿™ä¸ªæŒ‡é’ˆ
 	 * @return 
 	 */
 	static FTaskGraphImplementation& Get();
@@ -25,52 +25,52 @@ public:
 
 
 	/**
-	 * TaskGraphÏµÍ³µÄ³õÊ¼»¯Âß¼­:
+	 * TaskGraphç³»ç»Ÿçš„åˆå§‹åŒ–é€»è¾‘:
 	 * Startup()
-		©¸©¤> new FTaskGraphImplementation(...)
-	       ©À©¤ ÅĞ¶ÏÊÇ·ñÆôÓÃ¶àÏß³ÌÈÎÎñÍ¼
-	       ©À©¤ ¼ÆËãÏß³ÌÊıÁ¿
-	       ©À©¤ ´´½¨Ã¿¸ö Thread µÄ TaskGraphWorker ÊµÀı
-	       ©À©¤ ´´½¨Êµ¼Ê OS Ïß³Ì£¨FRunnableThread£©
-	       ©¸©¤ ÉèÖÃµ¥Àı TaskGraphImplementationSingleton
+		â””â”€> new FTaskGraphImplementation(...)
+	       â”œâ”€ åˆ¤æ–­æ˜¯å¦å¯ç”¨å¤šçº¿ç¨‹ä»»åŠ¡å›¾
+	       â”œâ”€ è®¡ç®—çº¿ç¨‹æ•°é‡
+	       â”œâ”€ åˆ›å»ºæ¯ä¸ª Thread çš„ TaskGraphWorker å®ä¾‹
+	       â”œâ”€ åˆ›å»ºå®é™… OS çº¿ç¨‹ï¼ˆFRunnableThreadï¼‰
+	       â””â”€ è®¾ç½®å•ä¾‹ TaskGraphImplementationSingleton
 	 */
 	FTaskGraphImplementation();
 
 
 	/**
-	 * ²»ÒªÊÖ¶¯µ÷ÓÃÕâ¸ö£¬³ı·ÇÏµÍ³Ïú»Ù£¬²»È»Ëü²»Ò»¶¨°²È«µÄ.
-	 * Îö¹¹µÄÊ±ºòÖ»»áwait ²¢ÇÒ delete ¾ßÃûÏß³ÌµÄthread¡£why£¿
+	 * ä¸è¦æ‰‹åŠ¨è°ƒç”¨è¿™ä¸ªï¼Œé™¤éç³»ç»Ÿé”€æ¯ï¼Œä¸ç„¶å®ƒä¸ä¸€å®šå®‰å…¨çš„.
+	 * ææ„çš„æ—¶å€™åªä¼šwait å¹¶ä¸” delete å…·åçº¿ç¨‹çš„threadã€‚whyï¼Ÿ
 	 */
 	virtual ~FTaskGraphImplementation();
 
 
-	/**½«Ò»¸ö FBaseGraphTask ÀàĞÍµÄÈÎÎñµ÷¶Èµ½Ö¸¶¨Ïß³ÌÉÏÔËĞĞ£¬»òÕßµ÷¶Èµ½ÈÎÒâ¿ÉÓÃµÄ worker Ïß³Ì³ØÖĞ¡£
+	/**å°†ä¸€ä¸ª FBaseGraphTask ç±»å‹çš„ä»»åŠ¡è°ƒåº¦åˆ°æŒ‡å®šçº¿ç¨‹ä¸Šè¿è¡Œï¼Œæˆ–è€…è°ƒåº¦åˆ°ä»»æ„å¯ç”¨çš„ worker çº¿ç¨‹æ± ä¸­ã€‚
 	 * 
-	 * @param Task Ö¸ÏòÒªµ÷¶ÈµÄÈÎÎñ¶ÔÏó
-	 * @param ThreadToExecuteOn Ö¸¶¨ÈÎÎñÔÚÄÄ¸öÏß³ÌÉÏÖ´ĞĞ¡£¿ÉÒÔÊÇÒ»¸ö¾ßÃûÏß³Ì£¨Èç GameThread, RenderThread£©£¬Ò²¿ÉÒÔÊÇ AnyThread£¨±íÊ¾¿ÉÒÔ¶ª¸ø worker Ïß³Ì³Øµ÷¶È£©¡£
-	 * @param CurrentThreadIfKnown ±íÊ¾Äãµ±Ç°ÊÇÔÚÄÄ¸öÏß³Ìµ÷ÓÃÕâ¸öº¯ÊıµÄ¡£Èô²»È·¶¨£¬¿ÉÒÔÌî AnyThread£¬ÏµÍ³»áÍ¨¹ı TLS ×Ô¶¯Ê¶±ğ¡£
+	 * @param Task æŒ‡å‘è¦è°ƒåº¦çš„ä»»åŠ¡å¯¹è±¡
+	 * @param ThreadToExecuteOn æŒ‡å®šä»»åŠ¡åœ¨å“ªä¸ªçº¿ç¨‹ä¸Šæ‰§è¡Œã€‚å¯ä»¥æ˜¯ä¸€ä¸ªå…·åçº¿ç¨‹ï¼ˆå¦‚ GameThread, RenderThreadï¼‰ï¼Œä¹Ÿå¯ä»¥æ˜¯ AnyThreadï¼ˆè¡¨ç¤ºå¯ä»¥ä¸¢ç»™ worker çº¿ç¨‹æ± è°ƒåº¦ï¼‰ã€‚
+	 * @param CurrentThreadIfKnown è¡¨ç¤ºä½ å½“å‰æ˜¯åœ¨å“ªä¸ªçº¿ç¨‹è°ƒç”¨è¿™ä¸ªå‡½æ•°çš„ã€‚è‹¥ä¸ç¡®å®šï¼Œå¯ä»¥å¡« AnyThreadï¼Œç³»ç»Ÿä¼šé€šè¿‡ TLS è‡ªåŠ¨è¯†åˆ«ã€‚
 	 */
 	virtual void QueueTask(class FBaseGraphTask* Task, ENamedThreads::Type ThreadToExecuteOn, ENamedThreads::Type InCurrentThreadIfKnown) final override;
 
 
 	/**
 	 * 
-	 * @param Priority Ïß³ÌÓÅÏÈ¼¶
-	 * @param IndexToStart ×¼±¸Æô¶¯µÄÏß³Ì
+	 * @param Priority çº¿ç¨‹ä¼˜å…ˆçº§
+	 * @param IndexToStart å‡†å¤‡å¯åŠ¨çš„çº¿ç¨‹
 	 */
 	void StartTaskThread(int32 Priority, int32 IndexToStart);
 	void StartAllTaskThreads(bool bDoBackgroundTask);
 
 	/**
-	 * ¸ù¾İThreadInNeed Ïß³ÌÀàĞÍºÍÓÅÏÈ¼¶£¬´Ó TaskGraph ÖĞÕÒµ½Ò»¸ö¿ÉÖ´ĞĞÈÎÎñ¡£
-	 * @param ThreadInNeed µ±Ç°ÇëÇóÈÎÎñµÄÏß³Ì£¨ÀıÈç GameThread¡¢RenderThread »ò WorkerThread£©
-	 * @return FBaseGraphTask* ¡ú ÕÒµ½µÄÈÎÎñÖ¸Õë£¬Èç¹ûÃ»ÓĞÈÎÎñÔò·µ»Ø nullptr
+	 * æ ¹æ®ThreadInNeed çº¿ç¨‹ç±»å‹å’Œä¼˜å…ˆçº§ï¼Œä» TaskGraph ä¸­æ‰¾åˆ°ä¸€ä¸ªå¯æ‰§è¡Œä»»åŠ¡ã€‚
+	 * @param ThreadInNeed å½“å‰è¯·æ±‚ä»»åŠ¡çš„çº¿ç¨‹ï¼ˆä¾‹å¦‚ GameThreadã€RenderThread æˆ– WorkerThreadï¼‰
+	 * @return FBaseGraphTask* â†’ æ‰¾åˆ°çš„ä»»åŠ¡æŒ‡é’ˆï¼Œå¦‚æœæ²¡æœ‰ä»»åŠ¡åˆ™è¿”å› nullptr
 	 */
 	FBaseGraphTask* FindWork(ENamedThreads::Type ThreadInNeed);
 
 
 	/**
-	 * ÈÃËùÓĞÏß³Ì¼¯ÖĞË÷ÒıÖµÎªIndexµÄÏß³Ì½øÈë»òÍË³ö¡°Í£¶Ù×´Ì¬¡±£¬·½±ã×ö Ïß³Ìµ÷¶Èµ÷ÓÅ»òĞÔÄÜ·ÖÎö¡£
+	 * è®©æ‰€æœ‰çº¿ç¨‹é›†ä¸­ç´¢å¼•å€¼ä¸ºIndexçš„çº¿ç¨‹è¿›å…¥æˆ–é€€å‡ºâ€œåœé¡¿çŠ¶æ€â€ï¼Œæ–¹ä¾¿åš çº¿ç¨‹è°ƒåº¦è°ƒä¼˜æˆ–æ€§èƒ½åˆ†æã€‚
 	 * @param Index 
 	 * @param Stall 
 	 */
@@ -78,29 +78,29 @@ public:
 
 
 	/**
-	 * ĞŞ¸Ä ËùÓĞ Worker Ïß³ÌÓÅÏÈ¼¶µÄ½Ó¿Ú¡£ËüÖ±½Ó×÷ÓÃÓÚÏß³Ìµ÷¶È£¬ÊôÓÚ ĞÔÄÜµ÷ÓÅ¹¤¾ß¡£
+	 * ä¿®æ”¹ æ‰€æœ‰ Worker çº¿ç¨‹ä¼˜å…ˆçº§çš„æ¥å£ã€‚å®ƒç›´æ¥ä½œç”¨äºçº¿ç¨‹è°ƒåº¦ï¼Œå±äº æ€§èƒ½è°ƒä¼˜å·¥å…·ã€‚
 	 * @param Pri 
 	 */
 	void SetTaskThreadPriorities(EThreadPriority Pri);
 
 	/**
-	 * ¼ì²éÏß³Ì¾Ö²¿´æ´¢£¨TLS£©ÒÔÊ¶±ğµ±Ç°Ïß³ÌµÄ ID
+	 * æ£€æŸ¥çº¿ç¨‹å±€éƒ¨å­˜å‚¨ï¼ˆTLSï¼‰ä»¥è¯†åˆ«å½“å‰çº¿ç¨‹çš„ ID
 	 *
-	 * Èç¹ûµ±Ç°Ïß³ÌÎŞ·¨Ê¶±ğ£¬»òÕßÊÇÒ»¸öÉĞÎ´¸½¼ÓµÄÃüÃûÏß³Ì£¬Ôò·µ»Ø ENamedThreads::AnyThread¡£
+	 * å¦‚æœå½“å‰çº¿ç¨‹æ— æ³•è¯†åˆ«ï¼Œæˆ–è€…æ˜¯ä¸€ä¸ªå°šæœªé™„åŠ çš„å‘½åçº¿ç¨‹ï¼Œåˆ™è¿”å› ENamedThreads::AnyThreadã€‚
 	 * @return 
 	 */
 	ENamedThreads::Type GetCurrentThread();
 	
 	/**
-	 * »®·ÖÏß³ÌµÄË÷Òı×ª»»³ÉÓÅÏÈ¼¶×éË÷Òı£¬°´Ë³ĞòÒÀ´Î°´¼ä¸ôÅÅ
-	 * @param ThreadIndex WorkerThreadsÊı×éµÄÏÂ±ê
+	 * åˆ’åˆ†çº¿ç¨‹çš„ç´¢å¼•è½¬æ¢æˆä¼˜å…ˆçº§ç»„ç´¢å¼•ï¼ŒæŒ‰é¡ºåºä¾æ¬¡æŒ‰é—´éš”æ’
+	 * @param ThreadIndex WorkerThreadsæ•°ç»„çš„ä¸‹æ ‡
 	 * @return 
 	 */
 	int32 ThreadIndexToPriorityIndex(int32 ThreadIndex);
 
 
 	/**
-	 * ·µ»ØÃ¿¸öÓÅÏÈ¼¯µÄÏß³Ì×éÀïÓĞ¶àÉÙ¸öÏß³Ì
+	 * è¿”å›æ¯ä¸ªä¼˜å…ˆé›†çš„çº¿ç¨‹ç»„é‡Œæœ‰å¤šå°‘ä¸ªçº¿ç¨‹
 	 * @return 
 	 */
 	virtual	int32 GetNumWorkerThreads() final override;
@@ -108,14 +108,14 @@ public:
 
 	/**
 	 * 
-	 * @param bLocalQueue ±íÊ¾ÈÎÎñÓ¦¸ÃÈë¶Óµ½µ±Ç°Ïß³ÌµÄ ¾Ö²¿ÈÎÎñ¶ÓÁĞ£¬¶ø²»ÊÇÈ«¾Ö¶ÓÁĞ Ã¿¸ö Worker ÓĞ×Ô¼ºµÄ¾Ö²¿¶ÓÁĞ¡£Push ÈÎÎñÊ±¿ÉÒÔÖ¸¶¨·Åµ½±¾µØ¶ÓÁĞ£¬Ìá¸ß»º´æ¾Ö²¿ĞÔ¡£Èç¹û±¾µØ¶ÓÁĞ¿ÕÁË£¬¿ÉÒÔÈ¥±ğµÄÏß³Ì¶ÓÁĞ¡°ÍµÈÎÎñ¡±¡£
-	 * @return Èç¹ûÌõ¼şÂú×ã£¬·µ»ØµÄ Result ¾Í»á¶àÒ»¸ö LocalQueue ±êÖ¾Î»¡£µ÷ÓÃ·½»á¸ù¾İÕâ¸ö±êÖ¾¾ö¶¨°ÑÈÎÎñÍÆµ½ÄÄÀï¡£
+	 * @param bLocalQueue è¡¨ç¤ºä»»åŠ¡åº”è¯¥å…¥é˜Ÿåˆ°å½“å‰çº¿ç¨‹çš„ å±€éƒ¨ä»»åŠ¡é˜Ÿåˆ—ï¼Œè€Œä¸æ˜¯å…¨å±€é˜Ÿåˆ— æ¯ä¸ª Worker æœ‰è‡ªå·±çš„å±€éƒ¨é˜Ÿåˆ—ã€‚Push ä»»åŠ¡æ—¶å¯ä»¥æŒ‡å®šæ”¾åˆ°æœ¬åœ°é˜Ÿåˆ—ï¼Œæé«˜ç¼“å­˜å±€éƒ¨æ€§ã€‚å¦‚æœæœ¬åœ°é˜Ÿåˆ—ç©ºäº†ï¼Œå¯ä»¥å»åˆ«çš„çº¿ç¨‹é˜Ÿåˆ—â€œå·ä»»åŠ¡â€ã€‚
+	 * @return å¦‚æœæ¡ä»¶æ»¡è¶³ï¼Œè¿”å›çš„ Result å°±ä¼šå¤šä¸€ä¸ª LocalQueue æ ‡å¿—ä½ã€‚è°ƒç”¨æ–¹ä¼šæ ¹æ®è¿™ä¸ªæ ‡å¿—å†³å®šæŠŠä»»åŠ¡æ¨åˆ°å“ªé‡Œã€‚
 	 */
 	virtual ENamedThreads::Type GetCurrentThreadIfKnown(bool bLocalQueue) final override;
 
 
 	/**
-	 * Ä³¸öÏß³ÌÊÇ·ñÕıÔÚÖ´ĞĞÈÎÎñ
+	 * æŸä¸ªçº¿ç¨‹æ˜¯å¦æ­£åœ¨æ‰§è¡Œä»»åŠ¡
 	 * @param ThreadToCheck 
 	 * @return 
 	 */
@@ -123,8 +123,8 @@ public:
 
 
 	/**
-	 * µ±Ò»¸ö¡°Íâ²¿Ïß³Ì¡±£¨²»ÊÇ TaskGraph ÏµÍ³×Ô¼º´´½¨µÄ¹¤×÷Ïß³Ì£¬±ÈÈçÄã×Ô¼º¿ªµÄ std::thread£©ÏëÒª²ÎÓëµ½ UE4 µÄÈÎÎñÏµÍ³£¨TaskGraph£©Ê±£¬¾Í±ØĞëµ÷ÓÃÕâ¸öº¯Êı¡£
-	 * Ëü»á°ÑÏß³ÌµÄĞÅÏ¢×¢²áµ½ TaskGraph Àï£¬²¢ÉèÖÃÏß³Ì¾Ö²¿´æ´¢£¨TLS£¬Thread Local Storage£©£¬ÕâÑù UE4 ÖªµÀÕâ¸öÏß³ÌÊÇË­¡¢ÊôÓÚÄÄ¸ö ENamedThreads::Type¡£
+	 * å½“ä¸€ä¸ªâ€œå¤–éƒ¨çº¿ç¨‹â€ï¼ˆä¸æ˜¯ TaskGraph ç³»ç»Ÿè‡ªå·±åˆ›å»ºçš„å·¥ä½œçº¿ç¨‹ï¼Œæ¯”å¦‚ä½ è‡ªå·±å¼€çš„ std::threadï¼‰æƒ³è¦å‚ä¸åˆ° UE4 çš„ä»»åŠ¡ç³»ç»Ÿï¼ˆTaskGraphï¼‰æ—¶ï¼Œå°±å¿…é¡»è°ƒç”¨è¿™ä¸ªå‡½æ•°ã€‚
+	 * å®ƒä¼šæŠŠçº¿ç¨‹çš„ä¿¡æ¯æ³¨å†Œåˆ° TaskGraph é‡Œï¼Œå¹¶è®¾ç½®çº¿ç¨‹å±€éƒ¨å­˜å‚¨ï¼ˆTLSï¼ŒThread Local Storageï¼‰ï¼Œè¿™æ · UE4 çŸ¥é“è¿™ä¸ªçº¿ç¨‹æ˜¯è°ã€å±äºå“ªä¸ª ENamedThreads::Typeã€‚
 	 * @param CurrentThread 
 	 */
 	virtual void AttachToThread(ENamedThreads::Type CurrentThread) final override;
@@ -133,7 +133,7 @@ public:
 	/**
 	 * 
 	 * @param CurrentThread 
-	 * @return ·µ»ØÍê³ÉÈÎÎñµÄÊıÁ¿
+	 * @return è¿”å›å®Œæˆä»»åŠ¡çš„æ•°é‡
 	 */
 	virtual uint64 ProcessThreadUntilIdle(ENamedThreads::Type CurrentThread) final override;
 
@@ -145,7 +145,7 @@ public:
 	virtual void WaitUntilTasksComplete(const FGraphEventArray& Tasks, ENamedThreads::Type CurrentThreadIfKnown) override;
 
 	/**
-	 * ÈÎÎñÍê³ÉºóÔÚÆÚÍûµÄÏß³ÌTrigger Event
+	 * ä»»åŠ¡å®Œæˆååœ¨æœŸæœ›çš„çº¿ç¨‹Trigger Event
 	 * @param InEvent 
 	 * @param Tasks 
 	 * @param CurrentThreadIfKnown 
@@ -161,8 +161,8 @@ public:
 private:
 
 	/**
-	 * ´Ó WorkerThreads ÖĞÒ»Ö±ÄÃµ½¶ÔÓ¦µÄÕæÊµµÄÏß³ÌÂß¼­¶ÔÏó
-	 * @param Index WorkerThreads ÖĞµÄË÷Òı
+	 * ä» WorkerThreads ä¸­ä¸€ç›´æ‹¿åˆ°å¯¹åº”çš„çœŸå®çš„çº¿ç¨‹é€»è¾‘å¯¹è±¡
+	 * @param Index WorkerThreads ä¸­çš„ç´¢å¼•
 	 * @return 
 	 */
 	FTaskThreadBase& Thread(int32 Index);
@@ -170,44 +170,44 @@ private:
 private:
 	enum
 	{
-		//Ã¿¸öÓÅÏÈ¼¶×é¿ÉÄÜ·ÖÅä×î¶à 26 ÌõÏß³Ì£¬×Ü¹² N ×é¡£×ÜµÄÏß³ÌÊıÁ¿¾ÍÊÇÇ°ÃæµÄ+¾ßÃûÏß³Ì+1
+		//æ¯ä¸ªä¼˜å…ˆçº§ç»„å¯èƒ½åˆ†é…æœ€å¤š 26 æ¡çº¿ç¨‹ï¼Œæ€»å…± N ç»„ã€‚æ€»çš„çº¿ç¨‹æ•°é‡å°±æ˜¯å‰é¢çš„+å…·åçº¿ç¨‹+1
 		MAX_THREADS = 26 * (CREATE_HIPRI_TASK_THREADS + CREATE_BACKGROUND_TASK_THREADS + 1) + ENamedThreads::ActualRenderingThread + 1,
-		MAX_THREAD_PRIORITIES = 3  //×î´óÓÅÏÈ¼¶ÊıÁ¿¡£UE4 ÖĞÄ¬ÈÏÖ§³ÖÈıÖÖÈÎÎñÓÅÏÈ¼¶Ïß³Ì³Ø£ºÕı³££¨Normal£© HiPri Background
+		MAX_THREAD_PRIORITIES = 3  //æœ€å¤§ä¼˜å…ˆçº§æ•°é‡ã€‚UE4 ä¸­é»˜è®¤æ”¯æŒä¸‰ç§ä»»åŠ¡ä¼˜å…ˆçº§çº¿ç¨‹æ± ï¼šæ­£å¸¸ï¼ˆNormalï¼‰ HiPri Background
 	};
 
-	// ËùÓĞµÄ¹¤×÷Ïß³Ì
+	// æ‰€æœ‰çš„å·¥ä½œçº¿ç¨‹
 	FWorkerThread WorkerThreads[MAX_THREADS];
-	// Êµ¼Ê´´½¨ºÍÊ¹ÓÃµÄÏß³Ì
+	// å®é™…åˆ›å»ºå’Œä½¿ç”¨çš„çº¿ç¨‹
 	int32 NumThreads;
-	// Êµ¼ÊÔÚÊ¹ÓÃµÄnamed threads
+	// å®é™…åœ¨ä½¿ç”¨çš„named threads
 	int32 NumNamedThreads;
-	// ÓĞ¶àÉÙ²»Í¬ÓÅÏÈ¼¯µÄÏß³Ì×é
+	// æœ‰å¤šå°‘ä¸åŒä¼˜å…ˆé›†çš„çº¿ç¨‹ç»„
 	int32 NumTaskThreadSets;
-	// Ã¿¸öÓÅÏÈ¼¯ÏÂµÄÏß³ÌµÄÊıÁ¿
+	// æ¯ä¸ªä¼˜å…ˆé›†ä¸‹çš„çº¿ç¨‹çš„æ•°é‡
 	int32 NumTaskThreadsPerSet;
-	// normal ÓÅÏÈ¼¶ÊÇ±ØĞë´æÔÚµÄ£¬ËùÒÔÕâÀïÖ»ÓĞÆäÓàÁ½¸öµÄbool±ê¼ÇÒª²»Òª´´½¨HiPriorityÒÔ¼°Backgroundpriority
+	// normal ä¼˜å…ˆçº§æ˜¯å¿…é¡»å­˜åœ¨çš„ï¼Œæ‰€ä»¥è¿™é‡Œåªæœ‰å…¶ä½™ä¸¤ä¸ªçš„boolæ ‡è®°è¦ä¸è¦åˆ›å»ºHiPriorityä»¥åŠBackgroundpriority
 	bool bCreatedHiPriorityThreads;
 	bool bCreatedBackgroundPriorityThreads;
 
 
 	/**
-	 * ¼ÇÂ¼×îºóÒ»¸öÒÑ¸½¼ÓµÄ¡°Íâ²¿Ïß³Ì¡±µÄÏß³Ì ID¡£
-	 * ËùÎ½¡°Íâ²¿Ïß³Ì¡±ÊÇÖ¸²»ÊÇ UE4 ×Ô¼ºÍ¨¹ı FRunnableThread::Create ´´½¨µÄÏß³Ì£¬±ÈÈç£ºäÖÈ¾Ïß³Ì ÓÎÏ·Ïß³Ì Ö÷Ïß³Ì
-	 * ËùÓĞµÄÄäÃûÏß³Ì±ØĞëÊÇinternalµÄ
+	 * è®°å½•æœ€åä¸€ä¸ªå·²é™„åŠ çš„â€œå¤–éƒ¨çº¿ç¨‹â€çš„çº¿ç¨‹ IDã€‚
+	 * æ‰€è°“â€œå¤–éƒ¨çº¿ç¨‹â€æ˜¯æŒ‡ä¸æ˜¯ UE4 è‡ªå·±é€šè¿‡ FRunnableThread::Create åˆ›å»ºçš„çº¿ç¨‹ï¼Œæ¯”å¦‚ï¼šæ¸²æŸ“çº¿ç¨‹ æ¸¸æˆçº¿ç¨‹ ä¸»çº¿ç¨‹
+	 * æ‰€æœ‰çš„åŒ¿åçº¿ç¨‹å¿…é¡»æ˜¯internalçš„
 	 */
 	ENamedThreads::Type LastExternalThread;
 
-	//Ïß³Ì°²È«µÄ¼ÆÊıÆ÷£¬ÓÃÓÚ¼ì²âÊÇ·ñ³öÏÖµİ¹é½øÈëµÄÇé¿ö£¨reentrant call£©
-	//±ÈÈçÄ³¸öÏß³ÌÕıÔÚÖ´ĞĞÈÎÎñ£¬µ«ÈÎÎñÖĞÓÖµİ¹é´¥·¢ ProcessTasks() µÈ£¬¿ÉÄÜ²úÉúµ÷¶ÈËÀËø
+	//çº¿ç¨‹å®‰å…¨çš„è®¡æ•°å™¨ï¼Œç”¨äºæ£€æµ‹æ˜¯å¦å‡ºç°é€’å½’è¿›å…¥çš„æƒ…å†µï¼ˆreentrant callï¼‰
+	//æ¯”å¦‚æŸä¸ªçº¿ç¨‹æ­£åœ¨æ‰§è¡Œä»»åŠ¡ï¼Œä½†ä»»åŠ¡ä¸­åˆé€’å½’è§¦å‘ ProcessTasks() ç­‰ï¼Œå¯èƒ½äº§ç”Ÿè°ƒåº¦æ­»é”
 	std::atomic<int32> ReentrancyCheck;
-	//TLS ²ÛÎ»
+	//TLS æ§½ä½
 	uint32 PerThreadIDTLSSlot;
-	//ÔÚÈÎÎñÍ¼ÏµÍ³¹Ø±ÕÊ±£¬»áÒÀ´Îµ÷ÓÃµÄÇåÀí»Øµ÷¡£
+	//åœ¨ä»»åŠ¡å›¾ç³»ç»Ÿå…³é—­æ—¶ï¼Œä¼šä¾æ¬¡è°ƒç”¨çš„æ¸…ç†å›è°ƒã€‚
 	std::vector<TFunction<void()>> ShutdownCallbacks;
 	/*
-	 * Ã¿¸öÓÅÏÈ¼¶¶¼ÓĞÒ»¸öÈÎÎñ¶ÓÁĞ£¬´æ´¢Í¶µİ¸ø AnyThread µÄÈÎÎñ£¨²»ÏŞÄ¿±êÏß³Ì£©
-	 * Ã¿¸öÈÎÎñ¶ÓÁĞÖ§³ÖÁ½¸öÏß³ÌÓÅÏÈ¼¶Ïß³ÌÔÚµÈ´ı»ò´¦Àí£¨Í¨³£ÊÇ Normal ºÍ HiPri£©¡£
-	 * ×¢ÒâÕâ¸ö½á¹¹´ÓpopµÄÉè¼ÆÀ´¿´Ä¬ÈÏÓ¦¸ÃÊÇ 0 ÊÇ¸ßÓÅÏÈ¼¶£¬1ÊÇµÍÓÅÏÈ¼¶¡£
+	 * æ¯ä¸ªä¼˜å…ˆçº§éƒ½æœ‰ä¸€ä¸ªä»»åŠ¡é˜Ÿåˆ—ï¼Œå­˜å‚¨æŠ•é€’ç»™ AnyThread çš„ä»»åŠ¡ï¼ˆä¸é™ç›®æ ‡çº¿ç¨‹ï¼‰
+	 * æ¯ä¸ªä»»åŠ¡é˜Ÿåˆ—æ”¯æŒä¸¤ä¸ªçº¿ç¨‹ä¼˜å…ˆçº§çº¿ç¨‹åœ¨ç­‰å¾…æˆ–å¤„ç†ï¼ˆé€šå¸¸æ˜¯ Normal å’Œ HiPriï¼‰ã€‚
+	 * æ³¨æ„è¿™ä¸ªç»“æ„ä»popçš„è®¾è®¡æ¥çœ‹é»˜è®¤åº”è¯¥æ˜¯ 0 æ˜¯é«˜ä¼˜å…ˆçº§ï¼Œ1æ˜¯ä½ä¼˜å…ˆçº§ã€‚
 	 */
 	FStallingTaskQueue<FBaseGraphTask, 2> IncomingAnyThreadTasks[MAX_THREAD_PRIORITIES];
 };

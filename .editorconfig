@@ -1,0 +1,10 @@
+root = true
+
+# C/C++ 源文件统一 UTF-8（不带 BOM）
+# MSVC 侧靠根 CMakeLists 的 add_compile_options(.../utf-8) 让编译器按 UTF-8 读源码，
+# 不再依赖 BOM；GCC/Clang 本就默认 UTF-8。跨平台一致、文件干净。
+[*.{h,hpp,hxx,inl,c,cc,cxx,cpp}]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true

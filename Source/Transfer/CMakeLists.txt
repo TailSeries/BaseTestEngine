@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(TRANSER_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-FILE(GLOB_RECURSE source_list
+FILE(GLOB_RECURSE source_list CONFIGURE_DEPENDS
     ${TRANSER_SRC_DIR}/*.c
     ${TRANSER_SRC_DIR}/*.cpp
     ${TRANSER_SRC_DIR}/*.h

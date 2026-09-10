@@ -72,6 +72,7 @@ Source/D3D12RHI/                   ← 对应 UE: Runtime/D3D12RHI/
 | 章 | 内容 | 说明 |
 |---|---|---|
 | 9+ | Submission / 中断线程 | 复刻 UE 的 InterruptThread：GPU 完成的 event 等待外包给专职后台线程，业务线程不再 inline 阻塞，实现 CPU/GPU 重叠 |
+| 9+ | 多线程 Present | 同属此套流水线：UE 的 Present 是排进 Submission 线程的 payload（SchedulePresent / PresentOnSubmissionThread / WaitForLastPresent / PresentEvent），不能独立提前加。第1~8章用 inline `FD3D12Viewport::Present()` 直调，对应 inline `WaitCPU()` 的同款简化，同章一起加回 |
 
 **为什么放到第6章后**：中断线程的循环外壳很简单（Core 已有 `FRunnableThread`/`FRunnable`/`FEvent`，UE 的 `FD3D12Thread` 就是 `FRunnableThread` 薄封装），但它唤醒后要处理的「payload」——命令列表/分配器回池、资源延迟删除、query 解析、触发 `FGraphEvent` 唤醒等待任务——**依赖第2/3/6章的资源与命令列表系统**。没有这些，中断线程醒来无活可干。等第6章 CommandList + 资源延迟删除到位，它才有真正的「客户」，那时单开此章顺理成章。第1~8章先用 inline 阻塞 `Flush()`，但 fence-per-queue 骨架已为它留位。
 
@@ -210,8 +211,39 @@ class FD3D12Queue {
 
 ### 进度
 - [x] 第1章 UE 源码讲解完成
-- [ ] 第1章 实现：创建 CMakeLists.txt、D3D12Device.h、D3D12Device.cpp
-- [ ] 第2章及后续
+- [x] 第1章 实现：`D3D12Queue.h/.cpp`（ED3D12QueueType / FD3D12Fence 纯数据struct / FD3D12Queue：带参构造 + Signal/Wait/WaitCPU）
+  - 定案：FD3D12Fence 无成员函数，操作全在 Queue 上（贴 UE）；Queue non-movable，Device 用 `vector<unique_ptr<FD3D12Queue>>` 存储
+- [x] 第1章 实现：`D3D12Device.h/.cpp`（Adapter回指 + GPUIndex + Queues；GetDevice() 转发 Adapter->GetD3DDevice()）
+- [x] 第1章 实现：`D3D12Adapter.h/.cpp`（FD3D12AdapterDesc + FindAdapter + CreateRootDevice + InitializeDevices）
+  - 选卡用 `IDXGIFactory6::EnumAdapterByGpuPreference(HIGH_PERFORMANCE)` 选独显；FindAdapter 与 CreateRootDevice 必须用同一枚举方式，否则 AdapterIndex 对不上（或改按 LUID 匹配更稳）
+- [x] 第1章 实现：`D3D12Viewport.h/.cpp`（FD3D12Viewport：Init 建 SwapChain + ResizeInternal 取 BackBuffer + PresentInternal；两段式对齐 UE）
+- [x] **第1章 闭环验证通过**：`RHITest.exe`（Win32 窗口 + 三层 + Viewport + Present），黑窗口不崩，选中 NVIDIA RTX 3060
+- [x] 第2章：RHI 资源基类（`FRHIResource` + `ERHIResourceType`；`FD3D12Resource` 包 ID3D12Resource）
+  - 定案（方案A）：`FRHIResource` 不做侵入式计数，生命周期交给 `TRefCountPtr(=shared_ptr)`，public 虚析构；等实现自己的侵入式 TRefCountPtr 再补 AddRef/Release
+- [x] 第3章：Buffer（`EBufferUsageFlags` + `FRHIBufferDesc` + `FRHIBuffer`；`FD3D12Buffer` 持 `FD3D12Resource`；`FD3D12Device::CreateBuffer` = CreateCommittedResource + UPLOAD 堆 Map/memcpy 上传）
+  - DEFAULT 堆 + 初始数据（staging + copy）留到有 CommandList 后
+- [x] 第4章：Descriptor Heap（`FD3D12DescriptorHeap` 封装 + 线性 Allocate；Viewport 用 RTV 堆给 back buffer 建 RTV，固定槽映射）
+- [x] 第6章：CommandList（`FD3D12CommandAllocator` + `FD3D12CommandList`；RHITest 每帧 barrier + ClearRenderTargetView + ExecuteCommandLists → **清屏成蓝色**）
+  - 简化：单分配器 + 每帧 Flush（无帧重叠）；多缓冲（N 分配器 + 每帧 fence）留后面
+- [x] 第5章：Shader & PSO
+  - `D3D12Shader`（运行时 D3DCompile → 字节码 blob；UE 离线编译，我们简化）
+  - `D3D12RootSignature`（序列化 + 创建；三角形用空签名 + `ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT`）
+  - `D3D12PipelineState`（CreateGraphicsPipelineState；手填光栅/混合/深度关/RTV格式=swapchain）
+- [x] **画三角形（整合）**：RHITest 顶点(pos+color) → VB → 编译VS/PS → RootSig → PSO → 每帧 clear + DrawInstanced，蓝底彩色三角形。**≈ 达成 A3-M3（Test 只调 RHI 画出图元）**
+- [ ] 下一阶段（对照 UE_Rendering_Learning_Roadmap.md 的 A3 里程碑）：
+  - [ ] M2 补齐：DSV（深度）+ Texture + SRV + Sampler（第7章纹理）
+  - [ ] M4：状态追踪 + 自动 Barrier + 描述符管理 + 多帧同步（N分配器+每帧fence，去掉每帧Flush）+ Fence保护延迟释放
+  - [ ] M5：动态常量数据 / ring buffer（传 MVP 让三角形动/变换）
+  - [ ] A2：`FDynamicRHI` 抽象（把 CreateBuffer 等从 Device 挪上去，Renderer 不知后端）
+
+**新增通用工具**：`Core/Base/EnumClassFlags.h`（`ENUM_CLASS_FLAGS` 宏 + EnumHasAnyFlags 等，仿 UE）。
+
+**踩坑记录**：
+- 曾用 UTF-8 with BOM 规避 cp936 GBK 误解析；后改为**全仓库 UTF-8 无 BOM + 根 CMakeLists 加 `/utf-8`**（MSVC 按 UTF-8 读源码）。`.editorconfig` 设 `charset = utf-8`。**`/utf-8` 现为硬依赖，勿删**。
+- 空壳模块（无导出符号）不生成 `.lib`，链接它会 LNK1104。第2章 `FRHIResource` 导出后 RHI.lib 生成，已把 `RHI` 加回 D3D12RHI 链接。
+- NodeMask 是"一个 device 内多 node（LDA/SLI）"，不是多物理卡；单卡填 1。选物理卡在枚举 adapter 阶段。
+
+**工程约定补记**：所有 CMakeLists 的 `FILE(GLOB_RECURSE ...)` 已加 `CONFIGURE_DEPENDS`。跨模块 include 用 `Core/Base/...` 或 `Base/...`（靠 `..` / Core 暴露），不用 `../../`。
 
 ---
 

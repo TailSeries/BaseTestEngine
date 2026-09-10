@@ -2,7 +2,7 @@
 #include "TaskGraphInterfaces.h"
 
 /**
- * 通用的一个执行函数式任务的帮助模板，
+ * 閫氱敤鐨勪竴涓墽琛屽嚱鏁板紡浠诲姟鐨勫府鍔╂ā鏉匡紝
  * @tparam Signature 
  * @tparam SubsequentsMode 
  */
@@ -52,7 +52,7 @@ private:
 	}
 };
 
-// 进一步直接封装一个FunctionGraphTask
+// 杩涗竴姝ョ洿鎺ュ皝瑁呬竴涓狥unctionGraphTask
 struct FFunctionGraphTask
 {
 public:

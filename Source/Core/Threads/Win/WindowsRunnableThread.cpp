@@ -22,7 +22,7 @@ uint32 FRunnableThreadWin::Run()
 	}
 	else
 	{
-		//¾ÍËã³õÊ¼»¯Ê§°Ü£¬ÎÒÃÇÒ²»¹ÊÇ·Å¿ªÕâ¸öÊÂ¼þ£¬Í¨ÖªÖ÷Ïß³Ì¿ÉÒÔ¼ÌÐøÁË
+		//å°±ç®—åˆå§‹åŒ–å¤±è´¥ï¼Œæˆ‘ä»¬ä¹Ÿè¿˜æ˜¯æ”¾å¼€è¿™ä¸ªäº‹ä»¶ï¼Œé€šçŸ¥ä¸»çº¿ç¨‹å¯ä»¥ç»§ç»­äº†
 		ThreadInitSyncEvent->Trigger();
 
 	}
@@ -82,7 +82,7 @@ bool FRunnableThreadWin::Kill(bool bShouldWait)
 	bool bDidExitOK = true;
 	if (Runnable)
 	{
-		//ÎÞÂÛÐèÒª²»Òªwait£¬ÎÒÃÇ¶¼µ÷ÓÃÒ»ÏÂstop
+		//æ— è®ºéœ€è¦ä¸è¦waitï¼Œæˆ‘ä»¬éƒ½è°ƒç”¨ä¸€ä¸‹stop
 		Runnable->Stop();
 	}
 	if (bShouldWait == true)
@@ -107,14 +107,14 @@ bool FRunnableThreadWin::CreateInternal(FRunnable* InRunnable, const char* InThr
 	if (!bOnce)
 	{
 		bOnce = true;
-		/*½«Ö÷Ïß³ÌÉèÖÃÎª¡°Õý³£ÓÅÏÈ¼¶¡±£¬ÒòÎªÄ¬ÈÏÇé¿öÏÂ Windows ´´½¨µÄÖ÷Ïß³Ì²»ÊÇ Normal ÓÅÏÈ¼¶£¨¶øÊÇ½Ï¸ßµÄ THREAD_PRIORITY_HIGHEST£©*/
+		/*å°†ä¸»çº¿ç¨‹è®¾ç½®ä¸ºâ€œæ­£å¸¸ä¼˜å…ˆçº§â€ï¼Œå› ä¸ºé»˜è®¤æƒ…å†µä¸‹ Windows åˆ›å»ºçš„ä¸»çº¿ç¨‹ä¸æ˜¯ Normal ä¼˜å…ˆçº§ï¼ˆè€Œæ˜¯è¾ƒé«˜çš„ THREAD_PRIORITY_HIGHESTï¼‰*/
 		::SetThreadPriority(::GetCurrentThread(), TranslateThreadPriority(TPri_Normal)); // set the main thread to be normal, since this is no longer the windows default.
 	}
 
 
 	Runnable = InRunnable;
 	ThreadAffinityMask = InThreadAffinityMask;
-	//Ïß³ÌµÄÍ¬²½ÊÂ¼þ windowsÉÏÊÂ¼þÊÇÄÚºË¶ÔÏó£¬Ëü±¾ÖÊÉÏÊÇÏµÍ³·¶Î§¿É¼ûµÄÍ¬²½»úÖÆ¡£ÈÎºÎÏß³Ì£¬Ö»ÒªÓÐÕâ¸öÊÂ¼þ¶ÔÏóµÄ¾ä±ú£¨HANDLE£©£¬¶¼¿ÉÒÔµÈ´ý»òÉèÖÃÕâ¸öÊÂ¼þ¡£¶ø²»±Ø¹ØÁªÕâ¸öÊÂ¼þµ½Ïß³Ì
+	//çº¿ç¨‹çš„åŒæ­¥äº‹ä»¶ windowsä¸Šäº‹ä»¶æ˜¯å†…æ ¸å¯¹è±¡ï¼Œå®ƒæœ¬è´¨ä¸Šæ˜¯ç³»ç»ŸèŒƒå›´å¯è§çš„åŒæ­¥æœºåˆ¶ã€‚ä»»ä½•çº¿ç¨‹ï¼Œåªè¦æœ‰è¿™ä¸ªäº‹ä»¶å¯¹è±¡çš„å¥æŸ„ï¼ˆHANDLEï¼‰ï¼Œéƒ½å¯ä»¥ç­‰å¾…æˆ–è®¾ç½®è¿™ä¸ªäº‹ä»¶ã€‚è€Œä¸å¿…å…³è”è¿™ä¸ªäº‹ä»¶åˆ°çº¿ç¨‹
 	ThreadInitSyncEvent = FPlatformProcess::GetSynchEventFromPool(true);
 
 	ThreadName = InThreadName ? InThreadName : "Unnamed Thread";
@@ -122,20 +122,20 @@ bool FRunnableThreadWin::CreateInternal(FRunnable* InRunnable, const char* InThr
 
 	{
 		/*
-		 * windows´´½¨threadµÄº¯Êý£¬·µ»ØÒ»¸ö¾ä±ú£¬Õâ¸ö¾ä±ú²ÅÕæÕý¹ØÁªÏß³Ì
-		 * ¶øÎÒÃÇÔò°ÑÖ´ÐÐµÄÎ¯ÍÐÂß¼­½»¸øÁË_ThreadProc£¬Õâ¸öº¯ÊýÀïµ÷ÓÃÎÒÃÇµÄÏß³ÌµÄÖ´ÐÐÂß¼­
+		 * windowsåˆ›å»ºthreadçš„å‡½æ•°ï¼Œè¿”å›žä¸€ä¸ªå¥æŸ„ï¼Œè¿™ä¸ªå¥æŸ„æ‰çœŸæ­£å…³è”çº¿ç¨‹
+		 * è€Œæˆ‘ä»¬åˆ™æŠŠæ‰§è¡Œçš„å§”æ‰˜é€»è¾‘äº¤ç»™äº†_ThreadProcï¼Œè¿™ä¸ªå‡½æ•°é‡Œè°ƒç”¨æˆ‘ä»¬çš„çº¿ç¨‹çš„æ‰§è¡Œé€»è¾‘
 		 */
 		Thread = CreateThread(NULL, InStackSize, _ThreadProc, this, STACK_SIZE_PARAM_IS_A_RESERVATION | CREATE_SUSPENDED, (::DWORD*)&ThreadID);
 	}
 
 	if (Thread == NULL)
 	{
-		//´´½¨Ê§°ÜÎÒÃÇ¾Í²»Òª°ÑRunnable½øÐÐ¸³Öµ
+		//åˆ›å»ºå¤±è´¥æˆ‘ä»¬å°±ä¸è¦æŠŠRunnableè¿›è¡Œèµ‹å€¼
 		Runnable = nullptr;
 	}
 	else
 	{
-		// ´´½¨³É¹¦£¬±£Ö¤Ïß³Ì»½ÐÑ
+		// åˆ›å»ºæˆåŠŸï¼Œä¿è¯çº¿ç¨‹å”¤é†’
 		ResumeThread(Thread);
 		ThreadInitSyncEvent->Wait(INFINITE);
 		ThreadPriority = TPri_Normal;

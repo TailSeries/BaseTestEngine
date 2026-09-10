@@ -2,15 +2,15 @@
 #include "Core.h"
 #if PLATFORM_CPU_X86_FAMILY
 /*
- * Ò»¸öÍ·ÎÄ¼ş£¬ÊôÓÚ Intel Ìá¹©µÄ SIMD£¨µ¥Ö¸Áî¶àÊı¾İ£©Ö¸Áî¼¯Ö§³Ö¿âÖ®Ò»£¬×¨ÃÅÓÃÓÚ·ÃÎÊ SSE2 Ö¸Áî¼¯£¨Streaming SIMD Extensions 2£©¡£Õâ¸öÍ·ÎÄ¼şÖĞ¶¨ÒåÁË´óÁ¿µÄÓë SSE2 ÏòÁ¿²Ù×÷Ïà¹ØµÄ intrinsic º¯Êı£¬Í¨³£ÓÃÓÚÊµÏÖÊı¾İ¼¶²¢ĞĞ¼ÓËÙ¡£
- * Ìá¹©ÁË»ùÓÚ __m128d¡¢__m128i ÀàĞÍµÄÖ¸Áî·â×°£¬Ö÷ÒªÓÃÓÚ²Ù×÷ Ë«¾«¶È¸¡µãÊı »ò 128 Î»ÕûÊıÏòÁ¿
+ * ä¸€ä¸ªå¤´æ–‡ä»¶ï¼Œå±äº Intel æä¾›çš„ SIMDï¼ˆå•æŒ‡ä»¤å¤šæ•°æ®ï¼‰æŒ‡ä»¤é›†æ”¯æŒåº“ä¹‹ä¸€ï¼Œä¸“é—¨ç”¨äºè®¿é—® SSE2 æŒ‡ä»¤é›†ï¼ˆStreaming SIMD Extensions 2ï¼‰ã€‚è¿™ä¸ªå¤´æ–‡ä»¶ä¸­å®šä¹‰äº†å¤§é‡çš„ä¸ SSE2 å‘é‡æ“ä½œç›¸å…³çš„ intrinsic å‡½æ•°ï¼Œé€šå¸¸ç”¨äºå®ç°æ•°æ®çº§å¹¶è¡ŒåŠ é€Ÿã€‚
+ * æä¾›äº†åŸºäº __m128dã€__m128i ç±»å‹çš„æŒ‡ä»¤å°è£…ï¼Œä¸»è¦ç”¨äºæ“ä½œ åŒç²¾åº¦æµ®ç‚¹æ•° æˆ– 128 ä½æ•´æ•°å‘é‡
  */
 #include <emmintrin.h>
 #endif
 
 #if !defined(__clang__)
 	/*
-	 * <intrin.h> ÊÇÎ¢Èí±àÒëÆ÷£¨MSVC£©Ìá¹©µÄÒ»¸öÍ·ÎÄ¼ş£¬°üº¬ÁËËùÓĞÆ½Ì¨Ïà¹ØµÄÄÚ½¨£¨intrinsic£©º¯ÊıÉùÃ÷£¬³£ÓÃÓÚ·ÃÎÊµ×²ã CPU Ö¸Áî£¨Èç»ã±àÌæ´ú£©¡¢Ô­×Ó²Ù×÷¡¢SIMD¡¢Î»²Ù×÷¡¢ÄÚ´æÆÁÕÏµÈ¡£
+	 * <intrin.h> æ˜¯å¾®è½¯ç¼–è¯‘å™¨ï¼ˆMSVCï¼‰æä¾›çš„ä¸€ä¸ªå¤´æ–‡ä»¶ï¼ŒåŒ…å«äº†æ‰€æœ‰å¹³å°ç›¸å…³çš„å†…å»ºï¼ˆintrinsicï¼‰å‡½æ•°å£°æ˜ï¼Œå¸¸ç”¨äºè®¿é—®åº•å±‚ CPU æŒ‡ä»¤ï¼ˆå¦‚æ±‡ç¼–æ›¿ä»£ï¼‰ã€åŸå­æ“ä½œã€SIMDã€ä½æ“ä½œã€å†…å­˜å±éšœç­‰ã€‚
 	 */
 #	include <intrin.h>
 #	if defined(_M_ARM)
@@ -25,9 +25,9 @@ class FEvent;
 
 struct COREMODULE FGenericPlatformProcess
 {
-	//ÊÇ·ñÖ§³Ö¶àÏß³Ì
+	//æ˜¯å¦æ”¯æŒå¤šçº¿ç¨‹
 	static bool SupportsMultithreading();
-	//½«event·Å»Ø³Ø×Ó
+	//å°†eventæ”¾å›æ± å­
 	static void ReturnSynchEventToPool(FEvent* Event);
 	static const uint64 GetTaskGraphThreadMask();
 	static const uint64 GetTaskGraphHighPriorityTaskMask();
@@ -38,30 +38,30 @@ struct COREMODULE FGenericPlatformProcess
 
 
 
-//ÎÒÃÇµ±Ç°Ö»ÓĞwindows£¬Ö±½ÓÓÃ
+//æˆ‘ä»¬å½“å‰åªæœ‰windowsï¼Œç›´æ¥ç”¨
 struct COREMODULE FWindowsPlatformProcess : public FGenericPlatformProcess
 {
-	//´´½¨windowsÏß³Ì
+	//åˆ›å»ºwindowsçº¿ç¨‹
 	static class FRunnableThread* CreateRunnableThread();
-	//´´½¨Í¬²½ÊÂ¼ş
+	//åˆ›å»ºåŒæ­¥äº‹ä»¶
 	static class FEvent* CreateSynchEvent(bool bIsManualReset = false);
 	static class FEvent* GetSynchEventFromPool(bool bIsManualReset = false);
-	// ÉèÖÃÏß³Ì°ó¶¨µÄcpuºËĞÄÑÚÂë
+	// è®¾ç½®çº¿ç¨‹ç»‘å®šçš„cpuæ ¸å¿ƒæ©ç 
 	static void SetThreadAffinityMask(uint64 AffinityMask);
-	// ÉèÖÃÏß³ÌÃû×Ö
+	// è®¾ç½®çº¿ç¨‹åå­—
 	static void SetThreadName(const char* ThreadName);
-	// ÉèÖÃÄÚ´æÆÁÕÏ
+	// è®¾ç½®å†…å­˜å±éšœ
 	static void SetMemoryBarrier() { _mm_sfence(); }
 
 	static void Sleep(float Seconds);
-	// ´´½¨¶àÉÙ¹¤×÷Ïß³Ì
+	// åˆ›å»ºå¤šå°‘å·¥ä½œçº¿ç¨‹
 	static int32 NumberOfWorkerThreadsToSpawn();
-	// °üº¬³¬Ïß³ÌÔÚÄÚµÄÂß¼­ºËĞÄÊıÁ¿
+	// åŒ…å«è¶…çº¿ç¨‹åœ¨å†…çš„é€»è¾‘æ ¸å¿ƒæ•°é‡
 	static int32 NumberOfCoresIncludingHyperthreads();
-	// Ã¶¾ÙºËĞÄÊıÁ¿
+	// æšä¸¾æ ¸å¿ƒæ•°é‡
 	static int32 NumberOfCores();
 
-	// TaskGraph ÏµÍ³µÄµÄÇ×ºÍÑÚÂë
+	// TaskGraph ç³»ç»Ÿçš„çš„äº²å’Œæ©ç 
 
 
 };

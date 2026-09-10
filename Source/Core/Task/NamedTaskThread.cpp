@@ -27,7 +27,7 @@ void FNamedTaskThread::ProcessTasksUntilQuit(int32 QueueIndex)
 {
 	Queue(QueueIndex).QuitForReturn = false;
 	const bool bIsMultiThread = FTaskGraphInterface::IsMultithread();
-	verify(++Queue(QueueIndex).RecursionGuard == 1);// Ò»¸öÏß³Ì²»Ó¦¸ÃÖØÈë×Ô¼ºµÄµ÷ÓÃÑ­»·
+	verify(++Queue(QueueIndex).RecursionGuard == 1);// ä¸€ä¸ªçº¿ç¨‹ä¸åº”è¯¥é‡å…¥è‡ªå·±çš„è°ƒç”¨å¾ªçŽ¯
 	do
 	{
 		const bool bAllowStall = bIsMultiThread;
@@ -39,7 +39,7 @@ void FNamedTaskThread::ProcessTasksUntilQuit(int32 QueueIndex)
 uint64 FNamedTaskThread::ProcessTasksUntilIdle(int32 QueueIndex)
 {
 	Queue(QueueIndex).QuitForReturn = false;
-	verify(++Queue(QueueIndex).RecursionGuard == 1);// Ò»¸öÏß³Ì²»Ó¦¸ÃÖØÈë×Ô¼ºµÄµ÷ÓÃÑ­»·
+	verify(++Queue(QueueIndex).RecursionGuard == 1);// ä¸€ä¸ªçº¿ç¨‹ä¸åº”è¯¥é‡å…¥è‡ªå·±çš„è°ƒç”¨å¾ªçŽ¯
 	uint64 ProcessedTasks = ProcessTasksNamedThread(QueueIndex, false);
 	verify(!--Queue(QueueIndex).RecursionGuard);
 	return ProcessedTasks;
@@ -49,7 +49,7 @@ uint64 FNamedTaskThread::ProcessTasksNamedThread(int32 QueueIndex, bool bAllowSt
 {
 	uint64 ProcessedTasks = 0;
 	bool bCountAsStall = false;
-	// äÖÈ¾Ïß³ÌÓÐÌØÊâ´¦Àí
+	// æ¸²æŸ“çº¿ç¨‹æœ‰ç‰¹æ®Šå¤„ç†
 	const bool bIsRenderThreadMainQueue = (ENamedThreads::GetThreadIndex(ThreadId) == ENamedThreads::ActualRenderingThread) && (QueueIndex == 0);
 	while (!Queue(QueueIndex).QuitForReturn)
 	{
@@ -60,7 +60,7 @@ uint64 FNamedTaskThread::ProcessTasksNamedThread(int32 QueueIndex, bool bAllowSt
 		{
 			if (bAllowStall)
 			{
-				// Ã»¶«Î÷ÈÃÏß³Ì´¦ÀíÁË£¬ÎÒÃÇÈÃÏß³ÌÐÝÃßÔÚÕâÀï
+				// æ²¡ä¸œè¥¿è®©çº¿ç¨‹å¤„ç†äº†ï¼Œæˆ‘ä»¬è®©çº¿ç¨‹ä¼‘çœ åœ¨è¿™é‡Œ
 				Queue(QueueIndex).StallRestartEvent->Wait(bIsRenderThreadAndPolling ? GRenderThreadPollPeriodMs : MAX_uint32, bCountAsStall);
 				if (Queue(QueueIndex).QuitForShutdown)
 				{
@@ -70,7 +70,7 @@ uint64 FNamedTaskThread::ProcessTasksNamedThread(int32 QueueIndex, bool bAllowSt
 			}
 			else
 			{
-				//ÎÒÃÇ²»ÐèÒªÏß³ÌstallµÄ»°£¬ÎÒÃÇÖ±½Ó break
+				//æˆ‘ä»¬ä¸éœ€è¦çº¿ç¨‹stallçš„è¯ï¼Œæˆ‘ä»¬ç›´æŽ¥ break
 				break;
 			}
 		}
@@ -85,14 +85,14 @@ uint64 FNamedTaskThread::ProcessTasksNamedThread(int32 QueueIndex, bool bAllowSt
 
 bool FNamedTaskThread::IsProcessingTasks(int32 QueueIndex)
 {
-	// ´¦ÀíÈÎÎñµÄÊ±ºòÕâ¸öÖµ»á++ Àë¿ªÈÎÎñµÄÊ±ºòÕâ¸öÖµ»á--
+	// å¤„ç†ä»»åŠ¡çš„æ—¶å€™è¿™ä¸ªå€¼ä¼š++ ç¦»å¼€ä»»åŠ¡çš„æ—¶å€™è¿™ä¸ªå€¼ä¼š--
 	return !!Queue(QueueIndex).RecursionGuard;
 }
 
 
 void FNamedTaskThread::WakeUp(int32 QueueIndex)
 {
-	// »½ÐÑÒ»¸öÏß³ÌÀ´´¦Àí¶ÓÁÐÀïµÄÄÚÈÝ
+	// å”¤é†’ä¸€ä¸ªçº¿ç¨‹æ¥å¤„ç†é˜Ÿåˆ—é‡Œçš„å†…å®¹
 	Queue(QueueIndex).StallRestartEvent->Trigger();
 }
 
@@ -102,15 +102,15 @@ void FNamedTaskThread::RequestQuit(int32 QueueIndex)
 	if (!Queue(0).StallRestartEvent)
 	{
 		/*
-		 * Èç¹ûµ±Ç°¶ÓÁÐµÄ StallRestartEvent ÊÇ nullptr£¬ËµÃ÷Ïß³ÌÏµÍ³»¹Ã»ÍêÈ«³õÊ¼»¯£¬Õâ¸öÏß³Ì¿ÉÄÜÉÐÎ´Æô¶¯»ò´¦ÓÚÎ´¾ÍÐ÷×´Ì¬¡£
-		 * ÔÚÕâÖÖÇé¿öÏÂ£¬µ÷ÓÃ RequestQuit() Ã»ÓÐÒâÒå£¬Ò²²»°²È«¡£
-		 * ÎªÊ²Ã´ÅÐ¶Ï Queue(0) ¾Í¿ÉÒÔ£¬ÒòÎª Èû½øÈÎÎñÖÁÉÙÓÐÒ»¸ö Queue(0)
+		 * å¦‚æžœå½“å‰é˜Ÿåˆ—çš„ StallRestartEvent æ˜¯ nullptrï¼Œè¯´æ˜Žçº¿ç¨‹ç³»ç»Ÿè¿˜æ²¡å®Œå…¨åˆå§‹åŒ–ï¼Œè¿™ä¸ªçº¿ç¨‹å¯èƒ½å°šæœªå¯åŠ¨æˆ–å¤„äºŽæœªå°±ç»ªçŠ¶æ€ã€‚
+		 * åœ¨è¿™ç§æƒ…å†µä¸‹ï¼Œè°ƒç”¨ RequestQuit() æ²¡æœ‰æ„ä¹‰ï¼Œä¹Ÿä¸å®‰å…¨ã€‚
+		 * ä¸ºä»€ä¹ˆåˆ¤æ–­ Queue(0) å°±å¯ä»¥ï¼Œå› ä¸º å¡žè¿›ä»»åŠ¡è‡³å°‘æœ‰ä¸€ä¸ª Queue(0)
 		 */
 		return;
 	}
 	if (QueueIndex == -1)
 	{
-		//QueueIndex == -1 µÄÊ±ºòÎÒÃÇÈÏÎªÕâÊÇÔÚ¹Ø»ú
+		//QueueIndex == -1 çš„æ—¶å€™æˆ‘ä»¬è®¤ä¸ºè¿™æ˜¯åœ¨å…³æœº
 		Queue(0).QuitForShutdown = true;
 		Queue(1).QuitForShutdown = true;
 		Queue(0).StallRestartEvent->Trigger();

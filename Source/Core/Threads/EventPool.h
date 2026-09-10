@@ -11,10 +11,10 @@ enum class COREMODULE EEventPoolTypes
 };
 
 /*
- * Ò»¸öÇáÁ¿µÄ °ü×°Æ÷Àà,ÄÚ²¿³ÖÓĞÒ»¸ö FEvent*,Õâ¸öFEvent*µÄÕæÊµËùÓĞÈ¨ÊÇEventPoolÖĞµÄ
- * Ïß³Ì°²È«·â×°£»
- * Îö¹¹Ê±×Ô¶¯¹é»¹ÊÂ¼ş¶ÔÏóµ½³ØÖĞ£»
- * ²Ù×÷½Ó¿ÚÍ¸Ã÷×ª·¢¸øÄÚ²¿µÄ FEvent£¨Èç Wait, Trigger, Reset µÈ£©¡£
+ * ä¸€ä¸ªè½»é‡çš„ åŒ…è£…å™¨ç±»,å†…éƒ¨æŒæœ‰ä¸€ä¸ª FEvent*,è¿™ä¸ªFEvent*çš„çœŸå®æ‰€æœ‰æƒæ˜¯EventPoolä¸­çš„
+ * çº¿ç¨‹å®‰å…¨å°è£…ï¼›
+ * ææ„æ—¶è‡ªåŠ¨å½’è¿˜äº‹ä»¶å¯¹è±¡åˆ°æ± ä¸­ï¼›
+ * æ“ä½œæ¥å£é€æ˜è½¬å‘ç»™å†…éƒ¨çš„ FEventï¼ˆå¦‚ Wait, Trigger, Reset ç­‰ï¼‰ã€‚
  * 
  */
 class COREMODULE FSafeRecyclableEvent  final : public FEvent
@@ -111,7 +111,7 @@ public:
 		Pool.push_front(Result);
 	}
 private:
-	//todo ÕâÀïÎÒÃÇÃ»ÓĞÊµÏÖÎŞËø¶ÓÁĞ£¬ËùÒÔÎÒÃÇÕâÀïÓÃ¸öËø£¬ºóÃæÓÅ»¯
+	//todo è¿™é‡Œæˆ‘ä»¬æ²¡æœ‰å®ç°æ— é”é˜Ÿåˆ—ï¼Œæ‰€ä»¥æˆ‘ä»¬è¿™é‡Œç”¨ä¸ªé”ï¼Œåé¢ä¼˜åŒ–
 	FCriticalSection PoolCriticalSection;
 	std::forward_list<FEvent*> Pool;
 };

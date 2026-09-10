@@ -2,7 +2,7 @@
 #include <iostream>
 #include "TransferUtility.h"
 #include "Module.h"
-// »ñÈ¡×ÓÀàĞÍµÄÀàĞÍÌØĞÔ
+// è·å–å­ç±»å‹çš„ç±»å‹ç‰¹æ€§
 template<typename T>
 struct DerivedType {
 	using type = T;
@@ -53,7 +53,7 @@ public:
 		TransferDown(data, dataTraits);
 	}
 
-	//ÓĞ¸öÏòÏÂµÄĞéº¯ÊıÀ´Î¯ÍĞ´¦ÀíÕâ¸ö
+	//æœ‰ä¸ªå‘ä¸‹çš„è™šå‡½æ•°æ¥å§”æ‰˜å¤„ç†è¿™ä¸ª
 	virtual void TransferDown(BaseObject& obj, TraitsBase& dataTraits) {};
 
 };

@@ -32,32 +32,32 @@ std::wstring D3DUtil::ToWString(const std::string& str)
     return wstr;
 }
 
-// ע�������ʵ��Ч��
+// 注意这里的实际效果
 /*
- *  1. CPU �� upload heap������ִ�С�Map + MemcpySubresource ��ͬ���� CPU �ڴ����������һ���þͿ����ꡣ
-	2. upload heap �� default heap��ֻ¼���CopyBufferRegion ֻ���������б�������һ��"�Ժ�ִ��"�����GPU ��û�ܡ�
-    �ؼ����� UpdateSubresources��ʵ�֣�����uploadbufferֱ������map�����Ƕ���defaultbuffer��cmdlist-copybufferregion
+ *  1. CPU → upload heap：立即执行。Map + MemcpySubresource 是同步的 CPU 内存操作，命令一调用就拷贝完。
+	2. upload heap → default heap：只录命令。CopyBufferRegion 只是往命令列表里塞了一条"以后执行"的命令，GPU 还没跑。
+    关键在于 UpdateSubresources的实现，对于uploadbuffer直接用了map，但是对于defaultbuffer是cmdlist-copybufferregion
  */
 Microsoft::WRL::ComPtr<ID3D12Resource> D3DUtil::CreateDefaultBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const void* initData, UINT64 byteSize, Microsoft::WRL::ComPtr<ID3D12Resource>& uploadBuffer)
 {
     Microsoft::WRL::ComPtr<ID3D12Resource> DefaultBuffer;
     CD3DX12_HEAP_PROPERTIES DefaultHeapProperty(D3D12_HEAP_TYPE_DEFAULT);
-    // Ĭ�϶�һ�������涥���buffer���������ǲ�ָ���ԵĶ�����;����D3D12_RESOURCE_FLAG_NONE����
+    // 默认堆一般用来存顶点的buffer，这里我们不指定对的额外用途，用D3D12_RESOURCE_FLAG_NONE就行
     CD3DX12_RESOURCE_DESC DefaultBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(byteSize, D3D12_RESOURCE_FLAG_NONE);
     ThrowIfFailed(device->CreateCommittedResource(&DefaultHeapProperty, D3D12_HEAP_FLAG_NONE, &DefaultBufferDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&DefaultBuffer)));
 
 
-    //΢�����ƣ��ϴ����ϵ���Դ���봴��Ϊ D3D12_RESOURCE_STATE_GENERIC_READ �ĳ�ʼ״̬
+    //微软限制，上传堆上的资源必须创建为 D3D12_RESOURCE_STATE_GENERIC_READ 的初始状态
     CD3DX12_HEAP_PROPERTIES UploadHeapProperty(D3D12_HEAP_TYPE_UPLOAD);
     CD3DX12_RESOURCE_DESC UploadBUfferDesc = CD3DX12_RESOURCE_DESC::Buffer(byteSize, D3D12_RESOURCE_FLAG_NONE);
     ThrowIfFailed(device->CreateCommittedResource(&UploadHeapProperty, D3D12_HEAP_FLAG_NONE, &UploadBUfferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer)));
 
 
-    //�����ݴ�cpu�࿽�����ϴ��ѣ�Ȼ�󿽱���Ĭ�϶�, 
+    //将数据从cpu侧拷贝到上传堆，然后拷贝到默认堆, 
     D3D12_SUBRESOURCE_DATA SubResourceData = {};
     SubResourceData.pData = initData;
-    SubResourceData.RowPitch = byteSize; // �����ܳ���
-    SubResourceData.SlicePitch = SubResourceData.RowPitch; // ��ʾһ�������е��ڴ��ȣ����ֽ�Ϊ��λ������ָ������һ�������У���һ�е���ʼλ�õ���һ�е���ʼλ��֮����ֽ��������仰˵����������ÿ�еġ����ȡ������������������ص����������ǿ����˶��롢��ʽ���������غ���ֽ�������
+    SubResourceData.RowPitch = byteSize; // 数据总长度
+    SubResourceData.SlicePitch = SubResourceData.RowPitch; // 表示一个纹理行的内存跨度（以字节为单位）。它指的是在一幅纹理中，从一行的起始位置到下一行的起始位置之间的字节数。换句话说，它是纹理每行的“宽度”，但它不仅仅是像素的数量，而是考虑了对齐、格式和其他因素后的字节总数。
     CD3DX12_RESOURCE_BARRIER DefaultBufferCommonToCopyDestBaarrier = CD3DX12_RESOURCE_BARRIER::Transition(DefaultBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
     cmdList->ResourceBarrier(1, &DefaultBufferCommonToCopyDestBaarrier);
     UpdateSubresources<1>(cmdList, DefaultBuffer.Get(), uploadBuffer.Get(), 0, 0, 1, &SubResourceData);
@@ -80,34 +80,34 @@ Microsoft::WRL::ComPtr<ID3DBlob> D3DUtil::CompileShader(const std::string& filen
     Microsoft::WRL::ComPtr<ID3DBlob> errors;
 
     /*
-    * �������λ�����Ľ��ͣ�
-    *   6. Flags1 - �����־1
+    * 两个标记位参数的解释：
+    *   6. Flags1 - 编译标志1
   UINT Flags1
-  - ���ã����Ʊ�����Ϊ�ı�־λ��ϣ���λ��
-  - ���ñ�־��
-  // �������
-  D3DCOMPILE_DEBUG              // ���ɵ�����Ϣ
-  D3DCOMPILE_SKIP_VALIDATION    // ������֤�����ڵ��ԣ�
-  D3DCOMPILE_SKIP_OPTIMIZATION  // �����Ż������ڵ��ԣ�
+  - 作用：控制编译行为的标志位组合（按位或）
+  - 常用标志：
+  // 调试相关
+  D3DCOMPILE_DEBUG              // 生成调试信息
+  D3DCOMPILE_SKIP_VALIDATION    // 跳过验证（用于调试）
+  D3DCOMPILE_SKIP_OPTIMIZATION  // 跳过优化（用于调试）
 
-  // �Ż�����
-  D3DCOMPILE_OPTIMIZATION_LEVEL0  // �Ż�����0�����ԣ�
-  D3DCOMPILE_OPTIMIZATION_LEVEL1  // �Ż�����1
-  D3DCOMPILE_OPTIMIZATION_LEVEL2  // �Ż�����2
-  D3DCOMPILE_OPTIMIZATION_LEVEL3  // �Ż�����3����ߣ�
+  // 优化级别
+  D3DCOMPILE_OPTIMIZATION_LEVEL0  // 优化级别0（调试）
+  D3DCOMPILE_OPTIMIZATION_LEVEL1  // 优化级别1
+  D3DCOMPILE_OPTIMIZATION_LEVEL2  // 优化级别2
+  D3DCOMPILE_OPTIMIZATION_LEVEL3  // 优化级别3（最高）
 
-  // ����
-  D3DCOMPILE_WARNINGS_ARE_ERRORS  // ������Ϊ����
-  D3DCOMPILE_PACK_MATRIX_ROW_MAJOR  // �����Ⱦ��󲼾�
-  D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR  // �����Ⱦ��󲼾֣�Ĭ�ϣ�
+  // 其他
+  D3DCOMPILE_WARNINGS_ARE_ERRORS  // 警告视为错误
+  D3DCOMPILE_PACK_MATRIX_ROW_MAJOR  // 行优先矩阵布局
+  D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR  // 列优先矩阵布局（默认）
 
-  7. Flags2 - �����־2��Ч����־��
+  7. Flags2 - 编译标志2（效果标志）
 
   UINT Flags2
-  - ���ã���Ҫ����Ч����ܣ�Effects framework����ͨ����Ϊ 0
-  - ����ֵ��
-    - 0����ͨ��ɫ������
-    - D3DCOMPILE_EFFECT_CHILD_EFFECT��Ч���ļ��е���Ч��
+  - 作用：主要用于效果框架（Effects framework），通常设为 0
+  - 常用值：
+    - 0：普通着色器编译
+    - D3DCOMPILE_EFFECT_CHILD_EFFECT：效果文件中的子效果
     */
     hr = D3DCompileFromFile(wfile.c_str(), defines, D3D_COMPILE_STANDARD_FILE_INCLUDE,
         entrypoint.c_str(), target.c_str(), compileFlags, 0, &byteCode, &errors);
@@ -123,10 +123,10 @@ Microsoft::WRL::ComPtr<ID3DBlob> D3DUtil::CompileShader(const std::string& filen
 
 D3D12_VERTEX_BUFFER_VIEW MeshGeometry::VertexBufferView() const
 {
-    //���㻺������ͼ����Ҫ��������
-    /*BufferLocation GPU �����ַ��ָ��ʵ�ʵ� vertex buffer ���ݣ��Դ��еĵ�ַ����ͨ���ɵ��� ID3D12Resource::GetGPUVirtualAddress() ���
-     * StrideInBytes ÿ��������ֽڴ�С����һ������ṹ��Ĵ�С����
-     * SizeInBytes ���㻺������ ���ֽڴ�С��GPU ��ȡʱ���ᳬ�������Χ��
+    //顶点缓冲区视图不需要描述符堆
+    /*BufferLocation GPU 虚拟地址，指向实际的 vertex buffer 数据（显存中的地址）。通常由调用 ID3D12Resource::GetGPUVirtualAddress() 获得
+     * StrideInBytes 每个顶点的字节大小（即一个顶点结构体的大小）。
+     * SizeInBytes 顶点缓冲区的 总字节大小。GPU 读取时不会超过这个范围。
      */
     D3D12_VERTEX_BUFFER_VIEW vbv;
     vbv.BufferLocation = VertexBufferGPU->GetGPUVirtualAddress();
@@ -137,11 +137,11 @@ D3D12_VERTEX_BUFFER_VIEW MeshGeometry::VertexBufferView() const
 
 D3D12_INDEX_BUFFER_VIEW MeshGeometry::IndexBufferView() const
 {
-    //���㻺����Ҳ����Ҫ��������
-     /*BufferLocation GPU �����ַ��ָ��ʵ�ʵ� vertex buffer ���ݣ��Դ��еĵ�ַ����ͨ���ɵ��� ID3D12Resource::GetGPUVirtualAddress() ���
-     * Format ���ݸ�ʽ����������������֮һ��DXGI_FORMAT_R16_UINT DXGI_FORMAT_R32_UINT
-     * SizeInBytes ���㻺������ ���ֽڴ�С��GPU ��ȡʱ���ᳬ�������Χ��
-     * Ϊʲô ������������ͼ����Ҫ StrideInBytes �����Ա��Format ָ���ľ������������������ݴ�С��
+    //顶点缓冲区也不需要描述符堆
+     /*BufferLocation GPU 虚拟地址，指向实际的 vertex buffer 数据（显存中的地址）。通常由调用 ID3D12Resource::GetGPUVirtualAddress() 获得
+     * Format 数据格式，必须是以下两种之一：DXGI_FORMAT_R16_UINT DXGI_FORMAT_R32_UINT
+     * SizeInBytes 顶点缓冲区的 总字节大小。GPU 读取时不会超过这个范围。
+     * 为什么 索引缓冲区视图不需要 StrideInBytes 这个成员？Format 指定的就是索引缓冲区的数据大小。
      */
     D3D12_INDEX_BUFFER_VIEW Ibv;
     Ibv.BufferLocation = IndexBufferGPU->GetGPUVirtualAddress();

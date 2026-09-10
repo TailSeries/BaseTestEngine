@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20.0)
 project(Main)
-FILE(GLOB_RECURSE source_list
+FILE(GLOB_RECURSE source_list CONFIGURE_DEPENDS
     ./*.c
     ./*.cpp
     ./*.h

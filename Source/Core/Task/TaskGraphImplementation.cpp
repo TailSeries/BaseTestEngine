@@ -27,13 +27,13 @@ FTaskGraphImplementation::FTaskGraphImplementation()
 	int32 MaxTaskThreads = MAX_THREADS;
 	bCreatedHiPriorityThreads = !!ENamedThreads::bHasHighPriorityThreads;
 	bCreatedBackgroundPriorityThreads = !!ENamedThreads::bHasBackgroundThreads;
-	// »ñÈ¡¿ÉÒÔ¹¤×÷µÄÏß³ÌÊıÁ¿ 2 ~ 26¸ö
+	// è·å–å¯ä»¥å·¥ä½œçš„çº¿ç¨‹æ•°é‡ 2 ~ 26ä¸ª
 	int32 NumTaskThreads = FPlatformProcess::NumberOfWorkerThreadsToSpawn();
 
 	/*
-	 * Èç¹û²»ÆôÓÃ¶àÏß³Ì£¨ÈçÆô¶¯²ÎÊıÀï½ûÓÃÁË»òÕß´¦ÓÚ -onethread Ä£Ê½£©£º
-	 *	Ö»´´½¨Ò»¸öÏß³Ì£¨Í¨³£ÊÇÖ÷Ïß³Ì£©
-	 *		°Ñ LastExternalThread ÉèÖÃÎª ActualRenderingThread - 1£¬±íÊ¾Ã»ÓĞäÖÈ¾Ïß³Ì
+	 * å¦‚æœä¸å¯ç”¨å¤šçº¿ç¨‹ï¼ˆå¦‚å¯åŠ¨å‚æ•°é‡Œç¦ç”¨äº†æˆ–è€…å¤„äº -onethread æ¨¡å¼ï¼‰ï¼š
+	 *	åªåˆ›å»ºä¸€ä¸ªçº¿ç¨‹ï¼ˆé€šå¸¸æ˜¯ä¸»çº¿ç¨‹ï¼‰
+	 *		æŠŠ LastExternalThread è®¾ç½®ä¸º ActualRenderingThread - 1ï¼Œè¡¨ç¤ºæ²¡æœ‰æ¸²æŸ“çº¿ç¨‹
 	 */
 	if (!FTaskGraphInterface::IsMultithread())
 	{
@@ -48,34 +48,34 @@ FTaskGraphImplementation::FTaskGraphImplementation()
 	else
 	{
 		LastExternalThread = ENamedThreads::ActualRenderingThread;
-		// todo ´¦ÀíforkµÄÇé¿ö£¬Ì«Âé·³ÁË£¬ÎÒ¾õµÃÎÒ×Ô¼ºµÄÉè¼ÆÒ»¶¨ÆÁ±Îfork
+		// todo å¤„ç†forkçš„æƒ…å†µï¼Œå¤ªéº»çƒ¦äº†ï¼Œæˆ‘è§‰å¾—æˆ‘è‡ªå·±çš„è®¾è®¡ä¸€å®šå±è”½fork
 
 	}
-	// ¾ßÃûÏß³ÌµÄÊıÁ¿
+	// å…·åçº¿ç¨‹çš„æ•°é‡
 	NumNamedThreads = LastExternalThread + 1;
-	// ²»Í¬ÓÅÏÈ¼¶µÄÏß³Ì¼¯µÄÊıÁ¿
+	// ä¸åŒä¼˜å…ˆçº§çš„çº¿ç¨‹é›†çš„æ•°é‡
 	NumTaskThreadSets = 1 + bCreatedHiPriorityThreads + bCreatedBackgroundPriorityThreads;
-	// Êµ¼Ê´´½¨µÄÏß³ÌÊıÁ¿£ºÕı³£Ó¦¸Ã¾ÍÊÇ NumTaskThreads * NumTaskThreadSets + NumNamedThreads ÁË
+	// å®é™…åˆ›å»ºçš„çº¿ç¨‹æ•°é‡ï¼šæ­£å¸¸åº”è¯¥å°±æ˜¯ NumTaskThreads * NumTaskThreadSets + NumNamedThreads äº†
 	NumThreads = std::max(std::min<int32>(NumTaskThreads * NumTaskThreadSets + NumNamedThreads, MAX_THREADS), NumNamedThreads + 1);
 	NumThreads = std::min(NumThreads, NumNamedThreads + NumTaskThreads * NumTaskThreadSets);
 
-	// Ã¿¸öÓÅÏÈ¼¶Ïß³Ì¼¯ÖĞµÄÏß³ÌÊıÁ¿ »ù±¾¾ÍÊÇ NumTaskThreads
+	// æ¯ä¸ªä¼˜å…ˆçº§çº¿ç¨‹é›†ä¸­çš„çº¿ç¨‹æ•°é‡ åŸºæœ¬å°±æ˜¯ NumTaskThreads
 	NumTaskThreadsPerSet = (NumThreads - NumNamedThreads) / NumTaskThreadSets;
 	LogStringMsg("Started task graph with %d named threads and %d total threads with %d sets of task threads.", NumNamedThreads, NumThreads, NumTaskThreadSets);
-	// ¼ì²éÊÇ·ñÖØÈë
+	// æ£€æŸ¥æ˜¯å¦é‡å…¥
 	assert(ReentrancyCheck.load(std::memory_order_relaxed) == 0);
 	ReentrancyCheck.fetch_add(1, std::memory_order_relaxed);
 	PerThreadIDTLSSlot = FPlatformTLS::AllocTlsSlot();
 
 
-	// ´´½¨Ïß³ÌÖ´ĞĞÂß¼­¶ÔÏó
+	// åˆ›å»ºçº¿ç¨‹æ‰§è¡Œé€»è¾‘å¯¹è±¡
 	for (int32 ThreadIndex = 0; ThreadIndex < NumThreads; ThreadIndex++)
 	{
 		bool bAnyTaskThread = ThreadIndex >= NumNamedThreads;
-		// ·ÖÀà´´½¨ÄäÃûÏß³ÌºÍ¾ßÃûÏß³Ì
+		// åˆ†ç±»åˆ›å»ºåŒ¿åçº¿ç¨‹å’Œå…·åçº¿ç¨‹
 		if (bAnyTaskThread)
 		{
-			// Êµ¼ÊÓÃÀ´Ö´ĞĞÏß³ÌÈÎÎñµÄÂß¼­¶ÔÏó
+			// å®é™…ç”¨æ¥æ‰§è¡Œçº¿ç¨‹ä»»åŠ¡çš„é€»è¾‘å¯¹è±¡
 			WorkerThreads[ThreadIndex].TaskGraphWorker = new FTaskThreadAnyThread(ThreadIndexToPriorityIndex(ThreadIndex));
 		}
 		else
@@ -89,8 +89,8 @@ FTaskGraphImplementation::FTaskGraphImplementation()
 
 	TaskGraphImplementationSingleton = this;
 
-	//´´½¨Ïß³Ì¶ÔÏó
-	/*ÎÒÃÇÕâÀïµÄÓÅÏÈ¼¶ºÍwindows¶¨ÒåµÄÏà±ÈÈõÒ»µã£¬¶¼ÊÇÔÚTPri_Normal Ö®ÏÂµÄ
+	//åˆ›å»ºçº¿ç¨‹å¯¹è±¡
+	/*æˆ‘ä»¬è¿™é‡Œçš„ä¼˜å…ˆçº§å’Œwindowså®šä¹‰çš„ç›¸æ¯”å¼±ä¸€ç‚¹ï¼Œéƒ½æ˜¯åœ¨TPri_Normal ä¹‹ä¸‹çš„
 	 *	Hi >> TPri_SlightlyBelowNormal
 	 *	Normal >> TPri_BelowNormal
 	 *	low >> TPri_Lowest
@@ -102,7 +102,7 @@ FTaskGraphImplementation::FTaskGraphImplementation()
 		const char* GroupName = "TaskGraphNormal";
 		int32 Priority = ThreadIndexToPriorityIndex(ThreadIndex);
 		EThreadPriority ThreadPri;
-		// windowsÉÏ·µ»Ø 0xFFFFFFFFFFFFFFFF£¬ÔÚwindowÉÏ£¬ÎÒÃÇ²»±ØÔ¼Êø´óĞ¡ºË
+		// windowsä¸Šè¿”å› 0xFFFFFFFFFFFFFFFFï¼Œåœ¨windowä¸Šï¼Œæˆ‘ä»¬ä¸å¿…çº¦æŸå¤§å°æ ¸
 		uint64 Affinity = FPlatformProcess::GetTaskGraphThreadMask();
 		if (Priority == 1)
 		{
@@ -141,17 +141,17 @@ FTaskGraphImplementation::FTaskGraphImplementation()
 		}
 
 
-		//todo µ±Ç°ÊÇ²»ÊÇ¿ÉforkµÄ£¬ÎÒÃÇºóĞø¿çÆ½Ì¨µÄÊ±ºòÀ´Éè¼ÆforkµÄ¹¦ÄÜ
+		//todo å½“å‰æ˜¯ä¸æ˜¯å¯forkçš„ï¼Œæˆ‘ä»¬åç»­è·¨å¹³å°çš„æ—¶å€™æ¥è®¾è®¡forkçš„åŠŸèƒ½
 		//if (FForkProcessHelper::IsForkedMultithreadInstance() && GAllowTaskGraphForkMultithreading)
 		//{
 		//	WorkerThreads[ThreadIndex].RunnableThread = FForkProcessHelper::CreateForkableThread(&Thread(ThreadIndex), *Name, StackSize, ThreadPri, Affinity);
 		//}
 		//else
 		{
-			// ´´½¨ÕæÕıµÄÏß³ÌÀà¶ÔÏó
+			// åˆ›å»ºçœŸæ­£çš„çº¿ç¨‹ç±»å¯¹è±¡
 			WorkerThreads[ThreadIndex].RunnableThread = FRunnableThread::Create(&Thread(ThreadIndex), Name.c_str(), StackSize, ThreadPri, Affinity);
 		}
-		// Õâ¸öÏß³Ì´´½¨Íê±Ï£¬ÎÒÃÇ¾ÍÈÏÎªÕâ¸öÏß³ÌÒÑ¾­±»Attach½øÀ´ÁË
+		// è¿™ä¸ªçº¿ç¨‹åˆ›å»ºå®Œæ¯•ï¼Œæˆ‘ä»¬å°±è®¤ä¸ºè¿™ä¸ªçº¿ç¨‹å·²ç»è¢«Attachè¿›æ¥äº†
 		WorkerThreads[ThreadIndex].bAttached = true;
 	}
 
@@ -170,7 +170,7 @@ FTaskGraphImplementation::~FTaskGraphImplementation()
 		Thread(ThreadIndex).RequestQuit(-1);
 	}
 
-	//¾ßÃûÏß³Ì£¬ÎÒÃÇÒªwait
+	//å…·åçº¿ç¨‹ï¼Œæˆ‘ä»¬è¦wait
 	for (int32 ThreadIndex = 0; ThreadIndex < NumThreads; ThreadIndex++)
 	{
 		if (ThreadIndex > LastExternalThread)
@@ -190,20 +190,20 @@ void FTaskGraphImplementation::QueueTask(FBaseGraphTask* Task, ENamedThreads::Ty
 {
 	if (ENamedThreads::GetThreadIndex(ThreadToExecuteOn) == ENamedThreads::AnyThread)
 	{
-		// ÆÚÍûÖ´ĞĞµÄÏß³ÌÀàĞÍÊÇAnyThread
+		// æœŸæœ›æ‰§è¡Œçš„çº¿ç¨‹ç±»å‹æ˜¯AnyThread
 		if (FPlatformProcess::SupportsMultithreading())
 		{
 			uint32 TaskPriority = ENamedThreads::GetTaskPriority(Task->ThreadToExecuteOn);
 			int32 Priority = ENamedThreads::GetThreadPriorityIndex(Task->ThreadToExecuteOn);
 			if (Priority == (ENamedThreads::BackgroundThreadPriority >> ENamedThreads::ThreadPriorityShift) && (!bCreatedBackgroundPriorityThreads || !ENamedThreads::bHasBackgroundThreads))
 			{
-				// Ã»ÓĞbackground threadsµÄÊ±ºòÖ±½Ó¸øËûÃÇ×ªµ½normal,×¢ÒâtaskpriorityÒ²×ªµ½normal
+				// æ²¡æœ‰background threadsçš„æ—¶å€™ç›´æ¥ç»™ä»–ä»¬è½¬åˆ°normal,æ³¨æ„taskpriorityä¹Ÿè½¬åˆ°normal
 				Priority = ENamedThreads::NormalThreadPriority >> ENamedThreads::ThreadPriorityShift;
 				TaskPriority = ENamedThreads::NormalTaskPriority >> ENamedThreads::TaskPriorityShift;
 			}
 			else if (Priority == (ENamedThreads::HighThreadPriority >> ENamedThreads::ThreadPriorityShift) && (!bCreatedHiPriorityThreads || !ENamedThreads::bHasHighPriorityThreads))
 			{
-				// Ã»ÓĞhi threadsµÄÊ±ºòÎÒÃÇÖ±½Ó¸øËüÃÇ×ªµ½ normal£¬×¢ÒâtaskpriorityÓ¦¸Ã×ªµ½hi
+				// æ²¡æœ‰hi threadsçš„æ—¶å€™æˆ‘ä»¬ç›´æ¥ç»™å®ƒä»¬è½¬åˆ° normalï¼Œæ³¨æ„taskpriorityåº”è¯¥è½¬åˆ°hi
 				Priority = ENamedThreads::NormalThreadPriority >> ENamedThreads::ThreadPriorityShift;
 				TaskPriority = ENamedThreads::HighTaskPriority >> ENamedThreads::TaskPriorityShift;
 			}
@@ -224,11 +224,11 @@ void FTaskGraphImplementation::QueueTask(FBaseGraphTask* Task, ENamedThreads::Ty
 
 	}
 
-	// Èç¹ûÊÇ¾ßÃûÏß³Ì
+	// å¦‚æœæ˜¯å…·åçº¿ç¨‹
 	ENamedThreads::Type CurrentThreadIfKnown;
 	if (ENamedThreads::GetThreadIndex(InCurrentThreadIfKnown) == ENamedThreads::AnyThread)
 	{
-		// Èç¹û½øÀ´µÄÏß³Ì±ê¼Ç¾ÍÊÇAnyThread£¬ÎÒÃÇÍ¨¹ıTLS»ñÈ¡µ±Ç°µÄÏß³ÌÀàĞÍ
+		// å¦‚æœè¿›æ¥çš„çº¿ç¨‹æ ‡è®°å°±æ˜¯AnyThreadï¼Œæˆ‘ä»¬é€šè¿‡TLSè·å–å½“å‰çš„çº¿ç¨‹ç±»å‹
 		CurrentThreadIfKnown = GetCurrentThread();
 	}
 	else
@@ -237,7 +237,7 @@ void FTaskGraphImplementation::QueueTask(FBaseGraphTask* Task, ENamedThreads::Ty
 	}
 
 	{
-		// ½«ÈÎÎñ
+		// å°†ä»»åŠ¡
 		int32 QueueToExecuteOn = ENamedThreads::GetQueueIndex(ThreadToExecuteOn);
 		ThreadToExecuteOn = ENamedThreads::GetThreadIndex(ThreadToExecuteOn);
 		FTaskThreadBase* Target = &Thread(ThreadToExecuteOn);
@@ -310,7 +310,7 @@ ENamedThreads::Type FTaskGraphImplementation::GetCurrentThread()
 	FWorkerThread* TLSPointer = (FWorkerThread*)FPlatformTLS::GetTlsValue(PerThreadIDTLSSlot);
 	if (TLSPointer)
 	{
-		// µ±Ç°TLSÖĞ¼ÇÂ¼ÁËÏß³ÌµÄµØÖ·£¬Õâ¸öµØÖ·±¾ÉíÓÖÔÚWorkerThreadsÊı×éÖĞÓĞ¼ÇÂ¼£¬¼ÈÈ»Èç´Ë£¬ÕâÁ½¸öµØÖ·×÷²î£¬¼´¿ÉµÃµ½Êı×éÆ«ÒÆÁ¿
+		// å½“å‰TLSä¸­è®°å½•äº†çº¿ç¨‹çš„åœ°å€ï¼Œè¿™ä¸ªåœ°å€æœ¬èº«åˆåœ¨WorkerThreadsæ•°ç»„ä¸­æœ‰è®°å½•ï¼Œæ—¢ç„¶å¦‚æ­¤ï¼Œè¿™ä¸¤ä¸ªåœ°å€ä½œå·®ï¼Œå³å¯å¾—åˆ°æ•°ç»„åç§»é‡
 		int32 ThreadIndex = static_cast<int32>(TLSPointer - WorkerThreads);
 		if (ThreadIndex < NumNamedThreads)
 		{
@@ -409,7 +409,7 @@ void FTaskGraphImplementation::WaitUntilTasksComplete(const FGraphEventArray& Ta
 		assert(CurrentThreadIfKnown == ENamedThreads::GetThreadIndex(GetCurrentThread()));
 	}
 
-	// ¾ßÃûÏß³Ì£¬ÇÒÃ»ÓĞÔÚÖ´ĞĞÈÎÎñ
+	// å…·åçº¿ç¨‹ï¼Œä¸”æ²¡æœ‰åœ¨æ‰§è¡Œä»»åŠ¡
 	if (CurrentThreadIfKnown != ENamedThreads::AnyThread && CurrentThreadIfKnown < NumNamedThreads && !IsThreadProcessingTasks(CurrentThread))
 	{
 		if (Tasks.size() < 8)
@@ -429,7 +429,7 @@ void FTaskGraphImplementation::WaitUntilTasksComplete(const FGraphEventArray& Ta
 				return;
 			}
 		}
-		// µÈ´ı¾ßÃûÏß³ÌÖĞµÄËùÓĞÈÎÎñÍê³É
+		// ç­‰å¾…å…·åçº¿ç¨‹ä¸­çš„æ‰€æœ‰ä»»åŠ¡å®Œæˆ
 		TGraphTask<FReturnGraphTask>::CreateTask(&Tasks, CurrentThread).ConstructAndDispatchWhenReady(CurrentThread);
 		ProcessThreadUntilRequestReturn(CurrentThread);
 	}
@@ -452,7 +452,7 @@ void FTaskGraphImplementation::WaitUntilTasksComplete(const FGraphEventArray& Ta
 				return;
 			}
 		}
-		// µÈ´ıËùÓĞÈÎÎñÖ´ĞĞ
+		// ç­‰å¾…æ‰€æœ‰ä»»åŠ¡æ‰§è¡Œ
 		FScopedEvent Event;
 		TriggerEventWhenTasksComplete(Event.Get(), Tasks, CurrentThreadIfKnown);
 	}
