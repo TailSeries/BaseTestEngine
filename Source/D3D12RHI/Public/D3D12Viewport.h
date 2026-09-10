@@ -2,7 +2,8 @@
 
 #include "D3D12RHIModule.h"
 #include "D3D12RHIPrivate.h"
-#include "Base/GenericPlatform.h"
+#include "D3D12Descriptors.h"
+#include "GenericPlatform.h"
 #include <vector>
 using Microsoft::WRL::ComPtr;
 class FD3D12Adapter;
@@ -26,6 +27,11 @@ public:
 	uint32           GetCurrentBackBufferIndex() const { return SwapChain->GetCurrentBackBufferIndex(); }
 	IDXGISwapChain3* GetSwapChain()              const { return SwapChain.Get(); }
 	uint32           GetNumBackBuffers()         const { return NumBackBuffers; }
+
+	// 当前backbuffer对应的RTV
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferRTV() const;
+
+
 private:
 	void ResizeInternal(); // UE 同名：从 swap chain 重新取回后备缓冲（Init / Resize 复用）
 	FD3D12Adapter* Adapter = nullptr;
@@ -36,4 +42,5 @@ private:
 	uint32 NumBackBuffers = 2;
 	ComPtr<IDXGISwapChain3> SwapChain;
 	std::vector<ComPtr<ID3D12Resource>> BackBuffers;
+	std::unique_ptr<FD3D12DescriptorHeap> RTVHeap;// 这是堆，但是每个backbuffer应该有一个RTV slot
 };

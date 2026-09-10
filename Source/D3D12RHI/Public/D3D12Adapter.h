@@ -2,6 +2,7 @@
 #include "D3D12RHIModule.h"
 #include "D3D12RHIPrivate.h"
 #include "D3D12Device.h"
+#include "GenericPlatform.h"
 /*
  * UE 选卡逻辑
  * ① 找卡 + 填 Desc(在 DynamicRHIModule 的 FindAdapter 里,用临时 factory 枚举挑 GPU)→ 造 FD3D12Adapter(Desc)

@@ -1,6 +1,7 @@
 #pragma once
 #include "D3D12RHIPrivate.h"
-#include "Core/Base/GenericPlatform.h"
+#include "GenericPlatform.h"
+#include "Base/GenericPlatform.h"
 
 /*
  * 对齐 UE 的 D3D12Queue.h:枚举 + 命令类型辅助函数 + FD3D12Fence + FD3D12Queue。先讲三个 UE 对照点,再给你敲的内容:

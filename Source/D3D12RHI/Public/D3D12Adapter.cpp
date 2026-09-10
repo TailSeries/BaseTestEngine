@@ -1,5 +1,5 @@
 #include "D3D12Adapter.h"
-#include "Core/Base/GenericPlatform.h"
+#include "Base/GenericPlatform.h"
 
 bool FD3D12Adapter::FindAdapter(FD3D12AdapterDesc& OutDesc)
 {

@@ -1,6 +1,6 @@
 #include "D3D12Viewport.h"
 #include "D3D12Adapter.h"
-#include "Core/Base/BaseDefines.h"
+#include "BaseDefines.h"
 
 // 构造函数只存参数（对齐 UE：不建 swap chain）
 FD3D12Viewport::FD3D12Viewport(FD3D12Adapter* InAdapter, HWND InWindowHandle, uint32 InSizeX, uint32 InSizeY, DXGI_FORMAT InFormat, uint32 InNumBackBuffers)
@@ -57,15 +57,31 @@ Present 这个动作要绑在能执行图形/呈现命令的队列上,Copy 队�
 	 * .As() 是 WRL ComPtr 的 QI 封装:对同一个对象做 COM 查询,拿到它的 IDXGISwapChain3 接口指针。
 	 */
 	VERIFY_D3D12(SwapChain1.As(&SwapChain)); // QI 到 IDXGISwapChain3
+
+	// 创建RTV堆
+	RTVHeap = std::make_unique<FD3D12DescriptorHeap>(Adapter->GetDevice(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, NumBackBuffers, false);
+
 	ResizeInternal(); // 取回后备缓冲
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE FD3D12Viewport::GetCurrentBackBufferRTV() const
+{
+	return RTVHeap->GetCPUHandle(GetCurrentBackBufferIndex());
 }
 
 // UE 的 ResizeInternal()：从当前 swap chain 取回 N 个后备缓冲 暂存
 void FD3D12Viewport::ResizeInternal()
 {
+	ID3D12Device* D3DDevice = Adapter->GetD3DDevice();
 	for (uint32 i = 0; i < NumBackBuffers; i++)
 	{
 		VERIFY_D3D12(SwapChain->GetBuffer(i, IID_PPV_ARGS(&BackBuffers[i])));
+		/*
+		 * - RTV 堆在 Init 建一次,resize 不重建:resize 时 back buffer 资源换了,但 RTV 堆还是那个,只需在 ResizeInternal 里重写每个槽的 RTV(指向新 back buffer)。堆本身持久。
+		 * :第二参 RTV 描述传 nullptr = 用资源自身的格式/维度建默认 RTV,back buffer 这么建就对。
+		 */
+		/// 为第 i 个 back buffer 建 RTV，落在 RTV 堆第 i 槽（back buffer i ↔ 槽 i 固定映射）
+		D3DDevice->CreateRenderTargetView(BackBuffers[i].Get(), nullptr, RTVHeap->GetCPUHandle(i));
 	}
 }
 

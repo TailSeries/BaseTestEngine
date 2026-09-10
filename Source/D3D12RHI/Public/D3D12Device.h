@@ -4,6 +4,9 @@
 #include "D3D12Queue.h"
 #include <vector>
 #include <memory>
+#include "D3D12Resources.h"
+#include "RHIResources.h"
+#include "GenericPlatform.h"
 /*
  *UE 三层的所有权是这样分的
  * FD3D12Adapter  拥有 RootDevice(ID3D12Device) + DxgiFactory + DxgiAdapter
@@ -15,6 +18,8 @@ class FD3D12Device final : public FD3D12SingleNodeGPUObject, public FNoncopyable
  */
 
 class FD3D12Adapter;
+class FD3D12Buffer;
+struct FRHIBufferDesc;
 // UE: class FD3D12Device final : FD3D12SingleNodeGPUObject, FNoncopyable, FD3D12AdapterChild
 // 简化：去掉三个基类，内联其精华（Adapter 回指 + GPUIndex + 禁拷贝）
 class D3D12RHIMODULE FD3D12Device
@@ -31,6 +36,10 @@ public:
     FD3D12Adapter* GetParentAdapter() const { return Adapter; }
     uint32 GetGPUIndex() const { return GPUIndex; }
     FD3D12Queue& GetQueue(ED3D12QueueType QueueType) { return *Queues[(uint32)QueueType]; }
+
+    // 创建 committed buffer（UE: FDynamicRHI::RHICreateBuffer；我们暂放 Device，后续挪到 FDynamicRHI）
+    TRefCountPtr<FD3D12Buffer> CreateBuffer(const FRHIBufferDesc& Desc, const void* InitialData = nullptr);
+
 private:
     FD3D12Adapter* Adapter = nullptr;  // UE: FD3D12AdapterChild::ParentAdapter
     uint32         GPUIndex = 0;         // UE: FD3D12SingleNodeGPUObject 的 GPU 掩码简化 对应的就是NodeMask
@@ -39,3 +48,5 @@ private:
     std::vector<std::unique_ptr<FD3D12Queue>> Queues;
 
 };
+
+

@@ -213,13 +213,32 @@ class FD3D12Queue {
   - 选卡用 `IDXGIFactory6::EnumAdapterByGpuPreference(HIGH_PERFORMANCE)` 选独显；FindAdapter 与 CreateRootDevice 必须用同一枚举方式，否则 AdapterIndex 对不上（或改按 LUID 匹配更稳）
 - [x] 第1章 实现：`D3D12Viewport.h/.cpp`（FD3D12Viewport：Init 建 SwapChain + ResizeInternal 取 BackBuffer + PresentInternal；两段式对齐 UE）
 - [x] **第1章 闭环验证通过**：`RHITest.exe`（Win32 窗口 + 三层 + Viewport + Present），黑窗口不崩，选中 NVIDIA RTX 3060
-- [ ] 第2章：RHI 资源基类（FRHIResource / D3D12Resources）
+- [x] 第2章：RHI 资源基类（`FRHIResource` + `ERHIResourceType`；`FD3D12Resource` 包 ID3D12Resource）
+  - 定案（方案A）：`FRHIResource` 不做侵入式计数，生命周期交给 `TRefCountPtr(=shared_ptr)`，public 虚析构；等实现自己的侵入式 TRefCountPtr 再补 AddRef/Release
+- [x] 第3章：Buffer（`EBufferUsageFlags` + `FRHIBufferDesc` + `FRHIBuffer`；`FD3D12Buffer` 持 `FD3D12Resource`；`FD3D12Device::CreateBuffer` = CreateCommittedResource + UPLOAD 堆 Map/memcpy 上传）
+  - DEFAULT 堆 + 初始数据（staging + copy）留到有 CommandList 后
+- [x] 第4章：Descriptor Heap（`FD3D12DescriptorHeap` 封装 + 线性 Allocate；Viewport 用 RTV 堆给 back buffer 建 RTV，固定槽映射）
+- [x] 第6章：CommandList（`FD3D12CommandAllocator` + `FD3D12CommandList`；RHITest 每帧 barrier + ClearRenderTargetView + ExecuteCommandLists → **清屏成蓝色**）
+  - 简化：单分配器 + 每帧 Flush（无帧重叠）；多缓冲（N 分配器 + 每帧 fence）留后面
+- [x] 第5章：Shader & PSO
+  - `D3D12Shader`（运行时 D3DCompile → 字节码 blob；UE 离线编译，我们简化）
+  - `D3D12RootSignature`（序列化 + 创建；三角形用空签名 + `ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT`）
+  - `D3D12PipelineState`（CreateGraphicsPipelineState；手填光栅/混合/深度关/RTV格式=swapchain）
+- [x] **画三角形（整合）**：RHITest 顶点(pos+color) → VB → 编译VS/PS → RootSig → PSO → 每帧 clear + DrawInstanced，蓝底彩色三角形。**≈ 达成 A3-M3（Test 只调 RHI 画出图元）**
+- [ ] 下一阶段（对照 UE_Rendering_Learning_Roadmap.md 的 A3 里程碑）：
+  - [ ] M2 补齐：DSV（深度）+ Texture + SRV + Sampler（第7章纹理）
+  - [ ] M4：状态追踪 + 自动 Barrier + 描述符管理 + 多帧同步（N分配器+每帧fence，去掉每帧Flush）+ Fence保护延迟释放
+  - [ ] M5：动态常量数据 / ring buffer（传 MVP 让三角形动/变换）
+  - [ ] A2：`FDynamicRHI` 抽象（把 CreateBuffer 等从 Device 挪上去，Renderer 不知后端）
+
+**新增通用工具**：`Core/Base/EnumClassFlags.h`（`ENUM_CLASS_FLAGS` 宏 + EnumHasAnyFlags 等，仿 UE）。
 
 **踩坑记录**：
-- 新建 C++ 文件必须 UTF-8 with BOM（否则 cp936 下 MSVC 按 GBK 解析中文注释，打乱 class 结构报假错如 `C2065 undeclared`）。已建 `.editorconfig`（`charset = utf-8-bom`）自动处理。
-- 空壳模块（无导出符号）不生成 `.lib`，链接它会 LNK1104。D3D12RHI 暂不链 RHI，等第2章 RHI 有导出类后再加回。
+- 曾用 UTF-8 with BOM 规避 cp936 GBK 误解析；后改为**全仓库 UTF-8 无 BOM + 根 CMakeLists 加 `/utf-8`**（MSVC 按 UTF-8 读源码）。`.editorconfig` 设 `charset = utf-8`。**`/utf-8` 现为硬依赖，勿删**。
+- 空壳模块（无导出符号）不生成 `.lib`，链接它会 LNK1104。第2章 `FRHIResource` 导出后 RHI.lib 生成，已把 `RHI` 加回 D3D12RHI 链接。
+- NodeMask 是"一个 device 内多 node（LDA/SLI）"，不是多物理卡；单卡填 1。选物理卡在枚举 adapter 阶段。
 
-**工程约定补记**：所有 CMakeLists 的 `FILE(GLOB_RECURSE ...)` 已加 `CONFIGURE_DEPENDS`（新文件自动并入 target，首次仍需一次 reconfigure）。跨模块 include 用 `Core/Base/...`（靠 D3D12RHI 的 `..` 暴露 `Source/`），不用 `../../`。
+**工程约定补记**：所有 CMakeLists 的 `FILE(GLOB_RECURSE ...)` 已加 `CONFIGURE_DEPENDS`。跨模块 include 用 `Core/Base/...` 或 `Base/...`（靠 `..` / Core 暴露），不用 `../../`。
 
 ---
 
