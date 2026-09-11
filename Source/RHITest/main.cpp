@@ -18,7 +18,7 @@ struct VSInput { float3 Pos : POSITION; float4 Color : COLOR; };
 struct PSInput { float4 Pos : SV_POSITION; float4 Color : COLOR; };
 PSInput VSMain(VSInput v) { 
 PSInput o; 
-o.Pos = float4(v.Pos, 1.0);// mul(float4(v.Pos, 1.0), WVP); 
+o.Pos =  mul(float4(v.Pos, 1.0), WVP); //float4(v.Pos, 1.0);
 o.Color = v.Color; 
 return o; }
 float4 PSMain(PSInput i) : SV_TARGET { return i.Color; }
@@ -42,27 +42,60 @@ public:
 		Viewport = std::make_unique<FD3D12Viewport>(Adapter.get(), hwnd, Width, Height, DXGI_FORMAT_R8G8B8A8_UNORM, 2);
 		Viewport->Init(); //  创建了swapchin rtv堆，并且创建与backbuffer相关联的rtv，并将这些rtv与对应的backbuffer关联了起来。
 
+		DSVHeap = std::make_unique<FD3D12DescriptorHeap>(Device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
+		DepthBuffer = Device->CreateDepthBuffer(Width, Height);
+		Device->GetDevice()->CreateDepthStencilView(DepthBuffer->GetResource(), nullptr, DSVHeap->GetCPUHandle(0));
+
 		//3 顶点缓冲
 		Vertex Triangle[6] = {
-	{ {  -1.0f,  -1.0f, 0.0f }, { 1, 0, 0, 1 } },
-	{ {  -1.0f, 1.0f, 0.0f }, { 0, 1, 0, 1 } },
-	{ { 1.0f, 1.0f, 0.0f }, { 0, 0, 1, 1 } },
-    { {  1.0f,  -1.0f, 0.0f }, { 1, 0, 0, 1 } },
-	{ {  1.0f, 1.0f, 0.0f }, { 0, 1, 0, 1 } },
-	{ { -1.0f, -1.0f, 0.0f }, { 0, 0, 1, 1 } },
+		{ {  -1.0f,  -1.0f, 0.0f }, { 1, 0, 0, 1 } },
+		{ {  -1.0f, 1.0f, 0.0f }, { 0, 1, 0, 1 } },
+		{ { 1.0f, 1.0f, 0.0f }, { 0, 0, 1, 1 } },
+	    { {  1.0f,  -1.0f, 0.0f }, { 1, 0, 0, 1 } },
+		{ {  1.0f, 1.0f, 0.0f }, { 0, 1, 0, 1 } },
+		{ { -1.0f, -1.0f, 0.0f }, { 0, 0, 1, 1 } },
 		};
 
+		Vertex Cube[8] = {
+	{{-0.5f,-0.5f,-0.5f},{0,0,0,1}}, // 0
+	{{-0.5f,+0.5f,-0.5f},{0,1,0,1}}, // 1
+	{{+0.5f,+0.5f,-0.5f},{1,1,0,1}}, // 2
+	{{+0.5f,-0.5f,-0.5f},{1,0,0,1}}, // 3
+	{{-0.5f,-0.5f,+0.5f},{0,0,1,1}}, // 4
+	{{-0.5f,+0.5f,+0.5f},{0,1,1,1}}, // 5
+	{{+0.5f,+0.5f,+0.5f},{1,1,1,1}}, // 6
+	{{+0.5f,-0.5f,+0.5f},{1,0,1,1}}, // 7
+		};
+		uint16 Indices[36] = {
+			0,1,2, 0,2,3,   // 后
+			4,6,5, 4,7,6,   // 前
+			4,5,1, 4,1,0,   // 左
+			3,2,6, 3,6,7,   // 右
+			1,5,6, 1,6,2,   // 上
+			4,0,3, 4,3,7,   // 下
+		};
+
+
 		// 我们要求创建一个uploadbuffer上的顶点buffer区
-		FRHIBufferDesc VBDesc(sizeof(Triangle), sizeof(Vertex), EBufferUsageFlags::VertexBuffer | EBufferUsageFlags::Dynamic);
-		VB = Device->CreateBuffer(VBDesc, Triangle); // 我们这里还只是创建了一个uploadbuffer上的东西
+		FRHIBufferDesc VBDesc(sizeof(Cube), sizeof(Vertex), EBufferUsageFlags::VertexBuffer | EBufferUsageFlags::Dynamic);
+		VB = Device->CreateBuffer(VBDesc, Cube); // 我们这里还只是创建了一个uploadbuffer上的东西
 
 		FRHIBufferDesc CBDesc(sizeof(FrameCB), 0, EBufferUsageFlags::ConstantBuffer | EBufferUsageFlags::Dynamic);
 		CB = Device->CreateBuffer(CBDesc, nullptr);
 
 
 		VBV.BufferLocation = VB->GetResource()->GetGPUVirtualAddress();
-		VBV.SizeInBytes = (uint32)sizeof(Triangle);
+		VBV.SizeInBytes = (uint32)sizeof(Cube);
 		VBV.StrideInBytes = (uint32)sizeof(Vertex);
+
+
+		FRHIBufferDesc IBDesc(sizeof(Indices), sizeof(uint16), EBufferUsageFlags::IndexBuffer | EBufferUsageFlags::Dynamic);
+		IB = Device->CreateBuffer(IBDesc, Indices);
+		IBV.BufferLocation = IB->GetResource()->GetGPUVirtualAddress();
+		IBV.SizeInBytes = (uint32)sizeof(Indices);
+		IBV.Format = DXGI_FORMAT_R16_UINT;//uint16 索引
+
+
 
 		// 4. 编译shader（blob只在建pso的时候用，局部即可）
 		ComPtr<ID3DBlob> VSBlob = CompileShader(g_ShaderSrc, "VSMain", "vs_5_0");
@@ -97,6 +130,10 @@ public:
 		Blend.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
 		D3D12_DEPTH_STENCIL_DESC DepthStencil = {}; // DepthEnable / StencilEnable 默认 FALSE
+		DepthStencil.DepthEnable = true;
+		DepthStencil.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;  // ← 通过的像素写入深度
+		DepthStencil.DepthFunc = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_LESS;//  ← 更近(z 更小)才通过
+		DepthStencil.StencilEnable = false;
 
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC PSODesc = {};
 		PSODesc.pRootSignature = RootSig->GetRootSignature();
@@ -110,7 +147,7 @@ public:
 		PSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		PSODesc.NumRenderTargets = 1;
 		PSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-		PSODesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+		PSODesc.DSVFormat = DXGI_FORMAT_D32_FLOAT; // ← 必须和深度缓冲格式一致
 		PSODesc.SampleDesc.Count = 1;//
 		PSO = std::make_unique<FD3D12PipelineState>(Device, PSODesc);
 
@@ -142,9 +179,11 @@ public:
 		CL->ResourceBarrier(1, &Barrier);
 
 		// 清屏
-		CL->OMSetRenderTargets(1, &RTV, false, nullptr);
+		D3D12_CPU_DESCRIPTOR_HANDLE DSV = DSVHeap->GetCPUHandle(0);
+		CL->OMSetRenderTargets(1, &RTV, false, &DSV);
 		const float ClearColor[4] = { 0.2f, 0.4f, 0.8f, 1.0f };
 		CL->ClearRenderTargetView(RTV, ClearColor, 0, nullptr);
+		CL->ClearDepthStencilView(DSV, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 		// 画图
 		CL->RSSetViewports(1, &VP);
@@ -152,20 +191,47 @@ public:
 		CL->SetGraphicsRootSignature(RootSig->GetRootSignature());
 		CL->SetPipelineState(PSO->GetPipelineState());
 		CL->IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		CL->IASetIndexBuffer(&IBV);
 		// 这里没传indexbuffer，传的时候输入装配器会按indexbuffer读，但是不传的话直接顺序0 1 2 3 4  5  6...读取，自动123 一个三角形，456一个三角形
 		CL->IASetVertexBuffers(0, 1, &VBV);
 
 		{
-			static float Angel = 0.0f;
-			Angel += 0.01f;
-			DirectX::XMMATRIX M = DirectX::XMMatrixRotationZ(Angel) * DirectX::XMMatrixScaling((float)Height / Width, 1.0f, 1.0f);
+			//static float Angel = 0.0f;
+			//Angel += 0.01f;
+			//DirectX::XMMATRIX M = DirectX::XMMatrixRotationZ(Angel) * DirectX::XMMatrixScaling((float)Height / Width, 1.0f, 1.0f);
+			//FrameCB Constants;
+			//DirectX::XMStoreFloat4x4(&Constants.WVP, DirectX::XMMatrixTranspose(M));
+			//memcpy(CB->GetMappedData(), &Constants, sizeof(FrameCB));
+			//CL->SetGraphicsRootConstantBufferView(0, CB->GetResource()->GetGPUVirtualAddress());
+		}
+
+		{
+			using namespace DirectX;
+			static float Angle = 0.0f;
+			Angle += 0.01f;
+			XMMATRIX World = XMMatrixRotationZ(Angle)* XMMatrixRotationX(Angle)* XMMatrixRotationY(Angle);   // 立方体自转 // 左手螺旋
+			XMMATRIX View = XMMatrixLookAtLH(
+				XMVectorSet(0,0,-3, 1), // 相机在 -Z，往 +Z（屏幕里）看
+				XMVectorSet(0,0,0,1),
+				XMVectorSet(0,1,0,1)
+			);
+
+			XMMATRIX Proj = XMMatrixPerspectiveFovLH(
+			XMConvertToRadians(60),//FOV	
+			(float) Width/Height,
+			0.1f, 
+			100.0f
+			);
+
+			XMMATRIX WVP = World * View * Proj;
 			FrameCB Constants;
-			DirectX::XMStoreFloat4x4(&Constants.WVP, DirectX::XMMatrixTranspose(M));
+			XMStoreFloat4x4(&Constants.WVP, XMMatrixTranspose(WVP));
 			memcpy(CB->GetMappedData(), &Constants, sizeof(FrameCB));
 			CL->SetGraphicsRootConstantBufferView(0, CB->GetResource()->GetGPUVirtualAddress());
 		}
 
-		CL->DrawInstanced(6, 1, 0, 0);
+		CL->DrawIndexedInstanced(36, 1, 0, 0, 0);
+		//CL->DrawInstanced(6, 1, 0, 0);
 
 		//barrier
 		Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -189,10 +255,15 @@ private:
 	TRefCountPtr<FD3D12Buffer> VB;
 	TRefCountPtr<FD3D12Buffer> CB;
 	D3D12_VERTEX_BUFFER_VIEW VBV{};
+	TRefCountPtr<FD3D12Buffer> IB;
+	D3D12_INDEX_BUFFER_VIEW    IBV{};
 	std::unique_ptr<FD3D12RootSignature> RootSig;
 	std::unique_ptr<FD3D12PipelineState> PSO;
 	std::unique_ptr<FD3D12CommandAllocator> CmdAlloc;
 	std::unique_ptr<FD3D12CommandList> CmdList;
+
+	std::unique_ptr<FD3D12DescriptorHeap> DSVHeap;
+	std::unique_ptr<FD3D12Resource> DepthBuffer;
 
 
 	D3D12_VIEWPORT VP{};

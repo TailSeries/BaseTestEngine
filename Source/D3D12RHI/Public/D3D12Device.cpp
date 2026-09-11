@@ -92,3 +92,37 @@ TRefCountPtr<FD3D12Buffer> FD3D12Device::CreateBuffer(const FRHIBufferDesc& Desc
     Buffer->SetResource(std::move(Res));
     return Buffer;
 }
+
+std::unique_ptr<FD3D12Resource> FD3D12Device::CreateDepthBuffer(uint32 Width, uint32 Height)
+{
+    ID3D12Device* D3DDevice = GetDevice();
+
+    //堆Default，深度缓冲位于VRAM，cpu不需要写
+    D3D12_HEAP_PROPERTIES HeapProps = {};
+    HeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+    HeapProps.CreationNodeMask = 1;
+    HeapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;//UMA（核显）和 NUMA（独显）才有区别。交给驱动决定
+
+
+    D3D12_RESOURCE_DESC Desc = {};
+    Desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    Desc.Width = Width;
+    Desc.Height = Height;
+    Desc.DepthOrArraySize = 1;
+    Desc.MipLevels = 1; // 深度缓冲没有mip，强行指定超过1会发生崩溃
+    Desc.Format = DXGI_FORMAT_D32_FLOAT;
+    Desc.SampleDesc.Count = 1; // 决定这个 Depth Buffer 是普通深度缓冲还是 MSAA 深度缓冲。
+    Desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;         // ← 纹理让驱动定布局（buffer 是 ROW_MAJOR）
+    Desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;// // ← 允许当深度目标
+
+    // 优化清除值：深度/RT 资源建议提供，且必须和 ClearDepthStencilView 用的值一致
+    D3D12_CLEAR_VALUE ClearValue = {};
+    ClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+    ClearValue.DepthStencil.Depth = 1.0f;
+    ClearValue.DepthStencil.Stencil = 0;
+
+    ComPtr<ID3D12Resource> D3DResource;
+    VERIFY_D3D12(D3DDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &Desc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &ClearValue, IID_PPV_ARGS(&D3DResource)));
+    return std::make_unique<FD3D12Resource>(this, D3DResource.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, Desc, D3D12_HEAP_TYPE_DEFAULT);
+}

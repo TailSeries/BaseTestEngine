@@ -39,7 +39,8 @@ public:
 
     // 创建 committed buffer（UE: FDynamicRHI::RHICreateBuffer；我们暂放 Device，后续挪到 FDynamicRHI）
     TRefCountPtr<FD3D12Buffer> CreateBuffer(const FRHIBufferDesc& Desc, const void* InitialData = nullptr);
-
+    //深度缓冲是一张2D 纹理， 因此我们不返回buffer，而是返回一个resource
+    std::unique_ptr<FD3D12Resource> CreateDepthBuffer(uint32 Width, uint32 Height);
 private:
     FD3D12Adapter* Adapter = nullptr;  // UE: FD3D12AdapterChild::ParentAdapter
     uint32         GPUIndex = 0;         // UE: FD3D12SingleNodeGPUObject 的 GPU 掩码简化 对应的就是NodeMask
