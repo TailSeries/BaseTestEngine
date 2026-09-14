@@ -50,3 +50,33 @@ private:
     FRHIBufferDesc Desc;
 };
 
+// UE: struct FRHITextureDesc / FRHITextureCreateDesc（RHIResources.h）
+// 精简：只留 2D 单 mip 单层需要的字段
+struct FRHITextureDesc
+{
+    uint32 Width = 1;
+    uint32 Height = 1;
+    EPixelFormat Format = PF_Unknown;
+    FRHITextureDesc() = default;
+    FRHITextureDesc(uint32 InW, uint32 InH, EPixelFormat InFmt)
+        : Width(InW), Height(InH), Format(InFmt) {}
+};
+
+// UE: class FRHITexture : FRHIViewableResource : FRHIResource
+// 精简：直接继承 FRHIResource（跳过 FRHIViewableResource 的 view 跟踪）
+class RHIMODULE FRHITexture:public FRHIResource
+{
+public:
+    explicit FRHITexture(const FRHITextureDesc& InDesc)
+	    :FRHIResource(RRT_Texture),Desc(InDesc)
+    {
+	    
+    }
+
+    const FRHITextureDesc& GetDesc() const { return Desc; }
+private:
+    FRHITextureDesc Desc;
+};
+
+
+

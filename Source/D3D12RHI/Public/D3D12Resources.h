@@ -66,3 +66,26 @@ private:
 };
 
 
+// UE: class FD3D12Texture : FRHITexture, FD3D12BaseShaderResource, FD3D12LinkedAdapterObject<>
+// 精简：直接持一个 committed FD3D12Resource（一纹理一资源），SRV slot 先留个字段
+class D3D12RHIMODULE FD3D12Texture:public FRHITexture
+{
+public:
+	FD3D12Texture(FD3D12Device* InParent, const FRHITextureDesc& InDesc)
+		:FRHITexture(InDesc), Parent(InParent)
+	{};
+	~FD3D12Texture();
+
+	FD3D12Resource* GetResource() const { return ResourcePtr.get(); }
+	FD3D12Device* GetParentDevice() const { return Parent; }
+	void SetResource(std::unique_ptr<FD3D12Resource> In) { ResourcePtr = std::move(In); }
+	void SetSRVSlot(uint32 In){SRVSlot = In;}
+	uint32 GetSRVSlot() { return SRVSlot; }
+
+private:
+	FD3D12Device* Parent = nullptr;
+	std::unique_ptr<FD3D12Resource> ResourcePtr;
+	uint32 SRVSlot = ~0u;
+};
+
+

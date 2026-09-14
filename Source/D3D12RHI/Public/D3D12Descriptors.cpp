@@ -56,3 +56,4 @@ uint32 FD3D12DescriptorHeap::Allocate()
  * - GetGPUDescriptorHandleForHeapStart 只对 shader-visible 合法:对非 shader-visible 堆调用是未定义行为,所以 ctor 里用 bShaderVisible 守住。
  * - 线性 Allocate:UE 有 free-list、子分配、回收;我们先"下一个空槽"够用
  **/
+

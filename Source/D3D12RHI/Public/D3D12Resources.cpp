@@ -28,3 +28,7 @@ void* FD3D12Buffer::GetMappedData()
 
 	return MappedData;
 }
+
+
+FD3D12Texture::~FD3D12Texture() = default;
+

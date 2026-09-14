@@ -1,5 +1,8 @@
 #include "D3D12Device.h"
+
+#include "BaseDefines.h"
 #include "D3D12Adapter.h"
+#include "D3D12CommandList.h"
 FD3D12Device::FD3D12Device(FD3D12Adapter* InAdapter, uint32 InGPUIndex)
     : Adapter(InAdapter)
     , GPUIndex(InGPUIndex)
@@ -125,4 +128,80 @@ std::unique_ptr<FD3D12Resource> FD3D12Device::CreateDepthBuffer(uint32 Width, ui
     ComPtr<ID3D12Resource> D3DResource;
     VERIFY_D3D12(D3DDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &Desc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &ClearValue, IID_PPV_ARGS(&D3DResource)));
     return std::make_unique<FD3D12Resource>(this, D3DResource.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, Desc, D3D12_HEAP_TYPE_DEFAULT);
+}
+
+TRefCountPtr<FD3D12Texture> FD3D12Device::CreateTexture(const FRHITextureDesc& InDesc, const void* InitialData)
+{
+    ID3D12Device* D3DDevice = GetDevice();
+    D3D12_HEAP_PROPERTIES HeapProps = {};
+    HeapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+    HeapProps.CreationNodeMask = 1;//在哪个 GPU 上创建资源,单卡直接1
+    HeapProps.VisibleNodeMask = 1;//那些GPU可以看见这个资源，单卡直接1
+
+    D3D12_RESOURCE_DESC Desc = {};
+    Desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    Desc.Width = InDesc.Width;
+    Desc.Height = InDesc.Height;
+    Desc.DepthOrArraySize = 1;
+    Desc.MipLevels = 1;
+    Desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    Desc.SampleDesc.Count = 1;
+    Desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;// 纹理让驱动来决定布局
+    Desc.Flags = D3D12_RESOURCE_FLAG_NONE;//// 只采样，不当 RT/DS
+
+    // 1.先建出Default堆上的资源
+    ComPtr<ID3D12Resource> D3DResource;
+    // 初始状态 COPY_DEST：等着被 staging copy 进来（Step2 上传后转 PIXEL_SHADER_RESOURCE）
+    VERIFY_D3D12(D3DDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &Desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&D3DResource)));
+    auto Res = std::make_unique<FD3D12Resource>(this, D3DResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, Desc, D3D12_HEAP_TYPE_DEFAULT);
+	
+    TRefCountPtr<FD3D12Texture> Texture = std::make_unique<FD3D12Texture>(this, InDesc);
+    Texture->SetResource(std::move(Res));
+
+    // 2. 填充InitialData，注意：RowPitch 已 256 对齐，因此拷贝字节必须一行行拷贝,而不能简单把InitialData塞里面
+    if (InitialData)
+    {
+        // 1. 问驱动 subresource0 的 footprint（RowPitch 已 256 对齐）: 这个结构是在 CPU 侧的线性缓冲区(Buffer)和 GPU 侧的纹理(Texture)之间做数据拷贝时,描述内存布局的关键结构
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT Footprint = {};
+        uint32 NumRows = 0;
+        uint64 RowSizeInBytes = 0;
+        uint64 TotalBytes = 0;
+        /*NumRows —— 真实行数(无对齐概念)
+         *RowSizeInBytes —— 每一行的真实大小(不含 padding)
+         *Footprint.Footprint.RowPitch —— 对齐后大小
+         *TotalBytes —— 对齐后的总大小 ≠ RowPitch × NumRows 最后一行通常不补 padding,所以一般是: TotalBytes = RowPitch × (NumRows - 1) + RowSizeInBytes
+         */
+        D3DDevice->GetCopyableFootprints(&Desc, 0, 1, 0, &Footprint, &NumRows, &RowSizeInBytes, &TotalBytes);
+
+        //2 upload staging buffers,这一块必须按footprint对齐padding
+        D3D12_HEAP_PROPERTIES UpProps;
+        UpProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+        UpProps.CreationNodeMask = 1;
+        UpProps.VisibleNodeMask = 1;
+
+        D3D12_RESOURCE_DESC BufDesc = {};
+        BufDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        BufDesc.Width = TotalBytes;
+        BufDesc.Height = 1;
+        BufDesc.DepthOrArraySize = 1;
+        BufDesc.MipLevels = 1;
+        BufDesc.Format = DXGI_FORMAT_UNKNOWN;
+        BufDesc.SampleDesc.Count = 1;
+        BufDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        ComPtr<ID3D12Resource> Staging;
+        VERIFY_D3D12(D3DDevice->CreateCommittedResource(&UpProps, D3D12_HEAP_FLAG_NONE, &BufDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&Staging)));
+
+        //3. 逐行copy：dst 每行跳 RowPitch(对齐)，src 每行 SrcRowPitch(紧密)，最后一行只有 RowSizeInBytes
+        uint8* Mapped = nullptr;
+        D3D12_RANGE Rd = {0, 0};
+        VERIFY_D3D12(Staging->Map(0, &Rd, reinterpret_cast<void**>(&Mapped)));
+
+
+
+
+    }
+
+
+
+    return Texture;
 }

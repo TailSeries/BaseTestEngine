@@ -25,4 +25,13 @@ enum class EBufferUsageFlags : uint32
     IndexBuffer = 1 << 3,
     ConstantBuffer = 1 << 4,
 };
+// UE: enum EPixelFormat（RHIDefinitions.h，PF_ 前缀，几十种）
+// 精简：暂时只保留一些现在用得到的
+enum EPixelFormat :uint8
+{
+    PF_Unknown = 0,
+    PF_R8G8B8A8_UNORM,   // 普通彩色贴图
+    PF_D32_FLOAT,        // 深度（把 CreateDepthBuffer 的硬编码也能收编到这）
+};
+
 ENUM_CLASS_FLAGS(EBufferUsageFlags);
