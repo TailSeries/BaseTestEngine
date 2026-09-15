@@ -236,7 +236,7 @@ class FD3D12Queue {
     - PSO 开深度（DepthEnable + DepthFunc=LESS + DSVFormat）；每帧 OMSetRenderTargets 带 DSV + ClearDepthStencilView(仅 DEPTH，D32 无 stencil)
     - 索引缓冲（`IndexBuffer` flag + `D3D12_INDEX_BUFFER_VIEW`/R16_UINT + `DrawIndexedInstanced`）
     - 透视相机：`WVP = World*View*Proj`（DirectXMath LH，行向量从左到右=空间转换顺序），转置上传
-  - [ ] M2 剩余：Texture + SRV + Sampler + descriptor table（给立方体贴图；第一次 CreateShaderResourceView，DEFAULT堆纹理需 staging+copy 上传）
+  - [x] M2 剩余：Texture + SRV + Sampler + descriptor table（给立方体贴图；第一次 CreateShaderResourceView，DEFAULT堆纹理需 staging+copy 上传）→ **棋盘格贴图立方体已跑通**
   - [ ] M4：状态追踪 + 自动 Barrier + 描述符管理 + 多帧同步（N分配器+每帧fence，去掉每帧Flush）+ Fence保护延迟释放
   - [x] M5（基础）：常量缓冲让三角形转起来
     - `CreateBuffer` 加 ConstantBuffer 分支（256 对齐）；`FD3D12Buffer::GetMappedData()` 持久映射

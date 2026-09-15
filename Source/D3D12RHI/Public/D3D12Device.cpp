@@ -3,6 +3,8 @@
 #include "BaseDefines.h"
 #include "D3D12Adapter.h"
 #include "D3D12CommandList.h"
+#include "D3D12Descriptors.h"
+
 FD3D12Device::FD3D12Device(FD3D12Adapter* InAdapter, uint32 InGPUIndex)
     : Adapter(InAdapter)
     , GPUIndex(InGPUIndex)
@@ -151,12 +153,8 @@ TRefCountPtr<FD3D12Texture> FD3D12Device::CreateTexture(const FRHITextureDesc& I
 
     // 1.先建出Default堆上的资源
     ComPtr<ID3D12Resource> D3DResource;
-    // 初始状态 COPY_DEST：等着被 staging copy 进来（Step2 上传后转 PIXEL_SHADER_RESOURCE）
+    // 初始状态 COPY_DEST：等着被 staging copy 进来（上传后状态转 PIXEL_SHADER_RESOURCE）
     VERIFY_D3D12(D3DDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &Desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&D3DResource)));
-    auto Res = std::make_unique<FD3D12Resource>(this, D3DResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, Desc, D3D12_HEAP_TYPE_DEFAULT);
-	
-    TRefCountPtr<FD3D12Texture> Texture = std::make_unique<FD3D12Texture>(this, InDesc);
-    Texture->SetResource(std::move(Res));
 
     // 2. 填充InitialData，注意：RowPitch 已 256 对齐，因此拷贝字节必须一行行拷贝,而不能简单把InitialData塞里面
     if (InitialData)
@@ -169,12 +167,13 @@ TRefCountPtr<FD3D12Texture> FD3D12Device::CreateTexture(const FRHITextureDesc& I
         /*NumRows —— 真实行数(无对齐概念)
          *RowSizeInBytes —— 每一行的真实大小(不含 padding)
          *Footprint.Footprint.RowPitch —— 对齐后大小
+         *Footprint.Offset 这段纹理数据在 buffer 中的起始字节偏移(多个子资源(mip/切片)打包在同一个 buffer 里时,靠各自的 Offset 区分位置)。
          *TotalBytes —— 对齐后的总大小 ≠ RowPitch × NumRows 最后一行通常不补 padding,所以一般是: TotalBytes = RowPitch × (NumRows - 1) + RowSizeInBytes
          */
         D3DDevice->GetCopyableFootprints(&Desc, 0, 1, 0, &Footprint, &NumRows, &RowSizeInBytes, &TotalBytes);
 
         //2 upload staging buffers,这一块必须按footprint对齐padding
-        D3D12_HEAP_PROPERTIES UpProps;
+        D3D12_HEAP_PROPERTIES UpProps = {};
         UpProps.Type = D3D12_HEAP_TYPE_UPLOAD;
         UpProps.CreationNodeMask = 1;
         UpProps.VisibleNodeMask = 1;
@@ -195,13 +194,75 @@ TRefCountPtr<FD3D12Texture> FD3D12Device::CreateTexture(const FRHITextureDesc& I
         uint8* Mapped = nullptr;
         D3D12_RANGE Rd = {0, 0};
         VERIFY_D3D12(Staging->Map(0, &Rd, reinterpret_cast<void**>(&Mapped)));
+        const uint8* Src = static_cast<const uint8*>(InitialData);
+        const uint32 SrcRowPitch = InDesc.Width * 4;// 默认数据格式 R8G8B8A8 = 4 字节/像素
+        for (uint32 y = 0; y < NumRows; y++)
+        {
+            memcpy(Mapped + Footprint.Offset + y * Footprint.Footprint.RowPitch, Src + y * SrcRowPitch, RowSizeInBytes);
+        }
+        Staging->Unmap(0, nullptr);
+
+        //4. 临时allocator + 录制从uploaderbuffer 到 defaultbuffer的copy指令
+        FD3D12CommandAllocator Alloc(this, ED3D12QueueType::Direct);
+        FD3D12CommandList List(this, &Alloc, ED3D12QueueType::Direct);
+        List.Reset(&Alloc);
+        ID3D12GraphicsCommandList* CL = List.GetCommandList();
+        // 目标
+    	D3D12_TEXTURE_COPY_LOCATION Dst{};
+        Dst.pResource = D3DResource.Get();
+        Dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;// 注意，目标defaultbuffer 这一端是纹理子资源而不是线性buffer，所以不能用D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT
+        Dst.SubresourceIndex = 0;
+
+        // 源
+        D3D12_TEXTURE_COPY_LOCATION SrcLoc{};
+        SrcLoc.pResource = Staging.Get();
+        SrcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+        SrcLoc.PlacedFootprint = Footprint;
+        // 这个函数实际上可以用在：上传:buffer → texture(最常见)；
+        CL->CopyTextureRegion(&Dst,// 目的地
+        	0,0,0,  // 写到目的地的哪个坐标:数据放到目的资源的哪个位置(左上角), 整张覆盖时通常填 0, 0, 0。比如往图集(atlas)里某个格子写,就用它定位偏移。单位:纹素(纹理端);buffer 端一般是 0
+        	&SrcLoc, 
+        	nullptr); // 从源里框出哪一块(可选)从源里框出的子区域(可选,_In_opt_),传 nullptr = 拷整个源子资源。
 
 
+        //5. barrier copy_dest 到 pixel_shader_resource
+        D3D12_RESOURCE_BARRIER B = {};
+        B.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        B.Transition.pResource = D3DResource.Get();
+        B.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        B.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+        B.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        CL->ResourceBarrier(1, &B);
+        List.Close();
 
-
+        // 6. 提交 + 阻塞 等GPU拷贝完（一次性 init，阻塞 OK；否则 Staging 出作用域会提前销毁）
+        FD3D12Queue& Q = GetQueue(ED3D12QueueType::Direct);
+        ID3D12CommandList* Lists[] = {CL};
+        Q.GetD3DQueue()->ExecuteCommandLists(1, Lists);
+        Q.WaitCPU(Q.Signal(Q.Fence));
     }
 
 
+    // / wrapper 用最终状态（有上传=PIXEL_SHADER_RESOURCE，否则仍 COPY_DEST）
+    const D3D12_RESOURCE_STATES FinalState = InitialData ? D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_COPY_DEST;
+    auto Res = std::make_unique<FD3D12Resource>(this, D3DResource.Get(), FinalState, Desc, D3D12_HEAP_TYPE_DEFAULT);
 
+    TRefCountPtr<FD3D12Texture> Texture = std::make_unique<FD3D12Texture>(this, InDesc);
+    Texture->SetResource(std::move(Res));
     return Texture;
+}
+
+void FD3D12Device::CreateShaderResourceView(FD3D12Texture* Texture, FD3D12DescriptorHeap* Heap)
+{
+    D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+    SRVDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;// // 之后用 EPixelFormat 映射
+    SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    //通道 swizzle(容易忽略的一项) 控制 shader 采样时 RGBA 四个通道各自映射到源的哪个通道,或强制为 0/1。绝大多数情况直接填这个宏D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING 保持原样. 不填的话会导致采样结果全0
+    SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    SRVDesc.Texture2D.MipLevels = 1;  // 可见多少级 mip(-1 = 全部)
+    SRVDesc.Texture2D.MostDetailedMip = 0;// // 从第几级 mip 开始可见
+
+    const uint32 Slot = Heap->Allocate();
+    GetDevice()->CreateShaderResourceView(Texture->GetResource()->GetResource(),  &SRVDesc, Heap->GetCPUHandle(Slot));
+    Texture->SetSRVSlot(Slot);
 }

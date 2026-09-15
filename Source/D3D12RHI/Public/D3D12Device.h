@@ -17,6 +17,7 @@ class FD3D12Device final : public FD3D12SingleNodeGPUObject, public FNoncopyable
 三个基类的作用:FD3D12AdapterChild 提供 ParentAdapter + GetParentAdapter();FD3D12SingleNodeGPUObject 装 GPU 掩码(单节点);FNoncopyable 禁拷贝。我们简化:去掉三个基类,把它们的精华(Adapter 回指 + GPUIndex + 禁拷贝)直接内联进类。骨架/命名不变。
  */
 
+class FD3D12DescriptorHeap;
 class FD3D12Adapter;
 class FD3D12Buffer;
 struct FRHIBufferDesc;
@@ -43,6 +44,7 @@ public:
     std::unique_ptr<FD3D12Resource> CreateDepthBuffer(uint32 Width, uint32 Height);
     // 声明（返回 TRefCountPtr，和 CreateBuffer 一致）
     TRefCountPtr<FD3D12Texture> CreateTexture(const FRHITextureDesc& Desc, const void* InitialData = nullptr);
+    void CreateShaderResourceView(FD3D12Texture* Texture, FD3D12DescriptorHeap* Heap);
 
 private:
     FD3D12Adapter* Adapter = nullptr;  // UE: FD3D12AdapterChild::ParentAdapter

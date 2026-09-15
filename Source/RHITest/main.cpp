@@ -8,20 +8,22 @@
 #include "D3D12PipelineState.h"
 #include <DirectXMath.h>
 struct FrameCB { DirectX::XMFLOAT4X4 WVP; };
-struct Vertex { float Pos[3]; float Color[4]; };
+struct Vertex { float Pos[3]; float UV[2]; };
 static const char* g_ShaderSrc = R"(
 cbuffer CB:register(b0)
 {
 	float4x4 WVP;
 };
-struct VSInput { float3 Pos : POSITION; float4 Color : COLOR; };
-struct PSInput { float4 Pos : SV_POSITION; float4 Color : COLOR; };
+Texture2D gTex:register(t0);
+SamplerState gSamp:register(s0);
+struct VSInput { float3 Pos : POSITION; float2 UV:TEXCOORD; };
+struct PSInput { float4 Pos : SV_POSITION; float2 UV : TEXCOORD; };
 PSInput VSMain(VSInput v) { 
 PSInput o; 
 o.Pos =  mul(float4(v.Pos, 1.0), WVP); //float4(v.Pos, 1.0);
-o.Color = v.Color; 
+o.UV = v.UV; 
 return o; }
-float4 PSMain(PSInput i) : SV_TARGET { return i.Color; }
+float4 PSMain(PSInput i) : SV_TARGET { return gTex.Sample(gSamp, i.UV); }
 )";
 
 class RHITestPeriod1
@@ -47,32 +49,18 @@ public:
 		Device->GetDevice()->CreateDepthStencilView(DepthBuffer->GetResource(), nullptr, DSVHeap->GetCPUHandle(0));
 
 		//3 顶点缓冲
-		Vertex Triangle[6] = {
-		{ {  -1.0f,  -1.0f, 0.0f }, { 1, 0, 0, 1 } },
-		{ {  -1.0f, 1.0f, 0.0f }, { 0, 1, 0, 1 } },
-		{ { 1.0f, 1.0f, 0.0f }, { 0, 0, 1, 1 } },
-	    { {  1.0f,  -1.0f, 0.0f }, { 1, 0, 0, 1 } },
-		{ {  1.0f, 1.0f, 0.0f }, { 0, 1, 0, 1 } },
-		{ { -1.0f, -1.0f, 0.0f }, { 0, 0, 1, 1 } },
-		};
-
-		Vertex Cube[8] = {
-	{{-0.5f,-0.5f,-0.5f},{0,0,0,1}}, // 0
-	{{-0.5f,+0.5f,-0.5f},{0,1,0,1}}, // 1
-	{{+0.5f,+0.5f,-0.5f},{1,1,0,1}}, // 2
-	{{+0.5f,-0.5f,-0.5f},{1,0,0,1}}, // 3
-	{{-0.5f,-0.5f,+0.5f},{0,0,1,1}}, // 4
-	{{-0.5f,+0.5f,+0.5f},{0,1,1,1}}, // 5
-	{{+0.5f,+0.5f,+0.5f},{1,1,1,1}}, // 6
-	{{+0.5f,-0.5f,+0.5f},{1,0,1,1}}, // 7
+		Vertex Cube[24] = {
+			{{-0.5f,-0.5f, 0.5f},{0,1}},{{-0.5f, 0.5f, 0.5f},{0,0}},{{ 0.5f, 0.5f, 0.5f},{1,0}},{{ 0.5f,-0.5f, 0.5f},{1,1}}, // +Z
+			{{ 0.5f,-0.5f,-0.5f},{0,1}},{{ 0.5f, 0.5f,-0.5f},{0,0}},{{-0.5f, 0.5f,-0.5f},{1,0}},{{-0.5f,-0.5f,-0.5f},{1,1}}, // -Z
+			{{ 0.5f,-0.5f, 0.5f},{0,1}},{{ 0.5f, 0.5f, 0.5f},{0,0}},{{ 0.5f, 0.5f,-0.5f},{1,0}},{{ 0.5f,-0.5f,-0.5f},{1,1}}, // +X
+			{{-0.5f,-0.5f,-0.5f},{0,1}},{{-0.5f, 0.5f,-0.5f},{0,0}},{{-0.5f, 0.5f, 0.5f},{1,0}},{{-0.5f,-0.5f, 0.5f},{1,1}}, // -X
+			{{-0.5f, 0.5f, 0.5f},{0,1}},{{-0.5f, 0.5f,-0.5f},{0,0}},{{ 0.5f, 0.5f,-0.5f},{1,0}},{{ 0.5f, 0.5f, 0.5f},{1,1}}, // +Y
+			{{-0.5f,-0.5f,-0.5f},{0,1}},{{-0.5f,-0.5f, 0.5f},{0,0}},{{ 0.5f,-0.5f, 0.5f},{1,0}},{{ 0.5f,-0.5f,-0.5f},{1,1}}, // -Y
 		};
 		uint16 Indices[36] = {
-			0,1,2, 0,2,3,   // 后
-			4,6,5, 4,7,6,   // 前
-			4,5,1, 4,1,0,   // 左
-			3,2,6, 3,6,7,   // 右
-			1,5,6, 1,6,2,   // 上
-			4,0,3, 4,3,7,   // 下
+			0,1,2, 0,2,3,      4,5,6, 4,6,7,
+			8,9,10, 8,10,11,   12,13,14, 12,14,15,
+			16,17,18, 16,18,19, 20,21,22, 20,22,23,
 		};
 
 
@@ -101,25 +89,46 @@ public:
 		ComPtr<ID3DBlob> VSBlob = CompileShader(g_ShaderSrc, "VSMain", "vs_5_0");
 		ComPtr<ID3DBlob> PSBlob = CompileShader(g_ShaderSrc, "PSMain", "ps_5_0");
 
-		//5. root signature(空 + 允许输入布局就行)
+		//5. root signature(2 参 + 1 static sampler + 允许输入布局就行)
+		// SRV 通过描述表的形式给
+		D3D12_DESCRIPTOR_RANGE SRVRange = {};
+		SRVRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		SRVRange.NumDescriptors = 1;
+		SRVRange.BaseShaderRegister = 0; //t0
+		SRVRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;//，这段在整个 descriptor table 里的偏移(以 descriptor 个数计)。就是-1默认表示"紧跟在上一段后面自动排",不用手动算偏移。这是最省心的写法:一个 table 里如果有多段(比如先一段 CBV、再一段 SRV),每段都写 APPEND,D3D12 就自动按顺序首尾相接。
+		
+		// 根参数两个，一个用来传递WVP矩阵，一个用来指明SRV
+		D3D12_ROOT_PARAMETER RootParams[2] = {};
+		RootParams[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;// b0(VS)
+		RootParams[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+		RootParams[0].Descriptor.ShaderRegister = 0;
+		RootParams[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		RootParams[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		RootParams[1].DescriptorTable.NumDescriptorRanges = 1;
+		RootParams[1].DescriptorTable.pDescriptorRanges = &SRVRange;
+
+		// 静态采样器
+		D3D12_STATIC_SAMPLER_DESC Samp = {};
+		Samp.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;// 纹理缩小 放大 两层mip之间都直接使用point采样
+		Samp.AddressU = Samp.AddressV = Samp.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		Samp.ShaderRegister = 0;
+		Samp.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		Samp.MaxLOD = D3D12_FLOAT32_MAX;
+
 		D3D12_ROOT_SIGNATURE_DESC RSDesc = {};
 		RSDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
-		D3D12_ROOT_PARAMETER RootParam = {};
-		RootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		RootParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-		RootParam.Descriptor.ShaderRegister = 0; // b0
-		RootParam.Descriptor.RegisterSpace = 0;// space0
-
-		RSDesc.NumParameters = 1;
-		RSDesc.pParameters = &RootParam;
+		RSDesc.NumParameters = 2;
+		RSDesc.pParameters = RootParams;
+		RSDesc.pStaticSamplers = &Samp;
+		RSDesc.NumStaticSamplers = 1;
 		RootSig = std::make_unique<FD3D12RootSignature>(Device, RSDesc);
 
 
 		//6. PSO
 		D3D12_INPUT_ELEMENT_DESC InputElems[] = {
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
 		};
 		D3D12_RASTERIZER_DESC Raster = {};
 		Raster.FillMode = D3D12_FILL_MODE_SOLID;
@@ -159,6 +168,20 @@ public:
 		VP = { 0.0f, 0.0f, (float)Width, (float)Height, 0.0f, 1.0f };
 		Scissor = { 0, 0, (LONG)Width, (LONG)Height };
 
+		//9. 测试一个棋盘纹理
+		SRVHeap = std::make_unique<FD3D12DescriptorHeap>(Device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 8, true);
+		const uint32 TW = 256, TH = 256;
+		std::vector<uint32> Pixels(TW* TH);
+		for (uint32 y = 0; y < TH; ++y)
+			for (uint32 x = 0; x < TW; ++x)
+			{
+				bool c = ((x >> 5) ^ (y >> 5)) & 1;              // 32px 棋盘
+				Pixels[y * TW + x] = c ? 0xFFFFFFFFu : 0xFF404040u; // 小端 AABBGGRR：白 / 深灰
+			}
+
+		FRHITextureDesc TexDesc(TW, TH, PF_R8G8B8A8_UNORM);
+		Tex = Device->CreateTexture(TexDesc, Pixels.data());
+		Device->CreateShaderResourceView(Tex.get(), SRVHeap.get());
 	}
 	void DrawTriangle()
 	{
@@ -189,6 +212,14 @@ public:
 		CL->RSSetViewports(1, &VP);
 		CL->RSSetScissorRects(1, &Scissor);
 		CL->SetGraphicsRootSignature(RootSig->GetRootSignature());
+
+		//
+		ID3D12DescriptorHeap* Heaps[]={SRVHeap->GetHeap()};
+		CL->SetDescriptorHeaps(1, Heaps);//SetDescriptorHeaps 每帧 CmdList->Reset 之后都得重设一次(命令列表 Reset 会清掉堆绑定),漏了 = SRV 表绑不上、采样报错。
+		//root 参数索引要对上:SetGraphicsRootConstantBufferView(0,...) 配 RootParams[0],SetGraphicsRootDescriptorTable(1,...) 配 RootParams[1]。填错索引 = 采样到错误资源。
+		CL->SetGraphicsRootDescriptorTable(1, SRVHeap->GetGPUHandle(Tex->GetSRVSlot()));
+
+
 		CL->SetPipelineState(PSO->GetPipelineState());
 		CL->IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		CL->IASetIndexBuffer(&IBV);
@@ -264,10 +295,14 @@ private:
 
 	std::unique_ptr<FD3D12DescriptorHeap> DSVHeap;
 	std::unique_ptr<FD3D12Resource> DepthBuffer;
+	std::unique_ptr<FD3D12DescriptorHeap> SRVHeap;
+	TRefCountPtr<FD3D12Texture> Tex;
 
 
 	D3D12_VIEWPORT VP{};
 	D3D12_RECT Scissor{};
+
+
 };
 
 static bool g_Running = true;
