@@ -2,9 +2,11 @@
 
 > 依据 `Source/RHI/Public`、`Source/D3D12RHI/Public` 及 `Source/RHITest/main.cpp` 的当前实现整理。
 >
-> 图例：`<|--` 为继承；`*--` 为独占所有权（析构时一并释放）；`o--` 为聚合；`-->` 为非拥有的使用/回指；`..>` 为创建或参数依赖。
+> 图例：`<|--` 为继承；`*--` 为独占所有权（析构时一并释放）；`o--` 为聚合/共享持有；`-->` 为非拥有的使用/回指；`..>` 为创建或参数依赖。
 
-## 资源抽象与 D3D12 实现
+## 一、资源抽象与 D3D12 实现
+
+RHI 层只暴露基类型（无任何 D3D12 类型）；D3D12 层继承并持有原生对象。`FRHIGraphicsPipelineState` 是为让命令列表能以 RHI 类型接收 PSO 而加的薄基类，创建仍在 D3D12 层具体做。
 
 ```mermaid
 classDiagram
@@ -27,6 +29,9 @@ namespace RHI {
         - FRHITextureDesc Desc
         + GetDesc() FRHITextureDesc
     }
+    class FRHIGraphicsPipelineState {
+        <<空基类，创建在 D3D12 层>>
+    }
     class FRHIBufferDesc {
         + uint32 Size
         + uint32 Stride
@@ -41,17 +46,12 @@ namespace RHI {
         <<enumeration>>
         RRT_Buffer
         RRT_Texture
-        RRT_VertexShader
-        RRT_PixelShader
         RRT_GraphicsPipelineState
     }
     class EBufferUsageFlags {
         <<enumeration>>
-        Static
-        Dynamic
-        VertexBuffer
-        IndexBuffer
-        ConstantBuffer
+        Static / Dynamic
+        VertexBuffer / IndexBuffer / ConstantBuffer
     }
     class EPixelFormat {
         <<enumeration>>
@@ -60,11 +60,10 @@ namespace RHI {
     }
 }
 
-namespace D3D12RHI {
+namespace D3D12RHI_Res {
     class FD3D12Buffer {
         - FD3D12Device* Parent
         - unique_ptr~FD3D12Resource~ ResourcePtr
-        - void* MappedData
         + GetResource() FD3D12Resource*
         + GetMappedData() void*
     }
@@ -73,17 +72,22 @@ namespace D3D12RHI {
         - unique_ptr~FD3D12Resource~ ResourcePtr
         - uint32 SRVSlot
         + GetResource() FD3D12Resource*
-        + SetSRVSlot(uint32)
+        + GetSRVSlot() uint32
+    }
+    class FD3D12PipelineState {
+        - ComPtr~ID3D12PipelineState~ PSO
+        - FD3D12RootSignature* RootSig
+        + GetPipelineState() ID3D12PipelineState*
+        + GetRootSignature() FD3D12RootSignature*
     }
     class FD3D12Resource {
         - FD3D12Device* Parent
         - ComPtr~ID3D12Resource~ Resource
         - D3D12_RESOURCE_STATES State
-        - D3D12_RESOURCE_DESC Desc
         - D3D12_HEAP_TYPE HeapType
         - D3D12_GPU_VIRTUAL_ADDRESS GPUVirtualAddress
         + GetResource() ID3D12Resource*
-        + GetGPUVirtualAddress() D3D12_GPU_VIRTUAL_ADDRESS
+        + GetGPUVirtualAddress() ...
     }
     class ID3D12Resource {
         <<D3D12 COM interface>>
@@ -92,62 +96,131 @@ namespace D3D12RHI {
 
 FRHIResource <|-- FRHIBuffer
 FRHIResource <|-- FRHITexture
-FRHIBuffer *-- FRHIBufferDesc : stores by value
-FRHITexture *-- FRHITextureDesc : stores by value
+FRHIResource <|-- FRHIGraphicsPipelineState
+FRHIBuffer *-- FRHIBufferDesc : by value
+FRHITexture *-- FRHITextureDesc : by value
 FRHIResource --> ERHIResourceType : type
 FRHIBufferDesc --> EBufferUsageFlags : usage
 FRHITextureDesc --> EPixelFormat : format
 
 FRHIBuffer <|-- FD3D12Buffer
 FRHITexture <|-- FD3D12Texture
+FRHIGraphicsPipelineState <|-- FD3D12PipelineState
 FD3D12Buffer *-- "1" FD3D12Resource : ResourcePtr
 FD3D12Texture *-- "1" FD3D12Resource : ResourcePtr
+FD3D12PipelineState --> FD3D12RootSignature : non-owning（UE：PSO 打包 rootsig）
 FD3D12Resource *-- "1" ID3D12Resource : ComPtr
 ```
 
-## D3D12 设备、提交与呈现
+## 二、RHI 抽象层：DynamicRHI + CommandList（接口/实现分离）
+
+上层只认 `FDynamicRHI`（资源创建）与 `FRHICommandList`（命令录制），不知道背后是 D3D12。`FD3D12DynamicRHI` 持有 `FD3D12Adapter`，是三层设备的拥有者；`FD3D12CommandContext` 持有帧资源（N 分配器 + CmdList + CB ring + 每帧 fence）、延迟删除队列，并借用 Viewport/DSV/SRV 堆。两层为将来多线程（命令缓存 + RHI 线程重放）留缝。
 
 ```mermaid
 classDiagram
 direction TB
 
-namespace D3D12RHI {
-    class FD3D12AdapterDesc {
-        + DXGI_ADAPTER_DESC Desc
-        + int32 AdapterIndex
-        + D3D_FEATURE_LEVEL MaxSupportedFeature
-        + IsValid() bool
+namespace RHI_Abstract {
+    class FDynamicRHI {
+        <<abstract>>
+        + Init()
+        + Shutdown()
+        + GetName() char*
+        + RHICreateBuffer(Desc, Data) TRefCountPtr~FRHIBuffer~
+        + RHICreateTexture(Desc, Data) TRefCountPtr~FRHITexture~
     }
+    class GDynamicRHI {
+        <<global FDynamicRHI ptr>>
+        + RHICreateBuffer/Texture 自由函数转发到它
+    }
+    class IRHICommandContext {
+        <<abstract>>
+        + BeginFrame()
+        + BeginRenderPass(ClearColor)
+        + SetGraphicsPipelineState(FRHIGraphicsPipelineState*)
+        + SetShaderConstants(RootParam, Data, Size)
+        + SetTexture(RootParam, FRHITexture*)
+        + SetStreamSource(Stream, FRHIBuffer*)
+        + DrawIndexedPrimitive(FRHIBuffer* IB, Count)
+        + EndRenderPass()
+        + EndFrame()
+        + WaitForGPU()
+        + DeferredDelete(TRefCountPtr~FRHIResource~)
+    }
+    class FRHICommandList {
+        - IRHICommandContext* Context
+        + 逐方法转发（将来在此插 deferred 录制）
+    }
+}
+
+namespace D3D12RHI_Impl {
+    class FD3D12DynamicRHI {
+        - unique_ptr~FD3D12Adapter~ Adapter
+        - FD3D12Device* Device
+        + Init()  // FindAdapter + InitializeDevices
+        + GetAdapter() FD3D12Adapter*
+        + GetDevice() FD3D12Device*
+    }
+    class FD3D12CommandContext {
+        - FD3D12Device* Device
+        - FD3D12Queue* Queue
+        - FD3D12Viewport* Viewport
+        - FD3D12DescriptorHeap* DSVHeap / SRVHeap
+        - unique_ptr~FD3D12CommandAllocator~ CmdAllocs[2]
+        - unique_ptr~FD3D12CommandList~ CmdList
+        - TRefCountPtr~FD3D12Buffer~ CBs_ring[2]
+        - uint64 FrameFenceValue[2]
+        - uint32 FrameIndex / Slot
+        - FD3D12DeferredDeletionQueue DeletionQueue
+        + Init(Device, Queue, Viewport, DSVHeap, SRVHeap)
+    }
+    class FD3D12DeferredDeletionQueue {
+        - vector~FEntry~ Pending
+        + Enqueue(Resource, FenceValue)
+        + ReleaseCompleted(CompletedValue)
+    }
+}
+
+FDynamicRHI <|-- FD3D12DynamicRHI
+IRHICommandContext <|-- FD3D12CommandContext
+FRHICommandList --> IRHICommandContext : 转发（非拥有）
+GDynamicRHI --> FDynamicRHI : 指向实现
+FD3D12CommandContext *-- "1" FD3D12DeferredDeletionQueue
+FD3D12DynamicRHI *-- "1" FD3D12Adapter : 拥有三层设备
+FD3D12CommandContext ..> FD3D12CommandAllocator : 每帧一个
+FD3D12CommandContext ..> FD3D12CommandList : 一条，每帧 Reset 到当帧 allocator
+```
+
+## 三、D3D12 设备、提交与呈现
+
+```mermaid
+classDiagram
+direction TB
+
+namespace D3D12RHI_Device {
     class FD3D12Adapter {
         - FD3D12AdapterDesc Desc
         - ComPtr~IDXGIFactory4~ DxgiFactory
-        - ComPtr~IDXGIAdapter~ DxgiAdapter
         - ComPtr~ID3D12Device~ RootDevice
         - FD3D12Device* Device
         + FindAdapter(out Desc) bool
         + InitializeDevices()
         + GetDevice() FD3D12Device*
-        + GetD3DDevice() ID3D12Device*
     }
     class FD3D12Device {
         - FD3D12Adapter* Adapter
-        - uint32 GPUIndex
         - vector~unique_ptr~FD3D12Queue~~ Queues
-        + GetDevice() ID3D12Device*
         + GetQueue(Type) FD3D12Queue&
         + CreateBuffer(Desc, Data) FD3D12Buffer
         + CreateTexture(Desc, Data) FD3D12Texture
-        + CreateDepthBuffer(Width, Height) FD3D12Resource
+        + CreateDepthBuffer(W, H) FD3D12Resource
+        + CreateShaderResourceView(Tex, Heap)
     }
     class ED3D12QueueType {
         <<enumeration>>
-        Direct
-        Copy
-        Async
+        Direct / Copy / Async
     }
     class FD3D12Queue {
-        + FD3D12Device* Device
-        + ED3D12QueueType Type
         + ComPtr~ID3D12CommandQueue~ D3DCommandQueue
         + FD3D12Fence Fence
         + Signal(Fence) uint64
@@ -155,7 +228,6 @@ namespace D3D12RHI {
         + WaitCPU(Value)
     }
     class FD3D12Fence {
-        + FD3D12Queue* OwnerQueue
         + ComPtr~ID3D12Fence~ D3DFence
         + uint64 NextCompletionValue
         + HANDLE FenceEvent
@@ -170,93 +242,87 @@ namespace D3D12RHI {
         + Close()
     }
     class FD3D12DescriptorHeap {
-        - FD3D12Device* Parent
         - ComPtr~ID3D12DescriptorHeap~ Heap
-        - uint32 NumDescriptors
-        - uint32 NextFreeSlot
-        + GetCPUHandle(slot) Handle
-        + GetGPUHandle(slot) Handle
+        - uint32 NumDescriptors / NextFreeSlot
+        + GetCPUHandle(slot) / GetGPUHandle(slot)
         + Allocate() uint32
     }
     class FD3D12Viewport {
-        - FD3D12Adapter* Adapter
         - ComPtr~IDXGISwapChain3~ SwapChain
         - vector~ComPtr~ID3D12Resource~~ BackBuffers
         - unique_ptr~FD3D12DescriptorHeap~ RTVHeap
-        + Init()
-        + Resize(Width, Height)
-        + PresentInternal(SyncInterval)
-        + GetBackBuffer() ID3D12Resource*
-        + GetCurrentBackBufferRTV() Handle
+        + Init() / PresentInternal(SyncInterval)
+        + GetBackBuffer() / GetCurrentBackBufferRTV()
     }
     class FD3D12RootSignature {
         - ComPtr~ID3D12RootSignature~ RootSignature
-    }
-    class FD3D12PipelineState {
-        - ComPtr~ID3D12PipelineState~ PSO
-    }
-    class CompileShader {
-        <<function>>
-        + CompileShader(Source, EntryPoint, Target) ComPtr~ID3DBlob~
+        + GetRootSignature() ID3D12RootSignature*
     }
 }
 
-FD3D12Adapter *-- "1" FD3D12AdapterDesc : Desc
 FD3D12Adapter *-- "0..1" FD3D12Device : new/delete
 FD3D12Device --> "1" FD3D12Adapter : non-owning parent
 FD3D12Device *-- "3" FD3D12Queue : Direct / Copy / Async
 FD3D12Queue *-- "1" FD3D12Fence
-FD3D12Fence --> "1" FD3D12Queue : OwnerQueue
 FD3D12Queue --> ED3D12QueueType : Type
-
-FD3D12CommandAllocator ..> FD3D12Device : creates native allocator
-FD3D12CommandAllocator --> ED3D12QueueType : command-list type
-FD3D12CommandList ..> FD3D12Device : creates native command list
-FD3D12CommandList ..> FD3D12CommandAllocator : Reset / constructor
-FD3D12CommandList --> ED3D12QueueType : command-list type
-
+FD3D12CommandAllocator ..> FD3D12Device : native allocator
+FD3D12CommandList ..> FD3D12CommandAllocator : Reset / ctor
 FD3D12DescriptorHeap --> FD3D12Device : non-owning parent
 FD3D12Viewport --> FD3D12Adapter : non-owning parent
 FD3D12Viewport *-- "1" FD3D12DescriptorHeap : RTVHeap
-FD3D12Viewport *-- "2" ID3D12Resource : swap-chain back buffers
 FD3D12RootSignature ..> FD3D12Device : creation
-FD3D12PipelineState ..> FD3D12Device : creation
 FD3D12Device ..> FD3D12Buffer : creates
 FD3D12Device ..> FD3D12Texture : creates
-FD3D12Device ..> FD3D12Resource : creates depth resource
+FD3D12Device ..> FD3D12Resource : depth resource
 ```
 
-## 当前调用入口
+## 四、当前调用入口
 
-`RHITestPeriod1` 是示例层而不是 RHI 模块的一部分。它拥有 `FD3D12Adapter`、`FD3D12Viewport`、根签名、PSO、命令分配器/列表、深度资源和描述符堆；`Device` 与 Direct `Queue` 只是从 `Adapter` 取得的非拥有指针。
+`RHITestPeriod1` 是示例层，不属于 RHI 模块。经过 A2/A2-b 后它的 draw loop **零裸 D3D12 调用**：资源经 `RHICreateBuffer/RHICreateTexture` 建立，命令经 `RHICmdList` 录制。`FD3D12DynamicRHI` 现在是三层设备的拥有者（Adapter 从示例层挪进它）；`FD3D12CommandContext` 拥有帧资源与延迟删除队列。示例层仍持有的具体 D3D12 对象（RootSig/PSO/SRV 堆/DSV 堆/深度资源/Viewport）属过渡态，将在 A2-b 片2/片3 逐步抽掉。
 
 ```mermaid
 classDiagram
 direction LR
 
 class RHITestPeriod1 {
-    - unique_ptr~FD3D12Adapter~ Adapter
+    - unique_ptr~FD3D12DynamicRHI~ RHI
     - unique_ptr~FD3D12Viewport~ Viewport
-    - FD3D12Device* Device
-    - FD3D12Queue* Queue
-    - shared_ptr~FD3D12Buffer~ VB / CB / IB
+    - FD3D12Device* Device        // borrowed
+    - FD3D12Queue* Queue          // borrowed Direct
+    - TRefCountPtr~FRHIBuffer~ VB / IB
+    - TRefCountPtr~FRHITexture~ Tex
+    - unique_ptr~FD3D12RootSignature~ RootSig
+    - unique_ptr~FD3D12PipelineState~ PSO
+    - unique_ptr~FD3D12DescriptorHeap~ DSVHeap / SRVHeap
+    - unique_ptr~FD3D12Resource~ DepthBuffer
+    - unique_ptr~FD3D12CommandContext~ Context
+    - unique_ptr~FRHICommandList~ RHICmdList
     + InitializedD3D12Device(HWND)
-    + DrawTriangle()
+    + DrawTriangle()   // BeginFrame→BeginRenderPass→Set*→Draw→End*
+    + MaybeSwapTexture()  // 空格换纹理，验证延迟删除
+    + WaitForGPU()
 }
 
-RHITestPeriod1 *-- FD3D12Adapter
+RHITestPeriod1 *-- FD3D12DynamicRHI : 拥有（内含 Adapter/三层设备）
 RHITestPeriod1 *-- FD3D12Viewport
-RHITestPeriod1 --> FD3D12Device : borrowed
-RHITestPeriod1 --> FD3D12Queue : borrowed Direct queue
-RHITestPeriod1 *-- FD3D12CommandAllocator
-RHITestPeriod1 *-- FD3D12CommandList
+RHITestPeriod1 *-- FD3D12CommandContext
+RHITestPeriod1 *-- FRHICommandList
+RHITestPeriod1 --> FD3D12Device : borrowed（RHI->GetDevice）
+RHITestPeriod1 --> FD3D12Queue : borrowed Direct
 RHITestPeriod1 *-- FD3D12RootSignature
 RHITestPeriod1 *-- FD3D12PipelineState
-RHITestPeriod1 *-- FD3D12DescriptorHeap : DSV heap
+RHITestPeriod1 *-- FD3D12DescriptorHeap : DSV / SRV heap
 RHITestPeriod1 *-- FD3D12Resource : depth buffer
-RHITestPeriod1 o-- FD3D12Buffer : VB / CB / IB
-FD3D12Adapter --> FD3D12Device
-FD3D12Device --> FD3D12Queue
+RHITestPeriod1 o-- FRHIBuffer : VB / IB（经 RHICreateBuffer）
+RHITestPeriod1 o-- FRHITexture : Tex（经 RHICreateTexture）
+FRHICommandList --> FD3D12CommandContext : 转发
 ```
 
-`TRefCountPtr` 在当前代码中等价于 `std::shared_ptr`（在项目的基础类型定义中别名）；上图因此将缓冲区表示为共享拥有关系。`FD3D12Resource` 的资源状态目前只在类内保存，尚未公开状态转换接口，示例程序中的 back-buffer barrier 仍直接操作 D3D12 原生资源。
+## 五、几点说明（当前简化 / 欠账）
+
+- `TRefCountPtr` 当前等价于 `std::shared_ptr`（基础类型别名），故缓冲/纹理为共享持有；延迟删除队列靠"多持一份 shared_ptr 拷贝"保活到 GPU 越过 fence（UE 用侵入式引用计数 + `MarkForDelete`）。
+- **多帧同步（M4-a）**：`FD3D12CommandContext` 用 N=2 的分配器/CB ring + 每帧 fence，提交后只记 `FrameFenceValue[Slot]` 不等，复用前 `WaitCPU`；退出走 `WaitForGPU`。
+- **延迟释放（M4-b）**：`DeferredDelete` 入队用"当前帧将 signal 的 fence 值"（保守上界）；`BeginFrame` 每帧 drain 已完成的。资源级 `LastUsedFrameFence` 精确追踪未做。
+- **barrier 仍手写**（在 `BeginRenderPass/EndRenderPass` 内），状态自动追踪属阶段 B（RHICore），未做。
+- **SRV 绑定 / 描述符槽回收**：SRV 靠 `Tex->GetSRVSlot()`；`FD3D12DescriptorHeap::Allocate` 线性只增、不回收（换纹理会泄漏槽）。SRV 创建/绑定的抽象与槽回收留 A2-b 片3 / 描述符管理。
+- **仍具体（过渡）**：PSO/RootSignature/RenderPass 的**创建**、`SetShaderConstants`（root CBV + CB ring，UE 用 UniformBuffer）。留 A2-b 片2。

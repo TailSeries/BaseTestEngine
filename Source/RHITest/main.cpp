@@ -29,10 +29,14 @@ o.UV = v.UV;
 return o; }
 float4 PSMain(PSInput i) : SV_TARGET { return gTex.Sample(gSamp, i.UV); }
 )";
-
+static bool g_Running = true;
+static bool g_SwapTexture = false;   // ← 加
 class RHITestPeriod1
 {
 public:
+
+
+
 	void InitializedD3D12Device(HWND hwnd)
 	{
 		// 1. 通过RHI抽象建后端
@@ -178,6 +182,7 @@ public:
 
 	void DrawTriangle()
 	{
+		MaybeSwapTexture();   // ← 加：帧与帧之间处理换纹理
 		RHICmdList->BeginFrame();
 		const float ClearColor[4]={0.2f, 0.4f, 0.8f, 1.0f};
 		RHICmdList->BeginRenderPass(ClearColor);
@@ -214,6 +219,37 @@ public:
 	{
 		RHICmdList->WaitForGPU();
 	}
+
+	void MaybeSwapTexture()
+	{
+		if (!g_SwapTexture)
+		{
+			return;
+		}
+		g_SwapTexture = false;
+		// 生成一张不同的棋盘（换格子大小 + 颜色）
+		static int Variant = 0;
+		Variant++;
+		const uint32 TW = 256, TH = 256;
+		std::vector<uint32> Pixels(TW * TH);
+		const uint32 Cell = (Variant & 1) ? 16 : 64;
+		for (uint32 y = 0; y < TH; ++y)
+		{
+			for (uint32 x = 0; x < TW; ++x)
+			{
+				bool c = ((x / Cell) ^ (y / Cell)) & 1;
+				Pixels[y * TW + x] = c ? 0xFF00FFFFu : 0xFFFF00FFu;
+			}
+		}
+		FRHITextureDesc TexDesc(TW, TH, PF_R8G8B8A8_UNORM);
+		TRefCountPtr<FRHITexture> NewTex = RHICreateTexture(TexDesc, Pixels.data());
+		Device->CreateShaderResourceView(static_cast<FD3D12Texture*>(NewTex.get()), SRVHeap.get());
+
+		// 旧纹理交给延迟删除队列保活；换上新的
+		RHICmdList->DeferredDelete(Tex);
+		Tex = NewTex;
+
+	}
 private:
 	uint32 Width = 1280;
 	uint32 Height = 720;
@@ -234,7 +270,7 @@ private:
 	std::unique_ptr<FRHICommandList> RHICmdList;
 };
 
-static bool g_Running = true;
+
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -242,6 +278,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		g_Running = false;
 		PostQuitMessage(0);
+		return 0;
+	}
+	if (msg == WM_KEYDOWN && wParam == VK_SPACE)   // ← 加：空格触发换纹理
+	{
+		g_SwapTexture = true;
 		return 0;
 	}
 	return DefWindowProc(hwnd, msg, wParam, lParam);
