@@ -244,9 +244,31 @@ class FD3D12Queue {
     - 每帧：DirectXMath 旋转矩阵 + **转置上传**（HLSL 默认列主序坑）+ memcpy + `SetGraphicsRootConstantBufferView(index, GPU_VA)`
     - 关键认知：root CBV 不建描述符对象，直接传资源 GPU VA（view 坍缩成地址，只对 buffer 成立；纹理必须建真描述符进堆）
     - 单 CB 够用因每帧 Flush 无重叠；多帧重叠时才需 **ring buffer**（M5 进阶，随 M4 一起做）
-  - [ ] M4：去每帧 Flush（多帧同步：N 分配器/CB ring + 每帧 fence）+ 自动 Barrier + 状态追踪 + 描述符管理 + Fence 保护延迟释放
-  - [ ] A2：`FDynamicRHI` 抽象（把 CreateBuffer 等从 Device 挪上去，Renderer 不知后端）
-  - [ ] 第7章：纹理（DSV + Texture + SRV + Sampler + descriptor table，第一次 CreateShaderResourceView）
+  - [~] M4：分块推进
+    - [x] **M4-a 多帧同步**：去每帧 Flush（N=2 分配器 + CB ring + 每帧 fence）。提交后只记 `FrameFenceValue[Slot]=Signal()` 不等；复用 slot 前 `WaitCPU(FrameFenceValue[Slot])`（稳态秒过，只在 CPU 领先≥N帧时反压）。一条 CmdList 每帧 Reset 到当帧 allocator。退出补 `WaitForGPU()`（不再每帧 Flush，否则销毁资源时 GPU 仍在用→崩）。简化：复用 Direct 队列 fence 当 FrameFence（UE 在 Adapter 上独立 ManualFence）；allocator 固定 N 个手动轮（UE 有池）。画面不变，收益在 CPU/GPU 重叠。
+    - [ ] M4-b 延迟释放（Fence 保护）：等有运行时动态创建/销毁资源再做（现全在 Init 建、不销毁，无客户）
+    - [ ] 自动 Barrier + 状态追踪 → 阶段 B（RHICore）正式化
+    - [ ] 描述符管理（子分配/回收）
+  - [~] A2：`FDynamicRHI` 抽象（接口/实现分离 + 全局分发）
+    - [x] **A2-a 资源创建抽象**：RHI/ 立 `FDynamicRHI` 纯虚接口（`RHICreateBuffer`/`RHICreateTexture`，只返回 FRHI 基类型）+ 全局 `GDynamicRHI`（定义在 RHI.cpp）+ 同名自由函数转发；D3D12RHI/ `FD3D12DynamicRHI : FDynamicRHI` 持有 Adapter，`Init()` 建三层，创建转发到 `Device->Create*`。RHITest 建 VB/IB/CB/Tex 改走 `RHICreateBuffer/RHICreateTexture`。UE 对照 DynamicRHI.h（`GDynamicRHI` + `RHICreateXxx` 系）。
+    - 过渡期耦合（A2-b 消除）：RHITest 拿到 `FRHIBuffer*` 后为 VBV/CBV 仍 `static_pointer_cast` 回 `FD3D12Buffer`；DepthBuffer/SRV/Viewport/Queue/CmdList 仍走具体 `Device`（靠 `RHI->GetDevice()/GetAdapter()`）。
+    - [~] A2-b 命令列表抽象（`FRHICommandList`）：分 3 片
+      - [x] **片1**：两层骨架 `FRHICommandList`(RHI/转发) → `IRHICommandContext`(RHI/抽象) → `FD3D12CommandContext`(D3D12RHI/实现，包 FD3D12CommandList + 多帧同步 + CB ring)。方法贴 UE：`BeginFrame`/`BeginRenderPass(clearColor)`/`SetGraphicsPipelineState(FRHIGraphicsPipelineState*)`/`SetShaderConstants`/`SetTexture(FRHITexture*)`/`SetStreamSource(FRHIBuffer*)`/`DrawIndexedPrimitive(FRHIBuffer* IB, count)`/`EndRenderPass`/`EndFrame`/`WaitForGPU`。**RHITest 的 draw loop 零裸 D3D12**；VB/IB/Tex 变 FRHI 基类型、`static_pointer_cast` 全消失；帧管理/CB ring/VBV/IBV/视口全搬进 context。
+        - 新增薄抽象 `FRHIGraphicsPipelineState`（RHI/，空基类）← `FD3D12PipelineState` 继承；PSO 存下 rootsig（UE：PSO 打包 rootsig，无独立 SetRootSignature）。
+        - 两层为多线程留缝：将来在 `FRHICommandList→context` 间插「命令缓存 + RHI 线程重放」，两端不动（第9章）。
+        - 保留简化：`SetShaderConstants`=root CBV+CB ring（UE 用 FRHIUniformBuffer，另章）。过渡透传/具体：PSO/RootSig/SRVHeap/DepthBuffer/Viewport 的**创建**仍具体，一次性传给 `context->Init`；SRV 绑定用 `Tex->GetSRVSlot()`（片3 抽）。
+        - 踩坑：① `FRHICommandList` 构造忘存 `Context` → 空指针崩；② `D3D12CommandContext.cpp` 漏 `#include "D3D12RootSignature.h"`（调 GetRootSignature 需完整类型）；③ 临时改造时 CB ring for 循环注释掉却留了用 `CmdAllocs[0]`(nullptr) 建 CmdList 的残行 → CreateCommandList 崩。
+      - [ ] 片2：抽 PSO/RootSignature/RenderPass 的**创建**（干掉 context->Init 里的具体透传一半）
+      - [ ] 片3：抽 SRV 绑定（descriptor table）+ barrier（与阶段B自动Barrier合流）→ RHITest 彻底不碰 D3D12
+    - 简化：`TRefCountPtr = std::shared_ptr`，故基类/派生转换用隐式上转型 + `static_pointer_cast` 下转型（UE 是侵入式引用计数 + `ResourceCast`）
+  - [x] 第7章：纹理（DSV + Texture + SRV + Sampler + descriptor table，第一次 CreateShaderResourceView）
+    - `FRHITexture`/`FD3D12Texture`（持 committed FD3D12Resource + SRV slot）；`EPixelFormat` 起步（PF_R8G8B8A8_UNORM/PF_D32_FLOAT）
+    - `FD3D12Device::CreateTexture`：DEFAULT堆 TEXTURE2D（COPY_DEST）→ **staging(UPLOAD) + GetCopyableFootprints 逐行256对齐拷 + CopyTextureRegion + barrier→PIXEL_SHADER_RESOURCE + 阻塞提交**（一次性 init）
+    - `CreateShaderResourceView`：shader-visible CBV_SRV_UAV 堆 Allocate 一槽 + `Shader4ComponentMapping` 默认映射
+    - 绑定：根签名 = root CBV(b0) + descriptor table(SRV t0) + **static sampler(s0)**（省 sampler 堆）；每帧 `SetDescriptorHeaps` + `SetGraphicsRootDescriptorTable(1,...)`
+    - 立方体 8→24 顶点（每面独立 UV，texture seam），Vertex 换 Pos+UV
+    - 踩坑：① UPLOAD 堆 `D3D12_HEAP_PROPERTIES` 必须 `={}` 归零（CPUPageProperty/MemoryPool=UNKNOWN）否则 E_INVALIDARG；② 临时 CommandList ctor 建完是**关闭态**，录制前先 `Reset`；③ 整块 memcpy 会花屏（须逐行跳 RowPitch）；④ 漏 `Shader4ComponentMapping`=采样全0黑图
+    - 未做（留后）：EPixelFormat→DXGI 映射函数（现仍硬编 R8G8B8A8）；真正的 sampler 描述符堆；图片文件加载（现用代码生成棋盘格）
 
 **新增通用工具**：`Core/Base/EnumClassFlags.h`（`ENUM_CLASS_FLAGS` 宏 + EnumHasAnyFlags 等，仿 UE）。
 

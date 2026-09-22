@@ -67,7 +67,7 @@ private:
 
 
 // UE: class FD3D12Texture : FRHITexture, FD3D12BaseShaderResource, FD3D12LinkedAdapterObject<>
-// 精简：直接持一个 committed FD3D12Resource（一纹理一资源），SRV slot 先留个字段
+// 精简：直接持一个 committed FD3D12Resource（一纹理一资源），SRV slot 先留个字段,直接标记自己在SRV堆里的位置
 class D3D12RHIMODULE FD3D12Texture:public FRHITexture
 {
 public:

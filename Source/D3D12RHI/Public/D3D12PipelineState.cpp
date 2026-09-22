@@ -1,13 +1,21 @@
 #include "D3D12PipelineState.h"
 #include "D3D12Device.h"
+#include "D3D12RootSignature.h"
 
-FD3D12PipelineState::FD3D12PipelineState(FD3D12Device* InDevice, const D3D12_GRAPHICS_PIPELINE_STATE_DESC& Desc)
+
+FD3D12PipelineState::FD3D12PipelineState(FD3D12Device* InDevice, const D3D12_GRAPHICS_PIPELINE_STATE_DESC& Desc, FD3D12RootSignature* InRootSig)
+	:RootSig(InRootSig)
 {
 	ID3D12Device* D3DDevice = InDevice->GetDevice();
 	VERIFY_D3D12(D3DDevice->CreateGraphicsPipelineState(&Desc, IID_PPV_ARGS(&PSO)));
 }
 
 FD3D12PipelineState::~FD3D12PipelineState() = default;
+
+FD3D12RootSignature* FD3D12PipelineState::GetRootSignature() const
+{
+	return RootSig;
+}
 
 /*
  * ---

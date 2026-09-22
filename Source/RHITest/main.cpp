@@ -7,6 +7,10 @@
 #include "D3D12RootSignature.h"
 #include "D3D12PipelineState.h"
 #include <DirectXMath.h>
+#include "D3D12DynamicRHI.h"
+#include "D3D12DynamicRHI.h"
+#include "RHICommandList.h"
+#include "D3D12CommandContext.h"
 struct FrameCB { DirectX::XMFLOAT4X4 WVP; };
 struct Vertex { float Pos[3]; float UV[2]; };
 static const char* g_ShaderSrc = R"(
@@ -31,17 +35,17 @@ class RHITestPeriod1
 public:
 	void InitializedD3D12Device(HWND hwnd)
 	{
-		// 1. Adapter → Device → Queues
-		FD3D12AdapterDesc Desc;
-		FD3D12Adapter::FindAdapter(Desc); //  失败可自行判断处理
-		Adapter = std::make_unique<FD3D12Adapter>(Desc);
-		Adapter->InitializeDevices(); // 初始化设备的时候，构造器直接建了三条队列，每条队列还建好了fence
+		// 1. 通过RHI抽象建后端
+		RHI = std::make_unique<FD3D12DynamicRHI>();
+		GDynamicRHI = RHI.get();// 全局分发入口指向它；之后 RHICreateBuffer/Texture 会走这里
+		GDynamicRHI->Init();
 
-		Device = Adapter->GetDevice();
+
+		Device = RHI->GetDevice();     // 过渡期：Viewport/Queue/CmdList/SRV/DepthBuffer 仍需具体 Device
 		Queue = &Device->GetQueue(ED3D12QueueType::Direct);
 
 		// 2.viewport （swapchain + RTV）
-		Viewport = std::make_unique<FD3D12Viewport>(Adapter.get(), hwnd, Width, Height, DXGI_FORMAT_R8G8B8A8_UNORM, 2);
+		Viewport = std::make_unique<FD3D12Viewport>(RHI->GetAdapter(), hwnd, Width, Height, DXGI_FORMAT_R8G8B8A8_UNORM, 2);
 		Viewport->Init(); //  创建了swapchin rtv堆，并且创建与backbuffer相关联的rtv，并将这些rtv与对应的backbuffer关联了起来。
 
 		DSVHeap = std::make_unique<FD3D12DescriptorHeap>(Device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
@@ -66,22 +70,11 @@ public:
 
 		// 我们要求创建一个uploadbuffer上的顶点buffer区
 		FRHIBufferDesc VBDesc(sizeof(Cube), sizeof(Vertex), EBufferUsageFlags::VertexBuffer | EBufferUsageFlags::Dynamic);
-		VB = Device->CreateBuffer(VBDesc, Cube); // 我们这里还只是创建了一个uploadbuffer上的东西
-
-		FRHIBufferDesc CBDesc(sizeof(FrameCB), 0, EBufferUsageFlags::ConstantBuffer | EBufferUsageFlags::Dynamic);
-		CB = Device->CreateBuffer(CBDesc, nullptr);
-
-
-		VBV.BufferLocation = VB->GetResource()->GetGPUVirtualAddress();
-		VBV.SizeInBytes = (uint32)sizeof(Cube);
-		VBV.StrideInBytes = (uint32)sizeof(Vertex);
+		VB = RHICreateBuffer(VBDesc, Cube);
 
 
 		FRHIBufferDesc IBDesc(sizeof(Indices), sizeof(uint16), EBufferUsageFlags::IndexBuffer | EBufferUsageFlags::Dynamic);
-		IB = Device->CreateBuffer(IBDesc, Indices);
-		IBV.BufferLocation = IB->GetResource()->GetGPUVirtualAddress();
-		IBV.SizeInBytes = (uint32)sizeof(Indices);
-		IBV.Format = DXGI_FORMAT_R16_UINT;//uint16 索引
+		IB = RHICreateBuffer(IBDesc, Indices);
 
 
 
@@ -158,15 +151,8 @@ public:
 		PSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		PSODesc.DSVFormat = DXGI_FORMAT_D32_FLOAT; // ← 必须和深度缓冲格式一致
 		PSODesc.SampleDesc.Count = 1;//
-		PSO = std::make_unique<FD3D12PipelineState>(Device, PSODesc);
+		PSO = std::make_unique<FD3D12PipelineState>(Device, PSODesc, RootSig.get());
 
-		//7. 命令分配器 + 列表
-		CmdAlloc = std::make_unique<FD3D12CommandAllocator>(Device, ED3D12QueueType::Direct);
-		CmdList = std::make_unique<FD3D12CommandList>(Device, CmdAlloc.get(), ED3D12QueueType::Direct);
-
-		//8. 视口/裁剪
-		VP = { 0.0f, 0.0f, (float)Width, (float)Height, 0.0f, 1.0f };
-		Scissor = { 0, 0, (LONG)Width, (LONG)Height };
 
 		//9. 测试一个棋盘纹理
 		SRVHeap = std::make_unique<FD3D12DescriptorHeap>(Device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 8, true);
@@ -180,129 +166,72 @@ public:
 			}
 
 		FRHITextureDesc TexDesc(TW, TH, PF_R8G8B8A8_UNORM);
-		Tex = Device->CreateTexture(TexDesc, Pixels.data());
-		Device->CreateShaderResourceView(Tex.get(), SRVHeap.get());
+		Tex = RHICreateTexture(TexDesc, Pixels.data());
+		// SRV 还没抽象，过渡期 downcast（Tex 现在是 FRHITexture*）
+		Device->CreateShaderResourceView(static_cast<FD3D12Texture*>(Tex.get()), SRVHeap.get());
+
+		// 命令录制两层：context 接入帧缓冲/描述符基础设施，RHICmdList 包着它
+		Context = std::make_unique<FD3D12CommandContext>();
+		Context->Init(Device, Queue, Viewport.get(), DSVHeap.get(), SRVHeap.get());
+		RHICmdList = std::make_unique<FRHICommandList>(Context.get());
 	}
+
 	void DrawTriangle()
 	{
-		CmdAlloc->Reset();
-		CmdList->Reset(CmdAlloc.get());
-		ID3D12GraphicsCommandList* CL = CmdList->GetCommandList();
-
-		ID3D12Resource* Backbuffer = Viewport->GetBackBuffer();
-		D3D12_CPU_DESCRIPTOR_HANDLE RTV = Viewport->GetCurrentBackBufferRTV();
-
-		// barrier PRESENT>>RENDER_TARGET
-		D3D12_RESOURCE_BARRIER Barrier = {};
-		Barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		Barrier.Transition.pResource = Backbuffer;
-		Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-		Barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		CL->ResourceBarrier(1, &Barrier);
-
-		// 清屏
-		D3D12_CPU_DESCRIPTOR_HANDLE DSV = DSVHeap->GetCPUHandle(0);
-		CL->OMSetRenderTargets(1, &RTV, false, &DSV);
-		const float ClearColor[4] = { 0.2f, 0.4f, 0.8f, 1.0f };
-		CL->ClearRenderTargetView(RTV, ClearColor, 0, nullptr);
-		CL->ClearDepthStencilView(DSV, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-		// 画图
-		CL->RSSetViewports(1, &VP);
-		CL->RSSetScissorRects(1, &Scissor);
-		CL->SetGraphicsRootSignature(RootSig->GetRootSignature());
-
-		//
-		ID3D12DescriptorHeap* Heaps[]={SRVHeap->GetHeap()};
-		CL->SetDescriptorHeaps(1, Heaps);//SetDescriptorHeaps 每帧 CmdList->Reset 之后都得重设一次(命令列表 Reset 会清掉堆绑定),漏了 = SRV 表绑不上、采样报错。
-		//root 参数索引要对上:SetGraphicsRootConstantBufferView(0,...) 配 RootParams[0],SetGraphicsRootDescriptorTable(1,...) 配 RootParams[1]。填错索引 = 采样到错误资源。
-		CL->SetGraphicsRootDescriptorTable(1, SRVHeap->GetGPUHandle(Tex->GetSRVSlot()));
-
-
-		CL->SetPipelineState(PSO->GetPipelineState());
-		CL->IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		CL->IASetIndexBuffer(&IBV);
-		// 这里没传indexbuffer，传的时候输入装配器会按indexbuffer读，但是不传的话直接顺序0 1 2 3 4  5  6...读取，自动123 一个三角形，456一个三角形
-		CL->IASetVertexBuffers(0, 1, &VBV);
-
-		{
-			//static float Angel = 0.0f;
-			//Angel += 0.01f;
-			//DirectX::XMMATRIX M = DirectX::XMMatrixRotationZ(Angel) * DirectX::XMMatrixScaling((float)Height / Width, 1.0f, 1.0f);
-			//FrameCB Constants;
-			//DirectX::XMStoreFloat4x4(&Constants.WVP, DirectX::XMMatrixTranspose(M));
-			//memcpy(CB->GetMappedData(), &Constants, sizeof(FrameCB));
-			//CL->SetGraphicsRootConstantBufferView(0, CB->GetResource()->GetGPUVirtualAddress());
-		}
-
+		RHICmdList->BeginFrame();
+		const float ClearColor[4]={0.2f, 0.4f, 0.8f, 1.0f};
+		RHICmdList->BeginRenderPass(ClearColor);
+		RHICmdList->SetGraphicsPipelineState(PSO.get());
+		// WVP 常量
 		{
 			using namespace DirectX;
 			static float Angle = 0.0f;
 			Angle += 0.01f;
-			XMMATRIX World = XMMatrixRotationZ(Angle)* XMMatrixRotationX(Angle)* XMMatrixRotationY(Angle);   // 立方体自转 // 左手螺旋
+			XMMATRIX World = XMMatrixRotationZ(Angle) * XMMatrixRotationX(Angle) * XMMatrixRotationY(Angle);
 			XMMATRIX View = XMMatrixLookAtLH(
-				XMVectorSet(0,0,-3, 1), // 相机在 -Z，往 +Z（屏幕里）看
-				XMVectorSet(0,0,0,1),
-				XMVectorSet(0,1,0,1)
-			);
-
+				XMVectorSet(0, 0, -3, 1),
+				XMVectorSet(0, 0, 0, 1),
+				XMVectorSet(0, 1, 0, 1));
 			XMMATRIX Proj = XMMatrixPerspectiveFovLH(
-			XMConvertToRadians(60),//FOV	
-			(float) Width/Height,
-			0.1f, 
-			100.0f
-			);
+				XMConvertToRadians(60),
+				(float)Width / Height,
+				0.1f,
+				100.0f);
 
 			XMMATRIX WVP = World * View * Proj;
 			FrameCB Constants;
 			XMStoreFloat4x4(&Constants.WVP, XMMatrixTranspose(WVP));
-			memcpy(CB->GetMappedData(), &Constants, sizeof(FrameCB));
-			CL->SetGraphicsRootConstantBufferView(0, CB->GetResource()->GetGPUVirtualAddress());
+
+			RHICmdList->SetShaderConstants(0, &Constants, sizeof(FrameCB));
 		}
-
-		CL->DrawIndexedInstanced(36, 1, 0, 0, 0);
-		//CL->DrawInstanced(6, 1, 0, 0);
-
-		//barrier
-		Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		Barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-		CL->ResourceBarrier(1, &Barrier);
-
-		CmdList->Close();
-		ID3D12CommandList* List[] = { CL };
-		Queue->GetD3DQueue()->ExecuteCommandLists(1, List);
-		Viewport->PresentInternal(1);
-		Queue->WaitCPU(Queue->Signal(Queue->Fence));
-	};
+		RHICmdList->SetTexture(1, Tex.get());
+		RHICmdList->SetStreamSource(0, VB.get());
+		RHICmdList->DrawIndexedPrimitive(IB.get(), 36);
+		RHICmdList->EndRenderPass();
+		RHICmdList->EndFrame();
+	}
+	void WaitForGPU()
+	{
+		RHICmdList->WaitForGPU();
+	}
 private:
 	uint32 Width = 1280;
 	uint32 Height = 720;
-	std::unique_ptr<FD3D12Adapter> Adapter;
+	std::unique_ptr<FD3D12DynamicRHI> RHI;
 	std::unique_ptr<FD3D12Viewport> Viewport;
 	FD3D12Device* Device = nullptr;// 非拥有，指向Adapter内部
 	FD3D12Queue* Queue = nullptr;// 非拥有
-
-	TRefCountPtr<FD3D12Buffer> VB;
-	TRefCountPtr<FD3D12Buffer> CB;
-	D3D12_VERTEX_BUFFER_VIEW VBV{};
-	TRefCountPtr<FD3D12Buffer> IB;
-	D3D12_INDEX_BUFFER_VIEW    IBV{};
+	TRefCountPtr<FRHIBuffer> VB;
+	TRefCountPtr<FRHIBuffer> IB;
 	std::unique_ptr<FD3D12RootSignature> RootSig;
 	std::unique_ptr<FD3D12PipelineState> PSO;
-	std::unique_ptr<FD3D12CommandAllocator> CmdAlloc;
-	std::unique_ptr<FD3D12CommandList> CmdList;
-
 	std::unique_ptr<FD3D12DescriptorHeap> DSVHeap;
 	std::unique_ptr<FD3D12Resource> DepthBuffer;
 	std::unique_ptr<FD3D12DescriptorHeap> SRVHeap;
-	TRefCountPtr<FD3D12Texture> Tex;
-
-
-	D3D12_VIEWPORT VP{};
-	D3D12_RECT Scissor{};
-
-
+	TRefCountPtr<FRHITexture> Tex;
+	// 命令录制两层（帧管理/CB ring/VBV/IBV/视口 都搬进 context 了）
+	std::unique_ptr<FD3D12CommandContext> Context;
+	std::unique_ptr<FRHICommandList> RHICmdList;
 };
 
 static bool g_Running = true;
@@ -350,5 +279,6 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 		}
 		App.DrawTriangle();
 	}
+	App.WaitForGPU();   //不再每帧 Flush，退出前等 GPU 把在飞的帧跑完，再让 App 析构销毁资源
 	return 0;   // 最后一帧 DrawTriangle 已 Flush，GPU 已空闲
 }

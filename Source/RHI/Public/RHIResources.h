@@ -78,5 +78,15 @@ private:
     FRHITextureDesc Desc;
 };
 
-
+// UE: class FRHIGraphicsPipelineState : public FRHIResource
+// 精简：目前空基类，只为让 RHICommandList 能以 RHI 类型接收 PSO；创建仍在 D3D12 层具体做
+class RHIMODULE FRHIGraphicsPipelineState:public FRHIResource
+{
+public:
+    FRHIGraphicsPipelineState()
+	    :FRHIResource(RRT_GraphicsPipelineState)
+    {
+	    
+    }
+};
 

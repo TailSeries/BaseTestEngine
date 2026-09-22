@@ -32,7 +32,7 @@ FD3D12Queue::~FD3D12Queue()
 		Fence.FenceEvent = nullptr;
 	}
 }
-// NextCompletionValue++ 后置递增——先用当前值 Signal,再加 1 留给下次。返回本次值,调用方不用自己算。
+// // 取当前值，然后 +1,  // 往 GPU 队列尾插一条"到这儿把 fence 设成 SignalValue", // 返回这个值
 uint64 FD3D12Queue::Signal(FD3D12Fence& InFence)
 {
 	const uint64 SignalValue = InFence.NextCompletionValue++;
