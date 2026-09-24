@@ -3,11 +3,15 @@
 #include "D3D12RHIPrivate.h"
 #include "D3D12Device.h"
 #include "GenericPlatform.h"
+#include "D3D12RootSignature.h"
+struct FBoundShaderStateInput;
 /*
  * UE 选卡逻辑
  * ① 找卡 + 填 Desc(在 DynamicRHIModule 的 FindAdapter 里,用临时 factory 枚举挑 GPU)→ 造 FD3D12Adapter(Desc)
  * ② Adapter::InitializeDevices() → CreateRootDevice()(建持久 factory、D3D12CreateDevice)+ new FD3D12Device(...)(D3D12Adapter.cpp:1561)
  * 枚举每块 adapter → 跳过软件卡(WARP) → 用 D3D12CreateDevice 测试能否在 D3D_FEATURE_LEVEL_11_0 建设备 → 能就纳入候选
+ * 
+ * 退出流程：先 WaitForGPU()，再销毁应用资源，最后销毁 RHI/Adapter。不要在 PSO 仍然使用时主动调用 Destroy()。
  */
 
 
@@ -41,7 +45,11 @@ public:
 	{
 		return DxgiFactory;
 	}
-
+	const FD3D12RootSignature* GetRootSignature(const FBoundShaderStateInput& BSS);
+	FD3D12RootSignatureManager* GetRootSignatureManager()
+	{
+		return &RootSignatureManager;
+	}
 
 private:
 	void CreateRootDevice();// UE 同名（去掉 bWithDebug / 调试层）
@@ -50,4 +58,6 @@ private:
 	ComPtr<IDXGIAdapter> DxgiAdapter;// / 选中的物理 GPU
 	ComPtr<ID3D12Device> RootDevice;//  UE: RootDevice..12，只留基础版；命名保持 RootDevice
 	FD3D12Device* Device = nullptr; // UE: Devices[MAX_NUM_GPUS]，单 GPU 只留一个
+
+	FD3D12RootSignatureManager RootSignatureManager;
 };

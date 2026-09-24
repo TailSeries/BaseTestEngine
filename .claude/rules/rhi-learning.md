@@ -21,5 +21,6 @@
 - 实现层:`F:\shakervon_engine_merge\Engine\Source\Runtime\D3D12RHI\Private\`
 
 ## 工程坑
+- 共享所有权类型统一写 `TRefCountPtr<T>`，不直接写 `std::shared_ptr<T>`；当前别名实现除外。创建对象仍可使用 `std::make_shared<T>()`。
 - **新建含中文注释的源文件,存成 UTF-8 with BOM**。中文系统(代码页 936)下 MSVC 会把无 BOM 的
   UTF-8 当 GBK 解析,拼错多字节字符、连带打乱 `#if/#endif` 与大括号配对。仓库既有文件多为 GBK。

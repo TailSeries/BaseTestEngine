@@ -12,6 +12,58 @@ enum ERHIResourceType :uint8
     RRT_VertexShader,
     RRT_PixelShader,
     RRT_GraphicsPipelineState,
+    RRT_VertexDeclaration,
+    RRT_RasterizerState,
+    RRT_DepthStencilState,
+    RRT_BlendState,
+};
+
+//实心或线框
+enum ERasterizerFillMode : uint8
+{
+    FM_Wireframe,
+    FM_Solid,
+};
+
+//剔除哪种顶点绕序的三角形
+enum ERasterizerCullMode : uint8
+{
+    CM_None,
+    CM_CW,
+    CM_CCW,
+};
+
+enum class ERasterizerDepthClipMode : uint8
+{
+    DepthClip,//越过远平面的部分被切掉，范围内的部分继续绘制。
+    DepthClamp,//越过部分仍可生成像素，它们的深度被钳制到远端边界。能否显示仍取决于深度测试等条件。(depth = clamp(depth, 0.0f, 1.0f);)
+};
+
+enum EVertexElementType : uint8
+{
+    VET_None = 0,
+    VET_Float1,
+    VET_Float2,
+    VET_Float3,
+    VET_Float4,
+    VET_UInt,
+    VET_UByte4,
+    VET_UByte4N,
+    VET_Short2,
+    VET_Short2N,
+};
+
+//
+enum ECompareFunction : uint8
+{
+    CF_Less,
+    CF_LessEqual,
+    CF_Greater,
+    CF_GreaterEqual,
+    CF_Equal,
+    CF_NotEqual,
+    CF_Never,
+    CF_Always,
 };
 
 // UE: enum class EBufferUsageFlags : uint32（RHIDefinitions.h，位标志）
@@ -35,3 +87,51 @@ enum EPixelFormat :uint8
 };
 
 ENUM_CLASS_FLAGS(EBufferUsageFlags);
+
+
+
+// Shader 所属的管线阶段；Frequency 在这里不是执行频率。
+enum EShaderFrequency :uint8
+{
+    SF_Vertex = 0,
+    SF_Pixel,
+};
+
+
+
+enum EBlendOperation : uint8
+{
+    BO_Add,
+    BO_Subtract,
+    BO_Min,
+    BO_Max,
+    BO_ReverseSubtract,
+};
+
+// 先实现常用子集，名字沿用 UE。
+enum EBlendFactor : uint8
+{
+    BF_Zero,
+    BF_One,
+    BF_SourceAlpha,
+    BF_InverseSourceAlpha,
+};
+
+enum EColorWriteMask : uint8
+{
+    CW_NONE = 0,
+    CW_RED = 0x01,
+    CW_GREEN = 0x02,
+    CW_BLUE = 0x04,
+    CW_ALPHA = 0x08,
+
+    CW_RGB = CW_RED | CW_GREEN | CW_BLUE,
+    CW_RGBA = CW_RGB | CW_ALPHA,
+};
+
+inline constexpr uint32 MaxSimultaneousRenderTargets = 8;
+
+enum EPrimitiveType : uint8
+{
+    PT_TriangleList,
+};

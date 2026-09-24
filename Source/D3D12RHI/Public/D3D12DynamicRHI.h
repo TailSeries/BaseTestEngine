@@ -21,7 +21,13 @@ public:
 	virtual const char* GetName() override { return "D3D12"; };
 	virtual TRefCountPtr<FRHIBuffer> RHICreateBuffer(const FRHIBufferDesc& Desc, const void* InitialData) override;
 	virtual TRefCountPtr<FRHITexture> RHICreateTexture(const FRHITextureDesc& Desc, const void* InitialData) override;
-
+	virtual TRefCountPtr<FRHIVertexShader> RHICreateVertexShader(const FRHICreateShaderDesc& CreateShaderDesc) override;
+	virtual TRefCountPtr<FRHIPixelShader> RHICreatePixelShader(const FRHICreateShaderDesc& CreateShaderDesc) override;
+	virtual TRefCountPtr<FRHIVertexDeclaration> RHICreateVertexDeclaration(const FVertexDeclarationElementList& Elements) override;
+	virtual TRefCountPtr<FRHIRasterizerState> RHICreateRasterizerState(const FRasterizerStateInitializerRHI& Initializer) override;
+	virtual TRefCountPtr<FRHIDepthStencilState> RHICreateDepthStencilState(const FDepthStencilStateInitializerRHI& Initializer) override;
+	virtual TRefCountPtr<FRHIBlendState> RHICreateBlendState(const FBlendStateInitializerRHI& Initializer) override;
+	virtual TRefCountPtr<FRHIGraphicsPipelineState> RHICreateGraphicsPipelineState(const FGraphicsPipelineStateInitializer& Initializer) override;
 	// 过渡期：Viewport / Queue / CommandList / SRV 仍是具体调用，需要拿 Adapter/Device
 	FD3D12Adapter* GetAdapter() const { return Adapter.get(); }
 	FD3D12Device* GetDevice()  const { return Device; }

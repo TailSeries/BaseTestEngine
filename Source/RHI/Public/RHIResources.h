@@ -1,4 +1,6 @@
 #pragma once
+#include <span>
+#include "RHI.h"
 #include "RHIModule.h"
 #include "RHIDefinitions.h"
 
@@ -78,8 +80,19 @@ private:
     FRHITextureDesc Desc;
 };
 
-// UE: class FRHIGraphicsPipelineState : public FRHIResource
-// 精简：目前空基类，只为让 RHICommandList 能以 RHI 类型接收 PSO；创建仍在 D3D12 层具体做
+/*
+ * UE 实际的pipelinestate的关系：
+ * FRHIGraphicsPipelineState                 RHI 接口层对象
+          ▲
+          │ 继承
+FD3D12GraphicsPipelineState               D3D12 图形管线对象
+          │
+          ├─ RootSignature ───────持有─────→ FD3D12RootSignature
+          │
+          └─ PipelineState ───────持有─────→ FD3D12PipelineState
+                                             │
+                                             └─ ID3D12PipelineState
+ */
 class RHIMODULE FRHIGraphicsPipelineState:public FRHIResource
 {
 public:
@@ -88,5 +101,204 @@ public:
     {
 	    
     }
+};
+
+
+/*
+ *UE 的 shader 数据分层
+ *  FRHIResource       FRHIShaderData
+      ▲                  ▲
+      └──── FRHIShader ───┘
+                 ▲
+         FRHIGraphicsShader
+                 ▲
+          FRHIVertexShader        FD3D12ShaderData
+                 ▲                      ▲
+                 └── FD3D12VertexShader─┘
+ * 
+ */
+
+// 对应 UE 的资源绑定元数据层，后续补资源表与静态槽位。
+class RHIMODULE FRHIShaderData
+{
+	
+};
+
+class RHIMODULE FRHIShader:public FRHIResource, public FRHIShaderData
+{
+public:
+    FRHIShader(ERHIResourceType InResourceType, EShaderFrequency InFrequency)
+	    :FRHIResource(InResourceType),Frequency(InFrequency)
+    {
+	    
+    }
+
+    EShaderFrequency GetFrequency() const { return Frequency; }
+
+private:
+    EShaderFrequency Frequency;
+};
+
+
+class RHIMODULE FRHIGraphicsShader:public FRHIShader
+{
+public:
+    FRHIGraphicsShader(ERHIResourceType InResourceType, EShaderFrequency InFrequency)
+	    :FRHIShader(InResourceType, InFrequency)
+	{}
+};
+
+class RHIMODULE FRHIVertexShader :public FRHIGraphicsShader
+{
+public:
+    FRHIVertexShader()
+        : FRHIGraphicsShader(RRT_VertexShader, SF_Vertex)
+    {}
+};
+
+class RHIMODULE FRHIPixelShader:public FRHIGraphicsShader
+{
+public:
+    FRHIPixelShader()
+	    :FRHIGraphicsShader(RRT_PixelShader, SF_Pixel)
+    {
+	    
+    }
+};
+
+//ResourceType 表示“这是哪种 RHI 资源”，Frequency 表示“这是哪个 Shader 阶段”。看起来有重复，但它们分别服务于资源系统和 Shader 系统，UE 也保留这两个信息。
+
+
+// UE 同名结构位于 RenderCore/ShaderCore.h。
+// 当前尚未建立对应的 Shader 编译产物模块，暂放这里。
+// 暂不包含 UsageFlags 和序列化信息。
+struct FShaderCodePackedResourceCounts
+{
+    uint8 NumSamplers = 0;
+    uint8 NumSRVs = 0;
+    uint8 NumCBs = 0;
+    uint8 NumUAVs = 0;
+};
+
+
+// 对应 UE 的 TConstArrayView<uint8>：只查看，不拥有数据。
+struct FRHICreateShaderDesc
+{
+    std::span<const uint8> Code;
+
+    // 教学阶段的显式元数据入口。
+    // UE 从 Code 携带的附加数据中解包，不是直接加这个成员。
+    FShaderCodePackedResourceCounts ResourceCounts{};
+
+    explicit  FRHICreateShaderDesc(std::span<const uint8> InCode)
+	    :Code(InCode)
+	{}
+};
+
+
+class RHIMODULE FRHIVertexDeclaration :public FRHIResource
+{
+public:
+    FRHIVertexDeclaration():FRHIResource(RRT_VertexDeclaration)
+	{}
+
+    virtual bool GetInitializer(FVertexDeclarationElementList& Init)
+    {
+        return false;
+    }
+};
+
+
+/*UE这里描述的是管线所使用的声明与 Shader 组合
+ * FGraphicsPipelineStateInitializer
+    └─ BoundShaderState
+         ├─ VertexDeclarationRHI
+         ├─ VertexShaderRHI
+         └─ PixelShaderRHI
+ */
+
+struct FBoundShaderStateInput
+{
+    TRefCountPtr<FRHIVertexDeclaration> VertexDeclarationRHI;
+    TRefCountPtr<FRHIVertexShader> VertexShaderRHI;
+    TRefCountPtr<FRHIPixelShader> PixelShaderRHI;
+
+    FBoundShaderStateInput() = default;
+    FBoundShaderStateInput(
+    		const TRefCountPtr<FRHIVertexDeclaration>& InVertexDeclarationRHI,
+        const TRefCountPtr<FRHIVertexShader>& InVertexShaderRHI,
+        const TRefCountPtr<FRHIPixelShader>& InPixelShaderRHI
+    ):VertexDeclarationRHI(InVertexDeclarationRHI),VertexShaderRHI(InVertexShaderRHI),PixelShaderRHI(InPixelShaderRHI){};
+
+    FRHIVertexShader* GetVertexShader() const
+    {
+        return VertexShaderRHI.get();
+    }
+
+    FRHIPixelShader* GetPixelShader() const
+    {
+        return PixelShaderRHI.get();
+    }
+    // 和ue不同，我们已经直接使用std::shared_ptr了，所以这里就这里不用再写 AddRefResources()、ReleaseResources()：智能指针复制和析构已经处理 CPU 所有权
+};
+
+
+
+class RHIMODULE FRHIRasterizerState:public FRHIResource
+{
+public:
+    FRHIRasterizerState()
+        : FRHIResource(RRT_RasterizerState)
+    {}
+
+    virtual bool GetInitializer(FRasterizerStateInitializerRHI& Init)
+    {
+        return false;
+    }
+
+};
+
+class RHIMODULE FRHIDepthStencilState:public  FRHIResource
+{
+public:
+    FRHIDepthStencilState()
+	    :FRHIResource(RRT_DepthStencilState)
+	{}
+
+    virtual bool GetInitializer(FDepthStencilStateInitializerRHI& Init)
+    {
+	    return false;
+    }
+};
+
+class RHIMODULE FRHIBlendState:public FRHIResource
+{
+public:
+    FRHIBlendState()
+	    :FRHIResource(RRT_BlendState)
+	{}
+
+    virtual bool GetInitializer(FBlendStateInitializerRHI& Init)
+    {
+	    return false;
+    }
+};
+
+
+//这个类就是 UE 的同名 PSO 创建描述。当前只加入已经具备的部分；
+class RHIMODULE FGraphicsPipelineStateInitializer
+{
+public:
+    using TRenderTargetFormats = std::array<EPixelFormat, MaxSimultaneousRenderTargets>;
+
+    FBoundShaderStateInput BoundShaderState;
+    TRefCountPtr<FRHIRasterizerState> RasterizerState;
+    TRefCountPtr<FRHIDepthStencilState> DepthStencilState;
+    TRefCountPtr<FRHIBlendState> BlendState;
+    EPrimitiveType PrimitiveType = PT_TriangleList;
+    uint32 RenderTargetsEnabled = 0;// 当前使用的颜色附件数量。
+    TRenderTargetFormats RenderTargetFormats{};// 数组中的格式默认是值为 0 的 PF_Unknown。
+    EPixelFormat DepthStencilTargetFormat = PF_Unknown; // 数组中的格式默认是值为 0 的 PF_Unknown。
+    uint16 NumSamples = 1;//NumSamples = 1 表示单采样，不是“无采样”。
 };
 

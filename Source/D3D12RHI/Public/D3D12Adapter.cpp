@@ -1,6 +1,12 @@
 #include "D3D12Adapter.h"
 #include "Base/GenericPlatform.h"
 
+
+FD3D12Adapter::FD3D12Adapter(const FD3D12AdapterDesc& InDesc)
+	: Desc(InDesc)
+	, RootSignatureManager(this)
+{}
+
 bool FD3D12Adapter::FindAdapter(FD3D12AdapterDesc& OutDesc)
 {
 	ComPtr<IDXGIFactory4> Factory;
@@ -101,13 +107,11 @@ void FD3D12Adapter::InitializeDevices()
 	}
 }
 
-// 构造 / 析构
-FD3D12Adapter::FD3D12Adapter(const FD3D12AdapterDesc& InDesc)
-	: Desc(InDesc)
-{}
 
 FD3D12Adapter::~FD3D12Adapter()
 {
+	// 调用方必须已等待 GPU 完成，并释放依赖这些根签名的 PSO。
+	RootSignatureManager.Destroy();
 	// 先删 Device（连带析构 Queues，释放从 RootDevice 建的 CommandQueue/Fence）
 	// 之后 ComPtr 成员按声明逆序自动释放 RootDevice → DxgiAdapter → DxgiFactory
 	delete Device;

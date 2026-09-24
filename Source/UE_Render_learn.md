@@ -99,12 +99,16 @@ RHI(A) ─▶ RHICore(B) ─▶ RenderCore(C) ─▶ RDG(D) ─▶ Renderer(E) �
 |---|---|---|
 | A0 纯 DX12 基础 | SwapChain/Present、CmdQueue/List/Allocator、Fence、VB/IB、PSO/RootSig/Shader、Descriptor、Barrier | 通过 Frank Luna 教材覆盖 |
 | A1 Core 基础设施 | 引用计数（`FRHIResource + TRefCountPtr` 风格）、线程/事件/锁、TaskGraph 底座 | 部分（`Core/`） |
-| A2 RHI 抽象层 | `RHIDefinitions / RHIResources / DynamicRHI / RHIContext / RHICommandList`，**不含任何 D3D12 类型** | 🔶 A2-a(资源创建)+A2-b片1(命令列表两层，draw loop 零裸D3D12) 通；A2-b 片2/3(PSO/RenderPass/SRV/barrier 创建与绑定抽象) 待做 |
+| A2 RHI 抽象层 | `RHIDefinitions / RHIResources / DynamicRHI / RHIContext / RHICommandList`，**不含任何 D3D12 类型** | 🔶 A2-a、A2-b片1已通；片2已接通 Shader/顶点声明/固定状态/PSO 创建和 Adapter 动态根签名缓存；顶点流 Stride、RenderPass/Viewport/Context、View/资源绑定抽象待完成 |
 | A3-M1 | RHI 初始化 → Clear → Present | ✅ |
 | A3-M2 | 创建 Buffer / Texture / SRV / RTV / DSV | ✅ Buffer/RTV/DSV/Texture/SRV 均已通（棋盘格贴图立方体） |
-| A3-M3 | Test 只调 RHI，画出三角形 / 静态 Mesh | ✅（画出转动三角形） |
-| A3-M4 | 状态追踪、**自动 Barrier**、描述符管理、**多帧同步**、Fence 保护延迟释放 | 🔶 多帧同步(N分配器+CB ring+每帧fence，去每帧Flush)已通；状态追踪/自动Barrier/延迟释放待做 |
+| A3-M3 | Test 只调 RHI，画出三角形 / 静态 Mesh | 🔶 已画出纹理立方体，draw loop 已走 RHI；初始化仍依赖具体后端，完整边界验收待完成 |
+| A3-M4 | 描述符管理、**多帧同步**、Fence 保护延迟释放；完整状态追踪/自动 Barrier 转阶段 B | 🔶 多帧同步已通；PendingDeletes/实际提交 Fence/DeletionQueue 已接入，真正的在飞资源释放验证和描述符回收待做 |
 | A3-M5 | 动态常量数据 / ring buffer | ✅ 单 CB→CB ring（每帧一个，随 M4-a 多帧同步一起做） |
+
+**当前检查点（2026-09-25）**：PSO 创建已走 RHI，根签名按 Shader 资源需求由 Adapter 中的 Manager 缓存共享；Context 根据根签名映射绑定 VS b0 / PS t0。RHITest Debug 编译链接通过，本次未验证图形运行或缓存命中。当前显式填写 Shader 元数据，仅支持 VS b0、PS t0/s0（space0、数量 0/1），保留 point/wrap 静态采样器；量化分档、完整编译产物解析、动态采样器及底层 PSO 缓存尚未实现。
+
+**阶段 A 剩余**：顶点流 Stride 接入、Texture/View/资源绑定抽象、RenderPass/Viewport/Context 获取抽象、描述符回收与生命周期验证，共 4 块实现工作，之后整体验收。完整自动 Barrier/状态追踪属于阶段 B；RHI 线程、完整 Shader 编译系统和完整 PSO 缓存不作为阶段 A 结束门槛。详细进度以 `RHI_Learning.md` 为准。
 
 **A 章节表**（对照 UE 文件，详见 `RHI_Learning.md`）：
 

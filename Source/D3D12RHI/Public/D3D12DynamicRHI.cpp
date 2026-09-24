@@ -2,6 +2,7 @@
 #include "D3D12Adapter.h"
 #include "D3D12Device.h"
 #include "D3D12Resources.h"
+#include "D3D12Shader.h"
 
 FD3D12DynamicRHI::FD3D12DynamicRHI() = default;
 
@@ -31,6 +32,37 @@ TRefCountPtr<FRHITexture> FD3D12DynamicRHI::RHICreateTexture(const FRHITextureDe
 {
 	return Device->CreateTexture(Desc, InitialData);
 }
+
+TRefCountPtr<FRHIVertexShader> FD3D12DynamicRHI::RHICreateVertexShader(const FRHICreateShaderDesc& CreateShaderDesc)
+{
+	//这个过程没有创建独立的 ID3D12VertexShader 对象，原生字节码随后交给 PSO 创建使用
+	if (CreateShaderDesc.Code.empty())
+	{
+		assert(false && "Vertex shader bytecode must not be empty");
+		return nullptr;
+	}
+
+	TRefCountPtr<FD3D12VertexShader> Shader = std::make_shared<FD3D12VertexShader>();
+	Shader->Code.assign(CreateShaderDesc.Code.begin(), CreateShaderDesc.Code.end());
+	Shader->ResourceCounts = CreateShaderDesc.ResourceCounts;
+	return Shader;
+}
+
+TRefCountPtr<FRHIPixelShader> FD3D12DynamicRHI::RHICreatePixelShader(const FRHICreateShaderDesc& CreateShaderDesc)
+{
+	//这个过程没有创建独立的 ID3D12VertexShader 对象，原生字节码随后交给 PSO 创建使用
+	if (CreateShaderDesc.Code.empty())
+	{
+		assert(false && "Vertex shader bytecode must not be empty");
+		return nullptr;
+	}
+
+	TRefCountPtr<FD3D12PixelShader> Shader = std::make_shared<FD3D12PixelShader>();
+	Shader->Code.assign(CreateShaderDesc.Code.begin(), CreateShaderDesc.Code.end());
+	Shader->ResourceCounts = CreateShaderDesc.ResourceCounts;
+	return Shader;
+}
+
 
 
 

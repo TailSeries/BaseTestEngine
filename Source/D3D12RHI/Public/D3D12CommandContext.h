@@ -13,6 +13,7 @@ class FD3D12DescriptorHeap;
 class FD3D12CommandAllocator;
 class FD3D12CommandList;
 class FD3D12Buffer;
+class FD3D12RootSignature;
 
 // UE: class FD3D12CommandContext : public IRHICommandContext
 // 精简：单线程即时执行；内部包 FD3D12CommandList + 多帧同步 + CB ring, 后续再填充多线程
@@ -33,8 +34,9 @@ public:
 	virtual void BeginFrame() override;
 	virtual void BeginRenderPass(const float ClearColor[4]) override;
 	virtual void SetGraphicsPipelineState(FRHIGraphicsPipelineState* PSO) override;
-	virtual void SetShaderConstants(uint32 RootParam, const void* Data, uint32 Size) override;
-	virtual void SetTexture(uint32 RootParam, FRHITexture* Texture) override;
+	//我们暂时保留现有两个教学接口，但调整参数语义：
+	virtual void SetShaderConstants(uint32 BufferIndex, const void* Data, uint32 Size) override; //  → VS 的 b0 这里的 0 变成 Shader 资源索引，后端负责查对应的根参数位置。这两个接口仍是过渡接口，尚不是 UE 完整的 UniformBuffer/ShaderParameters API。
+	virtual void SetTexture(uint32 TextureIndex, FRHITexture* Texture) override;//   → PS 的 t0 这里的 0 变成 Shader 资源索引，后端负责查对应的根参数位置。这两个接口仍是过渡接口，尚不是 UE 完整的 UniformBuffer/ShaderParameters API。
 	virtual void SetStreamSource(uint32 StreamIndex, FRHIBuffer* VertexBuffer) override;
 	virtual void DrawIndexedPrimitive(FRHIBuffer* IndexBuffer, uint32 IndexCount) override;
 	virtual void EndRenderPass() override;
@@ -58,4 +60,10 @@ private:
 	uint32 Slot = 0; // 当前帧 slot（BeginFrame 更新）
 
 	FD3D12DeferredDeletionQueue DeletionQueue;
+
+	// 已申请释放，但还没有绑定本次提交的完成 Fence。
+	std::vector<TRefCountPtr<FRHIResource>> PendingDeletes;
+
+	const FD3D12RootSignature* CurrentRootSignature = nullptr;
+
 };

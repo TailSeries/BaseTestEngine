@@ -14,6 +14,13 @@ public:
 	virtual const char* GetName() = 0;
 	virtual TRefCountPtr<FRHIBuffer> RHICreateBuffer(const FRHIBufferDesc& Desc, const void* InitialData = nullptr) = 0;
 	virtual TRefCountPtr<FRHITexture> RHICreateTexture(const FRHITextureDesc& Desc, const void* InitialData = nullptr) = 0;
+	virtual TRefCountPtr<FRHIVertexShader> RHICreateVertexShader(const FRHICreateShaderDesc& CreateShaderDesc) = 0;
+	virtual TRefCountPtr<FRHIPixelShader> RHICreatePixelShader(const FRHICreateShaderDesc& CreateShaderDesc) = 0;
+	virtual TRefCountPtr<FRHIVertexDeclaration> RHICreateVertexDeclaration(const FVertexDeclarationElementList& Elements) = 0;
+	virtual TRefCountPtr<FRHIRasterizerState> RHICreateRasterizerState(const FRasterizerStateInitializerRHI& Initializer) = 0;
+	virtual TRefCountPtr<FRHIDepthStencilState> RHICreateDepthStencilState(const FDepthStencilStateInitializerRHI& Initializer) = 0;
+	virtual TRefCountPtr<FRHIBlendState> RHICreateBlendState(const FBlendStateInitializerRHI& Initializer) = 0;
+	virtual TRefCountPtr<FRHIGraphicsPipelineState> RHICreateGraphicsPipelineState(const FGraphicsPipelineStateInitializer& Initializer) = 0;
 };
 // UE: extern RHI_API FDynamicRHI* GDynamicRHI; —— 全局分发入口，上层只认它
 
@@ -30,5 +37,41 @@ inline TRefCountPtr<FRHITexture> RHICreateTexture(const FRHITextureDesc& Desc, c
 	return GDynamicRHI->RHICreateTexture(Desc, InitialData);
 }
 
+inline TRefCountPtr<FRHIVertexShader> RHICreateVertexShader(const FRHICreateShaderDesc& CreateShaderDesc)
+{
+	return GDynamicRHI->RHICreateVertexShader(CreateShaderDesc);
+}
+
+inline TRefCountPtr<FRHIPixelShader> RHICreatePixelShader(const FRHICreateShaderDesc& CreateShaderDesc)
+{
+	return GDynamicRHI->RHICreatePixelShader(CreateShaderDesc);
+}
 
 
+inline TRefCountPtr<FRHIVertexDeclaration> RHICreateVertexDeclaration(const FVertexDeclarationElementList& Elements) 
+{
+	return GDynamicRHI->RHICreateVertexDeclaration(Elements);
+}
+
+
+inline TRefCountPtr<FRHIRasterizerState> RHICreateRasterizerState(const FRasterizerStateInitializerRHI& Initializer)
+{
+	return GDynamicRHI->RHICreateRasterizerState(Initializer);
+}
+
+inline TRefCountPtr<FRHIDepthStencilState> RHICreateDepthStencilState(const FDepthStencilStateInitializerRHI& Initializer)
+{
+	return GDynamicRHI->RHICreateDepthStencilState(Initializer);
+};
+
+
+inline TRefCountPtr<FRHIBlendState> RHICreateBlendState(const FBlendStateInitializerRHI& Initializer)
+{
+	return GDynamicRHI->RHICreateBlendState(Initializer);
+}
+
+
+inline TRefCountPtr<FRHIGraphicsPipelineState> RHICreateGraphicsPipelineState(const FGraphicsPipelineStateInitializer& Initializer)
+{
+	return GDynamicRHI->RHICreateGraphicsPipelineState(Initializer);
+}

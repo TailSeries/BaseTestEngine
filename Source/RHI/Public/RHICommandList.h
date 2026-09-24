@@ -31,11 +31,11 @@ public:
 	//设整条管线(shader+光栅+混合+深度+输入布局 打包成一个对象)+ 它的根签名 + 描述符堆 (SetGraphicsRootSignature + SetDescriptorHeaps + SetPipelineState。这就是 D3D12 的招牌 PSO)
 	virtual void SetGraphicsPipelineState(FRHIGraphicsPipelineState* PSO) = 0;
 	
-	//给 shader 传常量(你的 WVP 矩阵):写进当前 slot 的 CB,绑成 root CBV (memcpy CB + SetGraphicsRootConstantBufferView)
-	virtual void SetShaderConstants(uint32 RootParam, const void* Data, uint32 Size) = 0;
+	// 当前教学接口：向 VS 的 b0 写入常量。
+	virtual void SetShaderConstants(uint32 BufferIndex, const void* Data, uint32 Size) = 0;
 
-	//给 shader 绑纹理:找到纹理的 SRV 槽,绑成描述符表 (SetGraphicsRootDescriptorTable)
-	virtual void SetTexture(uint32 RootParam, FRHITexture* Texture) = 0;
+	// 当前教学接口：绑定 PS 的 t0。
+	virtual void SetTexture(uint32 TextureIndex, FRHITexture* Texture) = 0;
 	// IA 阶段数据设置
 	virtual void SetStreamSource(uint32 StreamIndex, FRHIBuffer* VertexBuffer) = 0;
 
@@ -77,15 +77,15 @@ public:
 	{
 		Context->SetGraphicsPipelineState(PSO);
 	}
-
-	void SetShaderConstants(uint32 RootParam, const void* Data, uint32 Size)
+	// 当前教学接口：向 VS 的 b0 写入常量。
+	void SetShaderConstants(uint32 BufferIndex, const void* Data, uint32 Size)
 	{
-		Context->SetShaderConstants(RootParam, Data, Size);
+		Context->SetShaderConstants(BufferIndex, Data, Size);
 	}
-
-	void SetTexture(uint32 RootParam, FRHITexture* Texture)
+	// 当前教学接口：绑定 PS 的 t0。
+	void SetTexture(uint32 TextureIndex, FRHITexture* Texture)
 	{
-		Context->SetTexture(RootParam, Texture);
+		Context->SetTexture(TextureIndex, Texture);
 	}
 
 	void SetStreamSource(uint32 StreamIndex, FRHIBuffer* VertexBuffer)

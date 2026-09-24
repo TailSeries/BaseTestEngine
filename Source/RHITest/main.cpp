@@ -4,13 +4,15 @@
 #include "D3D12Resources.h"
 #include "D3D12CommandList.h"
 #include "D3D12Shader.h"
-#include "D3D12RootSignature.h"
-#include "D3D12PipelineState.h"
 #include <DirectXMath.h>
 #include "D3D12DynamicRHI.h"
 #include "D3D12DynamicRHI.h"
 #include "RHICommandList.h"
 #include "D3D12CommandContext.h"
+#include <cstddef>
+
+#include "D3D12State.h"
+
 struct FrameCB { DirectX::XMFLOAT4X4 WVP; };
 struct Vertex { float Pos[3]; float UV[2]; };
 static const char* g_ShaderSrc = R"(
@@ -20,14 +22,27 @@ cbuffer CB:register(b0)
 };
 Texture2D gTex:register(t0);
 SamplerState gSamp:register(s0);
-struct VSInput { float3 Pos : POSITION; float2 UV:TEXCOORD; };
-struct PSInput { float4 Pos : SV_POSITION; float2 UV : TEXCOORD; };
+
+struct VSInput { 
+	float3 Pos : ATTRIBUTE0; 
+	float2 UV:ATTRIBUTE1; 
+};
+
+struct PSInput { 
+	float4 Pos : SV_POSITION; 
+	float2 UV : TEXCOORD; 
+};
+
 PSInput VSMain(VSInput v) { 
-PSInput o; 
-o.Pos =  mul(float4(v.Pos, 1.0), WVP); //float4(v.Pos, 1.0);
-o.UV = v.UV; 
-return o; }
-float4 PSMain(PSInput i) : SV_TARGET { return gTex.Sample(gSamp, i.UV); }
+	PSInput o; 
+	o.Pos =  mul(float4(v.Pos, 1.0), WVP); //float4(v.Pos, 1.0);
+	o.UV = v.UV; 
+	return o; 
+}
+
+float4 PSMain(PSInput i) : SV_TARGET { 
+	return gTex.Sample(gSamp, i.UV); 
+}
 )";
 static bool g_Running = true;
 static bool g_SwapTexture = false;   // ← 加
@@ -86,82 +101,60 @@ public:
 		ComPtr<ID3DBlob> VSBlob = CompileShader(g_ShaderSrc, "VSMain", "vs_5_0");
 		ComPtr<ID3DBlob> PSBlob = CompileShader(g_ShaderSrc, "PSMain", "ps_5_0");
 
-		//5. root signature(2 参 + 1 static sampler + 允许输入布局就行)
-		// SRV 通过描述表的形式给
-		D3D12_DESCRIPTOR_RANGE SRVRange = {};
-		SRVRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-		SRVRange.NumDescriptors = 1;
-		SRVRange.BaseShaderRegister = 0; //t0
-		SRVRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;//，这段在整个 descriptor table 里的偏移(以 descriptor 个数计)。就是-1默认表示"紧跟在上一段后面自动排",不用手动算偏移。这是最省心的写法:一个 table 里如果有多段(比如先一段 CBV、再一段 SRV),每段都写 APPEND,D3D12 就自动按顺序首尾相接。
-		
-		// 根参数两个，一个用来传递WVP矩阵，一个用来指明SRV
-		D3D12_ROOT_PARAMETER RootParams[2] = {};
-		RootParams[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;// b0(VS)
-		RootParams[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-		RootParams[0].Descriptor.ShaderRegister = 0;
-		RootParams[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		RootParams[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-		RootParams[1].DescriptorTable.NumDescriptorRanges = 1;
-		RootParams[1].DescriptorTable.pDescriptorRanges = &SRVRange;
+		const uint8* VSData = static_cast<const uint8*>(VSBlob->GetBufferPointer());
+		const uint8* PSData = static_cast<const uint8*>(PSBlob->GetBufferPointer());
+		FRHICreateShaderDesc VSDesc(std::span<const uint8>(VSData, VSBlob->GetBufferSize()));
+		FRHICreateShaderDesc PSDesc(std::span<const uint8>(PSData, PSBlob->GetBufferSize()));
+		// 必须与实际编译出的 Shader 资源布局一致。
+		// 当前 VS 使用 b0；PS 使用 t0、s0，均为 space0。
+		VSDesc.ResourceCounts.NumCBs = 1;
+		PSDesc.ResourceCounts.NumSRVs = 1;
+		PSDesc.ResourceCounts.NumSamplers = 1;
 
-		// 静态采样器
-		D3D12_STATIC_SAMPLER_DESC Samp = {};
-		Samp.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;// 纹理缩小 放大 两层mip之间都直接使用point采样
-		Samp.AddressU = Samp.AddressV = Samp.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		Samp.ShaderRegister = 0;
-		Samp.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-		Samp.MaxLOD = D3D12_FLOAT32_MAX;
+		TRefCountPtr<FRHIVertexShader> VertexShader = RHICreateVertexShader(VSDesc);
+		TRefCountPtr<FRHIPixelShader> PixelShader = RHICreatePixelShader(PSDesc);
 
-		D3D12_ROOT_SIGNATURE_DESC RSDesc = {};
-		RSDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
-		RSDesc.NumParameters = 2;
-		RSDesc.pParameters = RootParams;
-		RSDesc.pStaticSamplers = &Samp;
-		RSDesc.NumStaticSamplers = 1;
-		RootSig = std::make_unique<FD3D12RootSignature>(Device, RSDesc);
+
+
+
+		//5. root signature(2 参 + 1 static sampler + 允许输入布局就行), 已经交给RHI后端了，我们这略过
+
 
 
 		//6. PSO
-		D3D12_INPUT_ELEMENT_DESC InputElems[] = {
-			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		
+		static_assert(sizeof(Vertex) <= 65535);
+		static_assert(offsetof(Vertex, Pos) <= 255);
+		static_assert(offsetof(Vertex, UV) <= 255);
+
+		FGraphicsPipelineStateInitializer Initialier;
+
+		FVertexDeclarationElementList Elements{
+			FVertexElement(0, static_cast<uint8>(offsetof(Vertex, Pos)),VET_Float3, 0, static_cast<uint16>(sizeof(Vertex))),
+			FVertexElement(0, static_cast<uint8>(offsetof(Vertex, UV)),VET_Float2, 1, static_cast<uint16>(sizeof(Vertex)))
 		};
-		D3D12_RASTERIZER_DESC Raster = {};
-		Raster.FillMode = D3D12_FILL_MODE_SOLID;
-		Raster.CullMode = D3D12_CULL_MODE_NONE;
-		Raster.DepthClipEnable = true;
-
-		D3D12_BLEND_DESC Blend = {};
-		Blend.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-
-		D3D12_DEPTH_STENCIL_DESC DepthStencil = {}; // DepthEnable / StencilEnable 默认 FALSE
-		DepthStencil.DepthEnable = true;
-		DepthStencil.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;  // ← 通过的像素写入深度
-		DepthStencil.DepthFunc = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_LESS;//  ← 更近(z 更小)才通过
-		DepthStencil.StencilEnable = false;
-
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC PSODesc = {};
-		PSODesc.pRootSignature = RootSig->GetRootSignature();
-		PSODesc.VS = { VSBlob->GetBufferPointer(), VSBlob->GetBufferSize() };
-		PSODesc.PS = { PSBlob->GetBufferPointer(), PSBlob->GetBufferSize() };
-		PSODesc.InputLayout = { InputElems, 2 };
-		PSODesc.RasterizerState = Raster;
-		PSODesc.BlendState = Blend;
-		PSODesc.DepthStencilState = DepthStencil;
-		PSODesc.SampleMask = UINT_MAX;
-		PSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		PSODesc.NumRenderTargets = 1;
-		PSODesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-		PSODesc.DSVFormat = DXGI_FORMAT_D32_FLOAT; // ← 必须和深度缓冲格式一致
-		PSODesc.SampleDesc.Count = 1;//
-		PSO = std::make_unique<FD3D12PipelineState>(Device, PSODesc, RootSig.get());
+		TRefCountPtr<FRHIVertexDeclaration> VertexDeclaration = RHICreateVertexDeclaration(Elements);
+		Initialier.BoundShaderState = FBoundShaderStateInput(VertexDeclaration , VertexShader, PixelShader);
+		FRasterizerStateInitializerRHI RasterInitializer(FM_Solid, CM_None, false);
+		Initialier.RasterizerState = RHICreateRasterizerState(RasterInitializer);
+		FBlendStateInitializerRHI BlendStateInitializer;
+		Initialier.BlendState = RHICreateBlendState(BlendStateInitializer);
+		FDepthStencilStateInitializerRHI DepthStencilStateInitializer(true, CF_Less);
+		Initialier.DepthStencilState = RHICreateDepthStencilState(DepthStencilStateInitializer);
+		Initialier.PrimitiveType = PT_TriangleList;
+		Initialier.RenderTargetsEnabled = 1;
+		Initialier.RenderTargetFormats[0] = PF_R8G8B8A8_UNORM;
+		Initialier.DepthStencilTargetFormat = PF_D32_FLOAT;
+		Initialier.NumSamples = 1;
+		
+		PSO = RHICreateGraphicsPipelineState(Initialier);
 
 
 		//9. 测试一个棋盘纹理
 		SRVHeap = std::make_unique<FD3D12DescriptorHeap>(Device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 8, true);
 		const uint32 TW = 256, TH = 256;
-		std::vector<uint32> Pixels(TW* TH);
+		std::vector<uint32> Pixels(TW * TH);
 		for (uint32 y = 0; y < TH; ++y)
 			for (uint32 x = 0; x < TW; ++x)
 			{
@@ -184,7 +177,7 @@ public:
 	{
 		MaybeSwapTexture();   // ← 加：帧与帧之间处理换纹理
 		RHICmdList->BeginFrame();
-		const float ClearColor[4]={0.2f, 0.4f, 0.8f, 1.0f};
+		const float ClearColor[4] = { 0.2f, 0.4f, 0.8f, 1.0f };
 		RHICmdList->BeginRenderPass(ClearColor);
 		RHICmdList->SetGraphicsPipelineState(PSO.get());
 		// WVP 常量
@@ -209,7 +202,7 @@ public:
 
 			RHICmdList->SetShaderConstants(0, &Constants, sizeof(FrameCB));
 		}
-		RHICmdList->SetTexture(1, Tex.get());
+		RHICmdList->SetTexture(0, Tex.get());
 		RHICmdList->SetStreamSource(0, VB.get());
 		RHICmdList->DrawIndexedPrimitive(IB.get(), 36);
 		RHICmdList->EndRenderPass();
@@ -251,16 +244,15 @@ public:
 
 	}
 private:
-	uint32 Width = 1280;
-	uint32 Height = 720;
+	uint32 Width = 1920;
+	uint32 Height = 1080;
 	std::unique_ptr<FD3D12DynamicRHI> RHI;
 	std::unique_ptr<FD3D12Viewport> Viewport;
 	FD3D12Device* Device = nullptr;// 非拥有，指向Adapter内部
 	FD3D12Queue* Queue = nullptr;// 非拥有
+	TRefCountPtr<FRHIGraphicsPipelineState> PSO;
 	TRefCountPtr<FRHIBuffer> VB;
 	TRefCountPtr<FRHIBuffer> IB;
-	std::unique_ptr<FD3D12RootSignature> RootSig;
-	std::unique_ptr<FD3D12PipelineState> PSO;
 	std::unique_ptr<FD3D12DescriptorHeap> DSVHeap;
 	std::unique_ptr<FD3D12Resource> DepthBuffer;
 	std::unique_ptr<FD3D12DescriptorHeap> SRVHeap;
@@ -295,8 +287,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 	wc.lpfnWndProc = WndProc; wc.hInstance = hInst;
 	wc.lpszClassName = "RHITestWindow"; wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
 	RegisterClass(&wc);
-	int32 Width = 1280;
-	int32 Height = 720;
+	int32 Width = 1920;
+	int32 Height = 1080;
 	RECT rc = { 0, 0, (LONG)Width, (LONG)Height };     // 想要的客户区
 	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE); // 加上标题栏+边框，算出整窗尺寸
 

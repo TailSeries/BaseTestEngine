@@ -8,6 +8,8 @@
 #include "RHIResources.h"// FRHIBufferDesc
 #include "RHIDefinitions.h"   // EBufferUsageFlags
 #include "D3D12RootSignature.h"
+#include <cstring>
+#include <stdexcept>
 
 FD3D12CommandContext::FD3D12CommandContext() = default;
 
@@ -42,6 +44,7 @@ void FD3D12CommandContext::BeginFrame()
 
 	CmdAllocs[Slot]->Reset();
 	CmdList->Reset(CmdAllocs[Slot].get());
+	CurrentRootSignature = nullptr;
 }
 
 void FD3D12CommandContext::BeginRenderPass(const float ClearColor[4])
@@ -74,31 +77,82 @@ void FD3D12CommandContext::BeginRenderPass(const float ClearColor[4])
 
 void FD3D12CommandContext::SetGraphicsPipelineState(FRHIGraphicsPipelineState* PSO)
 {
+	if (!PSO)
+	{
+		throw std::invalid_argument("Graphics PSO is null");
+	}
+	FD3D12GraphicsPipelineState* D3DPSO = static_cast<FD3D12GraphicsPipelineState*>(PSO);
+	CurrentRootSignature = D3DPSO->RootSignature;
+
+
 	ID3D12GraphicsCommandList* CL = CmdList->GetCommandList();
-	FD3D12PipelineState* D3DPSO = static_cast<FD3D12PipelineState*>(PSO);
+
 	// UE：PSO 打包根签名，一起设
-	CL->SetGraphicsRootSignature(D3DPSO->GetRootSignature()->GetRootSignature());
+	CL->SetGraphicsRootSignature(CurrentRootSignature->GetRootSignature());
 
 	// 描述符堆：每帧 Reset 后设一次，必须在 SetGraphicsRootDescriptorTable 之前
 	ID3D12DescriptorHeap* Heaps[] = {SRVHeap->GetHeap()};
 	CL->SetDescriptorHeaps(1, Heaps);
-	CL->SetPipelineState(D3DPSO->GetPipelineState());
+	CL->SetPipelineState(D3DPSO->PipelineState->GetPipelineState());
 }
 
-void FD3D12CommandContext::SetShaderConstants(uint32 RootParam, const void* Data, uint32 Size)
+void FD3D12CommandContext::SetShaderConstants(uint32 BufferIndex, const void* Data, uint32 Size)
 {
+	if (!CurrentRootSignature)
+	{
+		throw std::logic_error("Set graphics PSO before shader constants");
+	}
+
+	if (BufferIndex != 0)
+	{
+		throw std::invalid_argument("Only VS b0 is supported");
+	}
+
+	const int32 RootSlot = CurrentRootSignature->GetRootParameterSlot(VS_RootCBVs);
+	if (RootSlot < 0)
+	{
+		throw std::logic_error("Current root signature has no VS b0");
+	}
 	// 简化：root CBV + CB ring（UE 用 FRHIUniformBuffer，留将来一章）
 	FD3D12Buffer* CB = CBs[Slot].get();
+	
+	if (!Data || Size == 0 || Size > CB->GetSize())
+	{
+		throw std::invalid_argument("Invalid shader constants");
+	}
+
 	memcpy(CB->GetMappedData(), Data, Size);
 	ID3D12GraphicsCommandList* CL = CmdList->GetCommandList();
-	CL->SetGraphicsRootConstantBufferView(RootParam, CB->GetResource()->GetGPUVirtualAddress());
+	CL->SetGraphicsRootConstantBufferView(static_cast<UINT>(RootSlot), CB->GetResource()->GetGPUVirtualAddress());
 }
 
-void FD3D12CommandContext::SetTexture(uint32 RootParam, FRHITexture* Texture)
+void FD3D12CommandContext::SetTexture(uint32 TextureIndex, FRHITexture* Texture)
 {
-	FD3D12Texture* D3DTex = static_cast<FD3D12Texture*>(Texture);
+	if (!CurrentRootSignature)
+	{
+		throw std::logic_error("Set graphics PSO before texture");
+	}
+
+	if (TextureIndex != 0 || !Texture)
+	{
+		throw std::invalid_argument("Only a valid PS t0 is supported");
+	}
+
+	const int32 RootSlot =
+		CurrentRootSignature->GetRootParameterSlot(PS_SRVs);
+
+	if (RootSlot < 0)
+	{
+		throw std::logic_error("Current root signature has no PS SRV table");
+	}
+
+	auto* D3DTex = static_cast<FD3D12Texture*>(Texture);
+
 	ID3D12GraphicsCommandList* CL = CmdList->GetCommandList();
-	CL->SetGraphicsRootDescriptorTable(RootParam, SRVHeap->GetGPUHandle(D3DTex->GetSRVSlot()));
+
+	CL->SetGraphicsRootDescriptorTable(
+		static_cast<UINT>(RootSlot),
+		SRVHeap->GetGPUHandle(D3DTex->GetSRVSlot()));
 }
 
 void FD3D12CommandContext::SetStreamSource(uint32 StreamIndex, FRHIBuffer* VertexBuffer)
@@ -146,19 +200,38 @@ void FD3D12CommandContext::EndFrame()
 	Queue->GetD3DQueue()->ExecuteCommandLists(1, Lists);
 	Viewport->PresentInternal(1);
 	FrameFenceValue[Slot] = Queue->Signal(Queue->Fence); // 只记一下对应slot帧需要等的fencevalue，不用等
+
+	for (auto& Resource : PendingDeletes)
+	{
+		DeletionQueue.Enqueue(std::move(Resource), FrameFenceValue[Slot]);
+	}
+	PendingDeletes.clear();
+
 	FrameIndex++;
 }
 
 void FD3D12CommandContext::WaitForGPU()
 {
-	Queue->WaitCPU(Queue->Signal(Queue->Fence));
+	// 前提：当前帧已 EndFrame，没有尚未提交的资源使用。
+	const uint64 CompletionValue = Queue->Signal(Queue->Fence);
+	for (auto& Resource : PendingDeletes)
+	{
+		DeletionQueue.Enqueue(std::move(Resource), CompletionValue);
+	}
+	PendingDeletes.clear();
+
+	Queue->WaitCPU(CompletionValue);
+	DeletionQueue.ReleaseCompleted(
+		Queue->Fence.D3DFence->GetCompletedValue());
 }
 
 void FD3D12CommandContext::DeferredDelete(TRefCountPtr<FRHIResource> Resource)
 {
 	// 入队时用"当前帧将要 signal 的 fence 值"——GPU 越过它，才算引用它的这帧结束, 
-	// 这里实际上是延迟一帧才删除（GPU真正的Fence值是NextCompletionValue+1操作之前的值），更加安全。严防上一帧是不是还有地方在用这个资源。
-	DeletionQueue.Enqueue(std::move(Resource), Queue->Fence.NextCompletionValue);
+	if (Resource)
+	{
+		PendingDeletes.push_back(std::move(Resource));
+	}
 }
 
 
