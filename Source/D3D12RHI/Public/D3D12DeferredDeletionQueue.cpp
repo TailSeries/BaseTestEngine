@@ -15,7 +15,7 @@ void FD3D12DeferredDeletionQueue::Enqueue(TRefCountPtr<FRHIResource> Resource, u
 
 void FD3D12DeferredDeletionQueue::ReleaseCompleted(uint64 CompletedValue)
 {
-	// 把"GPU 已越过 fence"的条目移到尾部再一次性 erase——它们的 shared_ptr 析构 = 真 free
+	// remove_if 压缩保留条目，erase 删除尾部；移除已完成条目的引用，最后一个引用消失时对象才析构。
 	Pending.erase(
 		std::remove_if(Pending.begin(), Pending.end(), [CompletedValue](const FEntry& E) {return E.FenceValue <= CompletedValue; }), Pending.end()
 	);

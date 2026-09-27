@@ -30,7 +30,7 @@ public:
 	uint32           GetNumBackBuffers()         const { return NumBackBuffers; }
 
 
-	// 当前使用 shared_ptr 别名，必须复制已有控制块。
+	// 当前 TRefCountPtr 是共享引用别名，必须复制已有控制块。
 	// 不可从 GetBackBuffer() 的裸指针重新构造共享指针。
 	TRefCountPtr<FD3D12Texture> GetBackBufferRef() const
 	{

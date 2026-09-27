@@ -102,7 +102,7 @@ TRefCountPtr<FD3D12Buffer> FD3D12Device::CreateBuffer(const FRHIBufferDesc& Desc
 		memcpy(Mapped, InitialData, Desc.Size);
 		D3DResource->Unmap(0, nullptr);// 只是取消映射，并不会导致资源被销毁
 	}
-	// 注：DEFAULT 堆 + 初始数据 需 staging + copy command list（第6章），本章先只支持 UPLOAD 上传
+	// 当前 Buffer 路径仅对 UPLOAD 堆执行初始数据复制；DEFAULT Buffer 的 staging 上传尚未实现。Texture 上传有独立的 staging 路径。
 
 	// 7. 包装：FD3D12Resource + FD3D12Buffer
 	std::unique_ptr<FD3D12Resource> Res = std::make_unique<FD3D12Resource>(this, D3DResource.Get(), InitalState, ResDesc, HeapType);

@@ -1,6 +1,6 @@
 #pragma once
 /*
- * UE 的描述符系统很庞大(offline/online 管理器、子分配、global heap、bindless),我们第4章只做最小可用的 FD3D12DescriptorHeap 封装,目标是能给 back buffer 建 RTV
+ * UE 的描述符系统很庞大(offline/online 管理器、子分配、global heap、bindless),当前 FD3D12DescriptorHeap 实现固定容量堆和空闲槽回收，供 SRV/RTV/DSV 使用
  * 三个必须搞懂的点
 
  * ① DescriptorSize(增量)是硬件相关的,必须查
@@ -10,7 +10,7 @@
  * - RTV/DSV 堆永远非 shader-visible——它们是给管线输出合并阶段(OM)用的,shader 不采样。建 RTV/DSV 堆时带 SHADER_VISIBLE 标志会创建失败。只有 CPU handle。
  * - CBV_SRV_UAV / SAMPLER 若要 shader 读,必须 shader-visible——有 CPU handle(写描述符用)+ GPU handle(绑给 shader 用)。同类型 shader-visible 堆同一时刻只能绑一个。
  * 但是注意：一个资源可以有多个不同类型的 view。渲染到纹理再采样,用的是两个不同的 descriptor 指向同一个纹理
- * Render-to-Texture 用的是两个 view：同一份资源从RTV→变化到了SRV
+ * Render-to-Texture 用的是两个 view：同一份资源通过 RTV 写入、通过 SRV 读取；切换用途还需正确的资源状态转换
 
              同一个纹理资源（ID3D12Resource）
              ┌───────────────────────────┐

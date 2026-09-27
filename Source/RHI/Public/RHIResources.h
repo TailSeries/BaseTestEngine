@@ -517,7 +517,7 @@ struct FBoundShaderStateInput
 	{
 		return PixelShaderRHI.get();
 	}
-	// 和ue不同，我们已经直接使用std::shared_ptr了，所以这里就这里不用再写 AddRefResources()、ReleaseResources()：智能指针复制和析构已经处理 CPU 所有权
+	// 当前 TRefCountPtr 别名的复制和析构负责 CPU 共享所有权，因此不另写 AddRefResources/ReleaseResources；GPU 生命周期仍需 Fence 保护。
 };
 
 

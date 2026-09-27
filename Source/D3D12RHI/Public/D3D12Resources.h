@@ -8,7 +8,7 @@ using Microsoft::WRL::ComPtr;
  * FD3D12Resource是对 ID3D12Resource 的低层封装——不是 FRHIResource(那是 RHI 抽象层;FD3D12Resource 是 D3D12 内部对象,后面 FD3D12Buffer/FD3D12Texture 会 持有 它)。
 我们保留:ID3D12Resource + Device 回指 + Desc + HeapType + GPU 虚拟地址 + 一个当前状态。
 砍掉:residency(显存驻留)、aftermath(崩溃调试)、reserved tiles(稀疏资源)、UAV 别名、per-subresource 状态位——这些都是进阶/多线程细节。
-状态跟踪简化:UE 新版用 ED3D12Access 抽象 + 复杂 barrier 系统,我们先用一个裸 D3D12_RESOURCE_STATES,转换时手动更新(够用到第6章 CommandList)。
+状态记录限制：State 当前只保存构造时传入的状态；Context 的手写屏障没有同步更新它。通用访问状态与屏障追踪留阶段 B。
 DeviceChild 内联:和之前 FD3D12Device 内联 AdapterChild 一样,这里把 FD3D12DeviceChild 内联成 FD3D12Device* Parent。
  */
 

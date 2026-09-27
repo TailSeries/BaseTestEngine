@@ -3,7 +3,7 @@
 #include "RHIResources.h" // FRHIResource  TRefCountPtr
 
 // UE: FRHIResource::MarkForDelete + DeleteResources（侵入式引用计数 + 待删队列）
-// 精简：不改侵入式，用队列持一份 shared_ptr 拷贝保活，直到 GPU 越过 fence 才释放
+// 精简：队列持有 TRefCountPtr 保活，直到 GPU 完成对应 Fence 才移除引用；最后一个引用消失时对象才析构。
 
 class D3D12RHIMODULE FD3D12DeferredDeletionQueue
 {
@@ -11,7 +11,7 @@ public:
 	// 把资源交给队列保活（refcount +1），记下"要等到的 fence 值"
 	void Enqueue(TRefCountPtr<FRHIResource> Resource, uint64 FenceValue);
 
-	// GPU 已越过 CompletedValue 的条目：丢弃（shared_ptr 释放 → 真 free）
+	// 移除 FenceValue <= CompletedValue 的条目；其他持有者仍可继续保活资源。
 	void ReleaseCompleted(uint64 CompletedValue);
 
 private:

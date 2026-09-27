@@ -42,7 +42,7 @@ void FD3D12CommandList::Close()
  * ---
 	要点
 	- CreateCommandList 建出来即"打开":所以 ctor 里立刻 Close()。这样每帧的流程统一成 Reset → 录制 → Close,第一帧不用特殊处理。
-	- Reset(allocator, PSO) 的第二参 PSO:清屏不画东西,不需要管线状态,传 nullptr。第5章有了 PSO 后这里传真正的 PSO。
+	- Reset 的初始 PSO 参数当前保持 nullptr；图形 PSO 由 Context::SetGraphicsPipelineState 在录制过程中显式绑定。
 	- allocator 和 list 的两个 Reset 不一样:
 	  - Allocator->Reset() = 丢弃这个分配器里所有已录命令的内存(GPU 必须跑完)。
 	  - CommandList->Reset(alloc) = 让 list 重新开始录制(可以在 GPU 还在跑旧命令时做,只要 list 本身已提交)。
