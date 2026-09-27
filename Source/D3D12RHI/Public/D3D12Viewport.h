@@ -5,16 +5,17 @@
 #include "D3D12Descriptors.h"
 #include "GenericPlatform.h"
 #include <vector>
+#include "D3D12Resources.h"
 using Microsoft::WRL::ComPtr;
 class FD3D12Adapter;
 // UE: class FD3D12Viewport : FRHIViewport, FD3D12AdapterChild
-// 精简：去 FRHIViewport 基类 + 多线程 Present；BackBuffer 先存裸资源
-
-class D3D12RHIMODULE FD3D12Viewport
+// 已接入 FRHIViewport；Adapter 回指暂以成员保存。
+// BackBuffers 的纹理持有 RTV；描述符堆归 Device 所有。
+class D3D12RHIMODULE FD3D12Viewport : public FRHIViewport
 {
 public:
 	FD3D12Viewport(FD3D12Adapter* InAdapter, HWND InWindowHandle, uint32 InSizeX, uint32 InSizeY, DXGI_FORMAT InFormat, uint32 InNumBackBuffers);
-	~FD3D12Viewport();
+	~FD3D12Viewport() override;
 
 	FD3D12Viewport(const FD3D12Viewport&) = delete;
 	FD3D12Viewport& operator=(const FD3D12Viewport&) = delete;
@@ -23,14 +24,18 @@ public:
 	void Resize(uint32 NewSizeX, uint32 NewSizeY);
 	void PresentInternal(int32 SyncInterval); // UE 同名：真正调 SwapChain->Present
 
-	ID3D12Resource* GetBackBuffer() const { return BackBuffers[GetCurrentBackBufferIndex()].Get(); };
+	FD3D12Texture* GetBackBuffer() const { return BackBuffers[GetCurrentBackBufferIndex()].get(); };
 	uint32           GetCurrentBackBufferIndex() const { return SwapChain->GetCurrentBackBufferIndex(); }
 	IDXGISwapChain3* GetSwapChain()              const { return SwapChain.Get(); }
 	uint32           GetNumBackBuffers()         const { return NumBackBuffers; }
 
-	// 当前backbuffer对应的RTV
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentBackBufferRTV() const;
 
+	// 当前使用 shared_ptr 别名，必须复制已有控制块。
+	// 不可从 GetBackBuffer() 的裸指针重新构造共享指针。
+	TRefCountPtr<FD3D12Texture> GetBackBufferRef() const
+	{
+		return BackBuffers[GetCurrentBackBufferIndex()];
+	}
 
 private:
 	void ResizeInternal(); // UE 同名：从 swap chain 重新取回后备缓冲（Init / Resize 复用）
@@ -41,6 +46,5 @@ private:
 	DXGI_FORMAT Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	uint32 NumBackBuffers = 2;
 	ComPtr<IDXGISwapChain3> SwapChain;
-	std::vector<ComPtr<ID3D12Resource>> BackBuffers;
-	std::unique_ptr<FD3D12DescriptorHeap> RTVHeap;// 这是堆，但是每个backbuffer应该有一个RTV slot
+	std::vector<TRefCountPtr<FD3D12Texture>> BackBuffers;
 };

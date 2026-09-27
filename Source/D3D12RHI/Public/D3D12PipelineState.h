@@ -32,7 +32,7 @@ private:
 
 
 // 对应 UE 的公共关联数据。
-// 暂无 PSO 缓存：用 shared_ptr 表达底层 PSO 所有权。
+// 暂无底层 PSO 缓存：用 TRefCountPtr 表达底层 PSO 所有权，根签名由 Adapter 缓存持有。
 struct D3D12RHIMODULE FD3D12PipelineStateCommonData
 {
 	FD3D12PipelineStateCommonData(const FD3D12RootSignature* InRootSignature, TRefCountPtr<FD3D12PipelineState> InPipelineState)

@@ -1,5 +1,9 @@
 # UE RHI 封装 DX12 学习笔记
 
+> **当前状态（2026-09-27）：阶段 A 已按既定教学范围实现并验收。下一阶段是 B：资源状态与 Barrier。**
+> Debug / Release 均编译、运行通过：GPU gate 保护真实 draw 的在飞资源，描述符回收、24 次 Resize、24 次 DSV 重建、120 次换纹理、Clear/Load、非零顶点 Offset、图像回读及退出验证均通过，D3D12 调试队列无警告/错误。
+> 具体改动、UE 对照、运行命令与保留的简化见 [StageA_Completion.md](StageA_Completion.md)。下方按日期保留的教学记录描述当时状态，不能覆盖此处当前结论。
+
 ## 教学约定
 每章节节奏：**先讲 UE 源码 → 再对照实现自己的简化版**
 
@@ -209,7 +213,7 @@ class FD3D12Queue {
 
 ---
 
-### 进度
+### 进度（历史过程与当前里程碑）
 - [x] 第1章 UE 源码讲解完成
 - [x] 第1章 实现：`D3D12Queue.h/.cpp`（ED3D12QueueType / FD3D12Fence 纯数据struct / FD3D12Queue：带参构造 + Signal/Wait/WaitCPU）
   - 定案：FD3D12Fence 无成员函数，操作全在 Queue 上（贴 UE）；Queue non-movable，Device 用 `vector<unique_ptr<FD3D12Queue>>` 存储
@@ -230,35 +234,35 @@ class FD3D12Queue {
   - `D3D12RootSignature`（序列化 + 创建；三角形用空签名 + `ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT`）
   - `D3D12PipelineState`（CreateGraphicsPipelineState；手填光栅/混合/深度关/RTV格式=swapchain）
 - [x] **画三角形（整合）**：RHITest 顶点(pos+color) → VB → 编译VS/PS → RootSig → PSO → 每帧 clear + DrawInstanced，蓝底彩色三角形。**≈ 达成 A3-M3（Test 只调 RHI 画出图元）**
-- [ ] 下一阶段（对照 UE_Render_learn.md 的 A3 里程碑）：
+- [x] A3 里程碑（2026-09-27 按阶段 A 范围验收）：
   - [x] M2（3D 骨架）：**深度缓冲(DSV) + 透视相机 + 索引绘制 → 转动的 3D 立方体**
     - `FD3D12Device::CreateDepthBuffer`（第一个纹理资源：TEXTURE2D / D32_FLOAT / DEFAULT堆 / ALLOW_DEPTH_STENCIL / 优化清除值）+ DSV 堆 + CreateDepthStencilView(nullptr desc)
     - PSO 开深度（DepthEnable + DepthFunc=LESS + DSVFormat）；每帧 OMSetRenderTargets 带 DSV + ClearDepthStencilView(仅 DEPTH，D32 无 stencil)
     - 索引缓冲（`IndexBuffer` flag + `D3D12_INDEX_BUFFER_VIEW`/R16_UINT + `DrawIndexedInstanced`）
     - 透视相机：`WVP = World*View*Proj`（DirectXMath LH，行向量从左到右=空间转换顺序），转置上传
   - [x] M2 剩余：Texture + SRV + Sampler + descriptor table（给立方体贴图；第一次 CreateShaderResourceView，DEFAULT堆纹理需 staging+copy 上传）→ **棋盘格贴图立方体已跑通**
-  - [ ] M4：状态追踪 + 自动 Barrier + 描述符管理 + 多帧同步（N分配器+每帧fence，去掉每帧Flush）+ Fence保护延迟释放
+  - [x] M4：描述符回收、多帧同步、Fence 保护延迟释放完成；状态追踪和自动 Barrier 转阶段 B。
   - [x] M5（基础）：常量缓冲让三角形转起来
     - `CreateBuffer` 加 ConstantBuffer 分支（256 对齐）；`FD3D12Buffer::GetMappedData()` 持久映射
     - 根签名加 root CBV 参数（b0）；shader `cbuffer` + `mul(pos, WVP)`
     - 每帧：DirectXMath 旋转矩阵 + **转置上传**（HLSL 默认列主序坑）+ memcpy + `SetGraphicsRootConstantBufferView(index, GPU_VA)`
     - 关键认知：root CBV 不建描述符对象，直接传资源 GPU VA（view 坍缩成地址，只对 buffer 成立；纹理必须建真描述符进堆）
     - 单 CB 够用因每帧 Flush 无重叠；多帧重叠时才需 **ring buffer**（M5 进阶，随 M4 一起做）
-  - [~] M4：分块推进
+  - [x] M4：阶段 A 范围完成
     - [x] **M4-a 多帧同步**：去每帧 Flush（N=2 分配器 + CB ring + 每帧 fence）。提交后只记 `FrameFenceValue[Slot]=Signal()` 不等；复用 slot 前 `WaitCPU(FrameFenceValue[Slot])`（稳态秒过，只在 CPU 领先≥N帧时反压）。一条 CmdList 每帧 Reset 到当帧 allocator。退出补 `WaitForGPU()`（不再每帧 Flush，否则销毁资源时 GPU 仍在用→崩）。简化：复用 Direct 队列 fence 当 FrameFence（UE 在 Adapter 上独立 ManualFence）；allocator 固定 N 个手动轮（UE 有池）。画面不变，收益在 CPU/GPU 重叠。
-    - [~] M4-b 延迟释放（Fence 保护）：已实现 `PendingDeletes → EndFrame 实际 Signal 值 → DeletionQueue → BeginFrame ReleaseCompleted`，退出 `WaitForGPU` 收尾；空格换纹理已接入。仍需真正的在飞资源释放验证：当前纹理上传会阻塞 Direct 队列，不能用此实验证明 GPU 使用中的资源得到保护。描述符槽位尚未回收。
+    - [x] M4-b 延迟释放：PendingDeletes → 实际提交 Fence → DeletionQueue；GPU gate 验证真实 draw 在飞时 SRV/纹理与槽位保持存活，完成后释放并复用。
     - [ ] 自动 Barrier + 状态追踪 → 阶段 B（RHICore）正式化
-    - [ ] 描述符管理（子分配/回收）
-  - [~] A2：`FDynamicRHI` 抽象（接口/实现分离 + 全局分发）
+    - [x] 描述符管理：固定容量 SRV/RTV/DSV 堆空闲槽回收；完整分配器和扩容留后续。
+  - [x] A2：`FDynamicRHI` 抽象（接口/实现分离 + 全局分发）
     - [x] **A2-a 资源创建抽象**：RHI/ 立 `FDynamicRHI` 纯虚接口（`RHICreateBuffer`/`RHICreateTexture`，只返回 FRHI 基类型）+ 全局 `GDynamicRHI`（定义在 RHI.cpp）+ 同名自由函数转发；D3D12RHI/ `FD3D12DynamicRHI : FDynamicRHI` 持有 Adapter，`Init()` 建三层，创建转发到 `Device->Create*`。RHITest 建 VB/IB/CB/Tex 改走 `RHICreateBuffer/RHICreateTexture`。UE 对照 DynamicRHI.h（`GDynamicRHI` + `RHICreateXxx` 系）。
-    - 当前过渡期耦合：VBV/CBV 已移入 Context；RHITest 的 DepthBuffer/SRV/Viewport/Queue/Context 初始化仍使用具体 D3D12 类型，Shader 编译仍调用后端辅助函数。
-    - [~] A2-b 命令列表抽象（`FRHICommandList`）：分 3 片
+    - 当前边界：普通初始化/绘制只使用 RHI；平台工厂和 Shader 编译隔离到 TestPlatform，专用 GPU 验证隔离到 BackendValidation。
+    - [x] A2-b 命令列表抽象（`FRHICommandList`）：分 3 片
       - [x] **片1**：两层骨架 `FRHICommandList`(RHI/转发) → `IRHICommandContext`(RHI/抽象) → `FD3D12CommandContext`(D3D12RHI/实现，包 FD3D12CommandList + 多帧同步 + CB ring)。方法贴 UE：`BeginFrame`/`BeginRenderPass(clearColor)`/`SetGraphicsPipelineState(FRHIGraphicsPipelineState*)`/`SetShaderConstants`/`SetTexture(FRHITexture*)`/`SetStreamSource(FRHIBuffer*)`/`DrawIndexedPrimitive(FRHIBuffer* IB, count)`/`EndRenderPass`/`EndFrame`/`WaitForGPU`。**RHITest 的 draw loop 零裸 D3D12**；VB/IB/Tex 变 FRHI 基类型、`static_pointer_cast` 全消失；帧管理/CB ring/VBV/IBV/视口全搬进 context。
         - 当前 PSO 分层：`FD3D12GraphicsPipelineState : FRHIGraphicsPipelineState, FD3D12PipelineStateCommonData`；公共数据关联非拥有的根签名指针和拥有的底层 `FD3D12PipelineState`，后者只封装原生 PSO。
         - 两层为多线程留缝：将来在 `FRHICommandList→context` 间插「命令缓存 + RHI 线程重放」，两端不动（第9章）。
         - 保留简化：`SetShaderConstants`=root CBV+每帧一个 CB（非每 Draw 分配；UE UniformBuffer 后续接入）。PSO 已走 RHI 创建，根签名由 Adapter 管理；Context 初始化仍接收具体 Device/Queue/Viewport/DSVHeap/SRVHeap，SRV 绑定仍用 `Tex->GetSRVSlot()`。
         - 踩坑：① `FRHICommandList` 构造忘存 `Context` → 空指针崩；② `D3D12CommandContext.cpp` 漏 `#include "D3D12RootSignature.h"`（调 GetRootSignature 需完整类型）；③ 临时改造时 CB ring for 循环注释掉却留了用 `CmdAllocs[0]`(nullptr) 建 CmdList 的残行 → CreateCommandList 崩。
-      - [~] 片2：抽 PSO/RootSignature/RenderPass 的**创建**；PSO/动态根签名链路已接通，RenderPass/Viewport/Context 获取抽象尚未完成。
+      - [x] 片2：PSO/动态根签名、RenderPass/Viewport、Context 后端初始化与即时命令列表获取均已接通。
         - [x] Shader、VertexDeclaration、Rasterizer/DepthStencil/Blend 状态均经 RHI 创建；`FGraphicsPipelineStateInitializer` 汇总 Shader、输入布局、固定状态、附件格式和采样数，后端转换为原生 PSO 描述。
         - [x] `RHICreateGraphicsPipelineState → FD3D12DynamicRHI`（入口位于 D3D12State.cpp）→ `Adapter::GetRootSignature → QBSS → RootSignatureManager`；RHITest 只持有 `TRefCountPtr<FRHIGraphicsPipelineState>`，不再手工创建根签名/底层 PSO。
         - [x] `FD3D12RootSignatureDesc` 生成描述；`FD3D12RootSignature` 保存原生对象和根参数位置映射；Adapter 持有 Manager，按布局缓存并共享根签名。新增 `FD3D12AdapterChild` 基类供根签名及 Manager 使用。
@@ -266,8 +270,8 @@ class FD3D12Queue {
         - 当前简化：显式填写 Shader ResourceCounts（UE 从编译产物读取）；仅 VS b0、PS t0/s0，space0，数量 0/1，暂不分档；point/wrap 静态采样器；根签名 1.0；单线程 std::map 缓存。底层 PSO 缓存、完整 Shader 编译系统、动态采样器尚未实现。
         - 对照基准：`F:\workspace\UnrealEngine58` 的 Windows D3D12 使用 `USE_STATIC_ROOT_SIGNATURE=0`；本项目沿动态根签名路径推进。
         - 2026-09-25 检查：RHITest 已改为 `PSO = RHICreateGraphicsPipelineState(Initialier)`；`cmake --build out/build/x64-Debug --target RHITest` 编译链接通过。本次未启动图形程序，画面及缓存命中仍待运行验证。
-        - [ ] 下一步：将 PSO 中已保存的 `StreamStrides` 接入 Context 顶点流绑定（当前仍读取 Buffer::GetStride）。
-      - [ ] 片3：抽 SRV 绑定（descriptor table）+ barrier（与阶段B自动Barrier合流）→ RHITest 彻底不碰 D3D12
+        - [x] 2026-09-26：Context 从当前 PSO 的 `StreamStrides` 获取顶点步长；SetStreamSource 贯通 Offset，VBV 地址加 Offset、大小减 Offset，支持空 Buffer 解绑。BeginFrame 清空当前 PSO；直接绑定模式下切换 PSO 后需重新绑定顶点流。RHITest Debug 编译链接通过，非零偏移及画面尚未运行验证。
+      - [x] 片3：SRV 绑定和 View 分层完成，RHITest 普通绘制不接触 D3D12；通用 Barrier 留阶段 B。
     - 简化：`TRefCountPtr = std::shared_ptr`，故基类/派生转换用隐式上转型 + `static_pointer_cast` 下转型（UE 是侵入式引用计数 + `ResourceCast`）
   - [x] 第7章：纹理（DSV + Texture + SRV + Sampler + descriptor table，第一次 CreateShaderResourceView）
     - `FRHITexture`/`FD3D12Texture`（持 committed FD3D12Resource + SRV slot）；`EPixelFormat` 起步（PF_R8G8B8A8_UNORM/PF_D32_FLOAT）
@@ -278,12 +282,7 @@ class FD3D12Queue {
     - 踩坑：① UPLOAD 堆 `D3D12_HEAP_PROPERTIES` 必须 `={}` 归零（CPUPageProperty/MemoryPool=UNKNOWN）否则 E_INVALIDARG；② 临时 CommandList ctor 建完是**关闭态**，录制前先 `Reset`；③ 整块 memcpy 会花屏（须逐行跳 RowPitch）；④ 漏 `Shader4ComponentMapping`=采样全0黑图
     - 未做（留后）：EPixelFormat→DXGI 映射函数（现仍硬编 R8G8B8A8）；真正的 sampler 描述符堆；图片文件加载（现用代码生成棋盘格）
 
-**阶段 A 剩余范围（2026-09-25）**：4 块实现工作 + 整体验收，不等同于 5 次教学。
-1. 顶点流绑定接入 PSO 的 StreamStrides。
-2. Texture/View/资源绑定抽象，消除测试代码直接创建 SRV、操作后端描述符堆。
-3. RenderPass/Viewport/Context 获取抽象，收敛具体后端初始化依赖。
-4. 描述符回收与 Fence 生命周期验证，包含真正的在飞资源替换场景。
-5. 整体验收：通过 RHI 完成纹理立方体，验证多帧、资源替换和退出释放；主要创建/绘制流程不依赖具体 D3D12 类型。
+**阶段 A 收尾（2026-09-27）**：原剩余的 View/资源绑定、RenderPass/Viewport/Context、描述符回收与在飞生命周期验证已完成。Debug/Release 的 GPU 验收记录在 `out/stage-a/Debug` 和 `out/stage-a/Release`，详细实现说明见 `StageA_Completion.md`。
 
 完整自动 Barrier/状态追踪归阶段 B；RHI 线程、完整 Shader 编译系统及完整 PSO 缓存不作为阶段 A 结束门槛。
 
@@ -298,4 +297,68 @@ class FD3D12Queue {
 
 ---
 
-*切换机器后继续：直接从"第1章实现"开始，先建 Source/RHI/ 和 Source/D3D12RHI/ 的 CMakeLists.txt*
+*切换机器后继续：先阅读当前状态和 StageA_Completion.md，从阶段 B 接续，不要重新开始第 1 章。*
+### SRV 抽象接入检查（2026-09-26）
+
+- 已完成：FRHIViewableResource、FRHIViewDesc、FRHIView、FRHIShaderResourceView；后端 FD3D12View → TD3D12View → FD3D12ShaderResourceView 与 FD3D12ShaderResourceView_RHI 包装。
+- RHICreateShaderResourceView 在 D3D12SRV.cpp 创建并初始化包装对象；Device 持有 ResourceDescriptorHeap，Context 从同一 Device 获取该堆。
+- RHITest 经 RHI 创建 SRV，以 SetShaderResourceViewParameter 绑定；Texture 的 SRVSlot 与旧 Device 创建函数已删除。换纹理时 DeferredDelete 旧 SRV，由其引用保住旧纹理。
+- 验证：RHITest Debug 编译链接通过；本次没有运行窗口、验证换纹理或 GPU 在飞释放。
+- 当前范围：Texture2D、RGBA8、mip0、PS t0；显式 SRV 绑定是教学接口。8 槽线性分配仍未回收，不能超过容量；纹理上传仍阻塞。SRV 基础创建与绑定已完成，完整 View 类型、动态采样器、描述符缓存不在本次完成范围。
+- 下一步：RenderPass 的 Load/Store 动作描述，随后接入附件、Viewport/Context 抽象。阶段 A 主线剩 RenderPass/Viewport/Context 抽象、描述符回收与生命周期验证两块，以及整体验收。
+
+### RenderPass 前置数据检查（2026-09-26）
+
+- Load/Store、深度模板动作、FRHIRenderPassInfo 已定义。Backbuffer 已包装为 FD3D12Texture，深度创建返回 FD3D12Texture，上层持有 FRHITexture。
+- FClearValueBinding 已接入纹理描述，backbuffer 绑定背景色，深度优化清除值来自同一份纹理元数据。Debug 编译链接通过；本次没有运行图形验证。
+- BeginRenderPass 仍使用旧的 ClearColor 参数并无条件清除；下一步才接入附件和动作解释，不能将描述结构完成视为执行路径完成。
+
+### RenderPass 执行接入检查（2026-09-27）
+
+- BeginRenderPass 已接收 FRHIRenderPassInfo 和 Name；校验当前 backbuffer、固定 D32 附件、尺寸/格式和动作，按 LoadAction 选择清除并读取纹理 ClearValue。
+- 支持 Clear_Store / Load_Store；仅一个颜色附件和固定深度附件，无 stencil、resolve、MRT 或任意离屏附件。Pass 配对检查已加入；结束转 PRESENT 仍是当前 backbuffer 专用策略。
+- 深度优化清除值读取调用已补回；RHITest Debug 编译链接通过，本次未运行图形验证。下一步接 FRHIViewport 与 RHIGetViewportBackBuffer，Viewport 创建和 Context 获取仍待抽象。
+
+### Viewport 创建抽象检查（2026-09-27）
+
+- FRHIViewport、RHICreateViewport、RHIGetViewportBackBuffer 已接通；测试持有 RHI Viewport，每帧获取 backbuffer 的共享引用。Context 内部转换为具体类型。
+- main.cpp 已直接包含 D3D12Descriptors.h，避免依赖旧 Viewport 头文件间接引入 DSV 堆定义；RHITest Debug 编译链接通过。未运行图形验证。
+- 下一步：深度纹理经统一 RHICreateTexture 创建；DSV 管理和 Context 获取仍待收拢。
+### DSV 后端封装完成（2026-09-27）
+
+- Device 持有非 shader-visible DSV 堆；CreateTexture 的深度分支创建 FD3D12DepthStencilView，由 FD3D12Texture 持有。View 先于纹理资源析构。
+- Context 从 RenderPass 深度纹理获取 DSV，验证同一 Device 和 View 初始化状态，不再依赖外部固定 DSV 槽位。Init 只接收 Device、Queue、Viewport。
+- RHITest 已删除 DSV 堆、深度纹理下转型和原生 DSV 创建。深度格式仍限 D32、单层/mip0/单采样，可写 DSV；资源维持 DEPTH_WRITE，尚无通用状态追踪。
+- SRV 堆约束移入 SRV 构造器；公共 GPU Handle 访问拒绝非 shader-visible View。两个描述符堆仍各为 8 槽线性分配，未实现回收。
+- RHITest Debug 编译链接通过；本次未运行图形程序，画面、换纹理、异常路径及 GPU 在飞释放仍待运行验证。
+- 下一步收拢 Context 获取与初始化；阶段 A 的描述符回收、生命周期验证及整体验收仍未完成。
+
+### 默认 Context 所有权归位（2026-09-27）
+
+- FD3D12Device 创建并持有 ImmediateCommandContext，通过 GetDefaultCommandContext 返回非拥有引用；成员顺序保证 Context 先于描述符堆与 Queue 析构。
+- RHITest 不再拥有或创建 Context，仅借用 Device 的默认 Context 构造 FRHICommandList；退出前仍通过 WaitForGPU 等待 GPU 完成。
+- 当前仅迁移所有权：Context::Init(Device, Queue, Viewport) 仍由测试调用，尚未完成初始化与视口解耦，也尚未收拢上层命令列表获取入口。
+- 验证：RHITest Debug 编译链接通过；本次未运行图形程序。
+- 下一步：解除 Context 初始化对 Viewport 的依赖，将初始化收回后端；描述符回收、生命周期验证及阶段 A 整体验收仍待完成。
+
+### RTV 类型补齐（2026-09-27）
+
+- 已增加 FD3D12RenderTargetView，复用 TD3D12View；校验非 shader-visible RTV 堆、资源所属 Device、RGBA8 Texture2D 单层/单 mip/单采样及 mip0/plane0 视图，创建 CPU 描述符。
+- 已同步公共 View 注释。RHITest Debug 编译链接通过；未运行图形验证。
+- 本步仅增加类型，尚未接入纹理所有权或 backbuffer 创建；Viewport 仍管理原 RTV 堆，Context 仍通过 Viewport 取得 RTV 和执行 Present。
+- 下一步将 RTV 接到 FD3D12Texture，再迁移 backbuffer RTV 创建与 RenderPass 绑定，随后解除 Context 初始化对 Viewport 的依赖。
+
+### 纹理 RTV 所有权接口完成（2026-09-27）
+
+- FD3D12Texture 新增 RenderTargetView 所有权及 GetRenderTargetView / SetRenderTargetView；当前仅单个 mip0、非数组 RTV，未创建时返回 nullptr。
+- View 成员位于 ResourcePtr 之后，确保先于资源析构；注释说明创建阶段接入和 GPU 使用期间不可替换的约束。
+- RHITest Debug 编译链接通过；未运行图形验证。backbuffer 尚未调用新 setter，现有 RTV 创建与绑定路径仍在 Viewport。
+- 下一步迁移 backbuffer RTV 创建，并让 RenderPass 从颜色纹理取得 RTV。
+
+### 阶段 A 最终验收（2026-09-27）
+
+- RTV 路径已接通，Device 持有三种描述符堆及默认 Context；Context 不再依赖 Viewport。ImmediateCommandList / Executor、RHIInit / RHIExit、独立 EndDrawingViewport 入口完成。
+- 描述符固定容量空闲槽回收、显式 DeferredDelete 协议和 GPU gate 生命周期验证完成；常量缓冲扩展为每帧 64 KiB、每次绑定 256 字节对齐分配。
+- Debug 与 Release 均编译运行通过；每种配置执行 120 次换纹理、24 次 Resize、24 次 DSV 创建销毁。640×480 图像回读中 27286 个非背景像素，背景值匹配，画面已检查；D3D12 调试队列无警告/错误。
+- 主要绘制代码无 D3D12 类型/头文件；平台引导、编译与后端专用诊断的例外明确隔离。完整改动和保留限制见 StageA_Completion.md。
+- 下一步：阶段 B，替换固定 backbuffer 屏障，学习 ERHIAccess / FRHITransition 和资源状态追踪。

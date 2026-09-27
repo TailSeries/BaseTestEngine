@@ -1,5 +1,6 @@
 #include "D3D12Resources.h"
 #include "D3D12Device.h"
+#include "D3D12View.h"
 
 FD3D12Resource::FD3D12Resource(FD3D12Device* InParent, ID3D12Resource* InResource, D3D12_RESOURCE_STATES InInitialSatte, const D3D12_RESOURCE_DESC& InDesc, D3D12_HEAP_TYPE InHeapType)
 	:Parent(InParent),
@@ -30,5 +31,19 @@ void* FD3D12Buffer::GetMappedData()
 }
 
 
+FD3D12Texture::FD3D12Texture(FD3D12Device* InParent, const FRHITextureDesc& InDesc)
+    : FRHITexture(InDesc), Parent(InParent)
+{}
+
 FD3D12Texture::~FD3D12Texture() = default;
 
+void FD3D12Texture::SetDepthStencilView(std::unique_ptr<FD3D12DepthStencilView> InView)
+{
+    DepthStencilView = std::move(InView);
+}
+
+
+void FD3D12Texture::SetRenderTargetView(std::unique_ptr<FD3D12RenderTargetView> InView)
+{
+    RenderTargetView = std::move(InView);
+}

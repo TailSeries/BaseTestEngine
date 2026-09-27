@@ -17,6 +17,7 @@ class FD3D12Device final : public FD3D12SingleNodeGPUObject, public FNoncopyable
 三个基类的作用:FD3D12AdapterChild 提供 ParentAdapter + GetParentAdapter();FD3D12SingleNodeGPUObject 装 GPU 掩码(单节点);FNoncopyable 禁拷贝。我们简化:去掉三个基类,把它们的精华(Adapter 回指 + GPUIndex + 禁拷贝)直接内联进类。骨架/命名不变。
  */
 
+class FD3D12CommandContext;
 class FD3D12DescriptorHeap;
 class FD3D12Adapter;
 class FD3D12Buffer;
@@ -38,13 +39,37 @@ public:
     uint32 GetGPUIndex() const { return GPUIndex; }
     FD3D12Queue& GetQueue(ED3D12QueueType QueueType) { return *Queues[(uint32)QueueType]; }
 
-    // 创建 committed buffer（UE: FDynamicRHI::RHICreateBuffer；我们暂放 Device，后续挪到 FDynamicRHI）
+    // Device 持有默认 Context；调用者只借用，不负责释放。
+    FD3D12CommandContext& GetDefaultCommandContext()
+    {
+        return *ImmediateCommandContext;
+    }
+
+    // RHICreateBuffer 经 DynamicRHI 转发到此处，当前后端使用 committed resource。
     TRefCountPtr<FD3D12Buffer> CreateBuffer(const FRHIBufferDesc& Desc, const void* InitialData = nullptr);
-    //深度缓冲是一张2D 纹理， 因此我们不返回buffer，而是返回一个resource
-    std::unique_ptr<FD3D12Resource> CreateDepthBuffer(uint32 Width, uint32 Height);
-    // 声明（返回 TRefCountPtr，和 CreateBuffer 一致）
+
+    // 按 Flags 分派 RGBA8 采样纹理与 D32 深度纹理；不支持的用途组合显式拒绝。
     TRefCountPtr<FD3D12Texture> CreateTexture(const FRHITextureDesc& Desc, const void* InitialData = nullptr);
-    void CreateShaderResourceView(FD3D12Texture* Texture, FD3D12DescriptorHeap* Heap);
+
+
+    // 教学阶段的单个 shader-visible 资源堆。
+	// 后续再拆分完整的描述符管理器和缓存。
+    FD3D12DescriptorHeap* GetResourceDescriptorHeap() const
+    {
+        return ResourceDescriptorHeap.get();
+    }
+    FD3D12DescriptorHeap* GetRenderTargetDescriptorHeap() const
+    {
+        return RenderTargetDescriptorHeap.get();
+    }
+    FD3D12DescriptorHeap* GetDepthStencilDescriptorHeap() const
+    {
+        return DepthStencilDescriptorHeap.get();
+    }
+private:
+    // 项目内部辅助函数，由统一 CreateTexture 入口分派。
+	// 不是新增的 RHI 接口。
+    TRefCountPtr<FD3D12Texture> CreateDepthBuffer(const FRHITextureDesc& TextureDesc);
 
 private:
     FD3D12Adapter* Adapter = nullptr;  // UE: FD3D12AdapterChild::ParentAdapter
@@ -52,7 +77,12 @@ private:
     // UE: TArray<FD3D12Queue, TFixedAllocator<Count>> Queues
 	// FD3D12Queue non-movable，故存 unique_ptr（
     std::vector<std::unique_ptr<FD3D12Queue>> Queues;
-
+    std::unique_ptr<FD3D12DescriptorHeap> ResourceDescriptorHeap;
+    // CPU 附件堆；View 析构归还槽位，调用方负责 GPU 生命周期。
+    std::unique_ptr<FD3D12DescriptorHeap> DepthStencilDescriptorHeap;
+    std::unique_ptr<FD3D12DescriptorHeap> RenderTargetDescriptorHeap;
+    // 逆序析构：Context 先于描述符堆和 Queue 销毁。
+    std::unique_ptr<FD3D12CommandContext> ImmediateCommandContext;
 };
 
 

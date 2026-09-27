@@ -1,17 +1,12 @@
 #include <Windows.h>
-#include "D3D12Adapter.h"    // 链了 D3D12RHI，其 Public 目录已在 include 路径
-#include "D3D12Viewport.h"
-#include "D3D12Resources.h"
-#include "D3D12CommandList.h"
-#include "D3D12Shader.h"
 #include <DirectXMath.h>
-#include "D3D12DynamicRHI.h"
-#include "D3D12DynamicRHI.h"
+#include "DynamicRHI.h"
 #include "RHICommandList.h"
-#include "D3D12CommandContext.h"
+#include "TestPlatform.h"
 #include <cstddef>
-
-#include "D3D12State.h"
+#include <cstring>
+#include <fstream>
+#include <string>
 
 struct FrameCB { DirectX::XMFLOAT4X4 WVP; };
 struct Vertex { float Pos[3]; float UV[2]; };
@@ -52,25 +47,20 @@ public:
 
 
 
-	void InitializedD3D12Device(HWND hwnd)
+	void Initialize(HWND hwnd, bool bValidate)
 	{
-		// 1. 通过RHI抽象建后端
-		RHI = std::make_unique<FD3D12DynamicRHI>();
-		GDynamicRHI = RHI.get();// 全局分发入口指向它；之后 RHICreateBuffer/Texture 会走这里
-		GDynamicRHI->Init();
+        if (bValidate) { Width = 640; Height = 480; }
+        RHICmdList = &FRHICommandListExecutor::GetImmediateCommandList();
+		// Viewport 经 RHI 创建；交换链、RTV 和 backbuffer 包装由后端初始化。
+		Viewport = RHICreateViewport(hwnd, Width, Height, false, PF_R8G8B8A8_UNORM);
 
 
-		Device = RHI->GetDevice();     // 过渡期：Viewport/Queue/CmdList/SRV/DepthBuffer 仍需具体 Device
-		Queue = &Device->GetQueue(ED3D12QueueType::Direct);
+		FRHITextureDesc DepthDesc(Width, Height, PF_D32_FLOAT);
+		DepthDesc.Flags = ETextureCreateFlags::DepthStencilTargetable;
+		DepthDesc.ClearValue = FClearValueBinding(1.0f, 0);
+		DepthBuffer = RHICreateTexture(DepthDesc, nullptr);
 
-		// 2.viewport （swapchain + RTV）
-		Viewport = std::make_unique<FD3D12Viewport>(RHI->GetAdapter(), hwnd, Width, Height, DXGI_FORMAT_R8G8B8A8_UNORM, 2);
-		Viewport->Init(); //  创建了swapchin rtv堆，并且创建与backbuffer相关联的rtv，并将这些rtv与对应的backbuffer关联了起来。
-
-		DSVHeap = std::make_unique<FD3D12DescriptorHeap>(Device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
-		DepthBuffer = Device->CreateDepthBuffer(Width, Height);
-		Device->GetDevice()->CreateDepthStencilView(DepthBuffer->GetResource(), nullptr, DSVHeap->GetCPUHandle(0));
-
+// 深度纹理及其 DSV 由 RHI 创建路径一并初始化。
 		//3 顶点缓冲
 		Vertex Cube[24] = {
 			{{-0.5f,-0.5f, 0.5f},{0,1}},{{-0.5f, 0.5f, 0.5f},{0,0}},{{ 0.5f, 0.5f, 0.5f},{1,0}},{{ 0.5f,-0.5f, 0.5f},{1,1}}, // +Z
@@ -88,8 +78,11 @@ public:
 
 
 		// 我们要求创建一个uploadbuffer上的顶点buffer区
-		FRHIBufferDesc VBDesc(sizeof(Cube), sizeof(Vertex), EBufferUsageFlags::VertexBuffer | EBufferUsageFlags::Dynamic);
-		VB = RHICreateBuffer(VBDesc, Cube);
+		std::vector<uint8> VertexData(16 + sizeof(Cube));
+        std::memcpy(VertexData.data() + 16, Cube, sizeof(Cube));
+        FRHIBufferDesc VBDesc(static_cast<uint32>(VertexData.size()), sizeof(Vertex),
+            EBufferUsageFlags::VertexBuffer | EBufferUsageFlags::Dynamic);
+        VB = RHICreateBuffer(VBDesc, VertexData.data());
 
 
 		FRHIBufferDesc IBDesc(sizeof(Indices), sizeof(uint16), EBufferUsageFlags::IndexBuffer | EBufferUsageFlags::Dynamic);
@@ -97,14 +90,11 @@ public:
 
 
 
-		// 4. 编译shader（blob只在建pso的时候用，局部即可）
-		ComPtr<ID3DBlob> VSBlob = CompileShader(g_ShaderSrc, "VSMain", "vs_5_0");
-		ComPtr<ID3DBlob> PSBlob = CompileShader(g_ShaderSrc, "PSMain", "ps_5_0");
-
-		const uint8* VSData = static_cast<const uint8*>(VSBlob->GetBufferPointer());
-		const uint8* PSData = static_cast<const uint8*>(PSBlob->GetBufferPointer());
-		FRHICreateShaderDesc VSDesc(std::span<const uint8>(VSData, VSBlob->GetBufferSize()));
-		FRHICreateShaderDesc PSDesc(std::span<const uint8>(PSData, PSBlob->GetBufferSize()));
+        // 编译适配器只返回字节码；Shader 资源仍由 RHI 创建。
+        const auto VSCode = CompileTestShader(g_ShaderSrc, "VSMain", "vs_5_0");
+        const auto PSCode = CompileTestShader(g_ShaderSrc, "PSMain", "ps_5_0");
+        FRHICreateShaderDesc VSDesc{std::span<const uint8>(VSCode)};
+        FRHICreateShaderDesc PSDesc{std::span<const uint8>(PSCode)};
 		// 必须与实际编译出的 Shader 资源布局一致。
 		// 当前 VS 使用 b0；PS 使用 t0、s0，均为 space0。
 		VSDesc.ResourceCounts.NumCBs = 1;
@@ -123,7 +113,7 @@ public:
 
 
 		//6. PSO
-		
+
 		static_assert(sizeof(Vertex) <= 65535);
 		static_assert(offsetof(Vertex, Pos) <= 255);
 		static_assert(offsetof(Vertex, UV) <= 255);
@@ -135,7 +125,7 @@ public:
 			FVertexElement(0, static_cast<uint8>(offsetof(Vertex, UV)),VET_Float2, 1, static_cast<uint16>(sizeof(Vertex)))
 		};
 		TRefCountPtr<FRHIVertexDeclaration> VertexDeclaration = RHICreateVertexDeclaration(Elements);
-		Initialier.BoundShaderState = FBoundShaderStateInput(VertexDeclaration , VertexShader, PixelShader);
+		Initialier.BoundShaderState = FBoundShaderStateInput(VertexDeclaration, VertexShader, PixelShader);
 		FRasterizerStateInitializerRHI RasterInitializer(FM_Solid, CM_None, false);
 		Initialier.RasterizerState = RHICreateRasterizerState(RasterInitializer);
 		FBlendStateInitializerRHI BlendStateInitializer;
@@ -147,12 +137,11 @@ public:
 		Initialier.RenderTargetFormats[0] = PF_R8G8B8A8_UNORM;
 		Initialier.DepthStencilTargetFormat = PF_D32_FLOAT;
 		Initialier.NumSamples = 1;
-		
+
 		PSO = RHICreateGraphicsPipelineState(Initialier);
 
 
 		//9. 测试一个棋盘纹理
-		SRVHeap = std::make_unique<FD3D12DescriptorHeap>(Device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 8, true);
 		const uint32 TW = 256, TH = 256;
 		std::vector<uint32> Pixels(TW * TH);
 		for (uint32 y = 0; y < TH; ++y)
@@ -163,22 +152,37 @@ public:
 			}
 
 		FRHITextureDesc TexDesc(TW, TH, PF_R8G8B8A8_UNORM);
-		Tex = RHICreateTexture(TexDesc, Pixels.data());
-		// SRV 还没抽象，过渡期 downcast（Tex 现在是 FRHITexture*）
-		Device->CreateShaderResourceView(static_cast<FD3D12Texture*>(Tex.get()), SRVHeap.get());
+		TexDesc.Flags = ETextureCreateFlags::ShaderResource;
 
-		// 命令录制两层：context 接入帧缓冲/描述符基础设施，RHICmdList 包着它
-		Context = std::make_unique<FD3D12CommandContext>();
-		Context->Init(Device, Queue, Viewport.get(), DSVHeap.get(), SRVHeap.get());
-		RHICmdList = std::make_unique<FRHICommandList>(Context.get());
+		Tex = RHICreateTexture(TexDesc, Pixels.data());
+		const FRHIViewDesc ViewDesc =
+			FRHIViewDesc::CreateTextureSRV()
+			.SetMipRange(0, 1)
+			.Build();
+		// 未指定 Format，沿用纹理格式。
+		TexSRV = RHICreateShaderResourceView(Tex, ViewDesc);
+
+        // 两张纹理在初始化阶段上传。运行时切换只创建/替换 SRV，避免上传等待
+        // 把上一帧 GPU 工作全部排空，掩盖在飞资源的生命周期问题。
+        TextureVariants[0] = Tex;
+        for (uint32& Pixel : Pixels)
+            Pixel = Pixel == 0xFFFFFFFFu ? 0xFF00FFFFu : 0xFFFF00FFu;
+        TextureVariants[1] = RHICreateTexture(TexDesc, Pixels.data());
+
 	}
 
-	void DrawTriangle()
+	void DrawTriangle(bool bPresent = true)
 	{
-		MaybeSwapTexture();   // ← 加：帧与帧之间处理换纹理
 		RHICmdList->BeginFrame();
-		const float ClearColor[4] = { 0.2f, 0.4f, 0.8f, 1.0f };
-		RHICmdList->BeginRenderPass(ClearColor);
+        MaybeSwapTexture(); // 先回收已完成帧的引用，再申请新 View。
+		TRefCountPtr<FRHITexture> BackBuffer = RHIGetViewportBackBuffer(Viewport.get());
+		FRHIRenderPassInfo PassInfo;
+		PassInfo.ColorRenderTargets[0].RenderTarget = BackBuffer.get();
+		PassInfo.ColorRenderTargets[0].Action = ERenderTargetActions::Clear_Store;
+		PassInfo.DepthStencilRenderTarget.DepthStencilTarget = DepthBuffer.get();
+		PassInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Clear_Store, ERenderTargetActions::DontLoad_DontStore);
+		RHICmdList->BeginRenderPass(PassInfo, "MainPass");
+
 		RHICmdList->SetGraphicsPipelineState(PSO.get());
 		// WVP 常量
 		{
@@ -202,11 +206,18 @@ public:
 
 			RHICmdList->SetShaderConstants(0, &Constants, sizeof(FrameCB));
 		}
-		RHICmdList->SetTexture(0, Tex.get());
-		RHICmdList->SetStreamSource(0, VB.get());
+		RHICmdList->SetShaderResourceViewParameter(0, TexSRV.get());
+		RHICmdList->SetStreamSource(0, VB.get(), 16); // Buffer 前 16 字节为前缀，Stride 仍来自声明。
 		RHICmdList->DrawIndexedPrimitive(IB.get(), 36);
 		RHICmdList->EndRenderPass();
-		RHICmdList->EndFrame();
+        // 第二个空 Pass 使用 Load_Store；用于确认附件内容保留路径。
+        PassInfo.ColorRenderTargets[0].Action = ERenderTargetActions::Load_Store;
+        PassInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(
+            ERenderTargetActions::Load_Store, ERenderTargetActions::DontLoad_DontStore);
+        RHICmdList->BeginRenderPass(PassInfo, "PreservePass");
+        RHICmdList->EndRenderPass();
+        RHICmdList->EndFrame();
+        RHICmdList->EndDrawingViewport(Viewport.get(), FRHIPresentArgs(FrameNumber++, bPresent, true));
 	}
 	void WaitForGPU()
 	{
@@ -220,46 +231,46 @@ public:
 			return;
 		}
 		g_SwapTexture = false;
-		// 生成一张不同的棋盘（换格子大小 + 颜色）
-		static int Variant = 0;
-		Variant++;
-		const uint32 TW = 256, TH = 256;
-		std::vector<uint32> Pixels(TW * TH);
-		const uint32 Cell = (Variant & 1) ? 16 : 64;
-		for (uint32 y = 0; y < TH; ++y)
-		{
-			for (uint32 x = 0; x < TW; ++x)
-			{
-				bool c = ((x / Cell) ^ (y / Cell)) & 1;
-				Pixels[y * TW + x] = c ? 0xFF00FFFFu : 0xFFFF00FFu;
-			}
-		}
-		FRHITextureDesc TexDesc(TW, TH, PF_R8G8B8A8_UNORM);
-		TRefCountPtr<FRHITexture> NewTex = RHICreateTexture(TexDesc, Pixels.data());
-		Device->CreateShaderResourceView(static_cast<FD3D12Texture*>(NewTex.get()), SRVHeap.get());
+        Variant = (Variant + 1) % TextureVariants.size();
+        TRefCountPtr<FRHITexture> NewTex = TextureVariants[Variant];
 
-		// 旧纹理交给延迟删除队列保活；换上新的
-		RHICmdList->DeferredDelete(Tex);
-		Tex = NewTex;
-
+		const FRHIViewDesc ViewDesc = FRHIViewDesc::CreateTextureSRV().SetMipRange(0, 1).Build();
+		TRefCountPtr<FRHIShaderResourceView> NewSRV = RHICreateShaderResourceView(NewTex, ViewDesc);
+		// 旧 SRV 持有旧纹理。
+		// 将旧 SRV 保留到 GPU 完成，同时保住它引用的纹理。
+		RHICmdList->DeferredDelete(TexSRV);
+		TexSRV = std::move(NewSRV);
+		Tex = std::move(NewTex);
 	}
+    void Validate()
+    {
+        ValidateBackend(Viewport.get(), DepthBuffer.get(), PSO.get(), VB.get(), IB.get());
+        for (uint32 Index = 0; Index < 120; ++Index)
+        {
+            g_SwapTexture = true;
+            DrawTriangle();
+        }
+        DrawTriangle(false);
+        ValidateRenderedImage(RHIGetViewportBackBuffer(Viewport.get()).get(), "stage-a-frame.ppm");
+        WaitForGPU();
+        CheckDebugMessages();
+    }
 private:
+    uint64 FrameNumber = 0;
+    size_t Variant = 0;
+    std::array<TRefCountPtr<FRHITexture>, 2> TextureVariants;
 	uint32 Width = 1920;
 	uint32 Height = 1080;
-	std::unique_ptr<FD3D12DynamicRHI> RHI;
-	std::unique_ptr<FD3D12Viewport> Viewport;
-	FD3D12Device* Device = nullptr;// 非拥有，指向Adapter内部
-	FD3D12Queue* Queue = nullptr;// 非拥有
+	TRefCountPtr<FRHIViewport> Viewport;
 	TRefCountPtr<FRHIGraphicsPipelineState> PSO;
 	TRefCountPtr<FRHIBuffer> VB;
 	TRefCountPtr<FRHIBuffer> IB;
-	std::unique_ptr<FD3D12DescriptorHeap> DSVHeap;
-	std::unique_ptr<FD3D12Resource> DepthBuffer;
-	std::unique_ptr<FD3D12DescriptorHeap> SRVHeap;
+	TRefCountPtr<FRHITexture> DepthBuffer;
+
 	TRefCountPtr<FRHITexture> Tex;
-	// 命令录制两层（帧管理/CB ring/VBV/IBV/视口 都搬进 context 了）
-	std::unique_ptr<FD3D12CommandContext> Context;
-	std::unique_ptr<FRHICommandList> RHICmdList;
+	TRefCountPtr<FRHIShaderResourceView> TexSRV;
+	// 借用 RHI 启动阶段建立的即时命令列表。
+    FRHICommandListImmediate* RHICmdList = nullptr;
 };
 
 
@@ -280,38 +291,60 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
-int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR CommandLine, int nCmdShow)
 {
+    const bool bValidate = std::string(CommandLine).find("--validate") != std::string::npos;
 	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 	WNDCLASS wc = {};
 	wc.lpfnWndProc = WndProc; wc.hInstance = hInst;
 	wc.lpszClassName = "RHITestWindow"; wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
 	RegisterClass(&wc);
-	int32 Width = 1920;
-	int32 Height = 1080;
+	int32 Width = bValidate ? 640 : 1920;
+	int32 Height = bValidate ? 480 : 1080;
 	RECT rc = { 0, 0, (LONG)Width, (LONG)Height };     // 想要的客户区
 	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE); // 加上标题栏+边框，算出整窗尺寸
 
-	HWND hwnd = CreateWindowEx(0, "RHITestWindow", "BaseTestEngine RHI - Triangle",
+	HWND hwnd = CreateWindowEx(0, "RHITestWindow", "BaseTestEngine RHI - Textured Cube",
 		WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
 		rc.right - rc.left,   // ← 用反算后的整窗宽
 		rc.bottom - rc.top,   // ← 整窗高
 		nullptr, nullptr, hInst, nullptr);
-	ShowWindow(hwnd, nCmdShow);
-
-	RHITestPeriod1 App;
-	App.InitializedD3D12Device(hwnd);
-
-	MSG msg = {};
-	while (g_Running)
-	{
-		while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-		App.DrawTriangle();
-	}
-	App.WaitForGPU();   //不再每帧 Flush，退出前等 GPU 把在飞的帧跑完，再让 App 析构销毁资源
-	return 0;   // 最后一帧 DrawTriangle 已 Flush，GPU 已空闲
+    ShowWindow(hwnd, bValidate ? SW_HIDE : nCmdShow);
+    try
+    {
+        RHIInit(CreateTestRHI(bValidate));
+        {
+            RHITestPeriod1 App;
+            App.Initialize(hwnd, bValidate);
+            if (bValidate)
+            {
+                App.Validate();
+            }
+            else
+            {
+                MSG Msg{};
+                while (g_Running)
+                {
+                    while (PeekMessage(&Msg, nullptr, 0, 0, PM_REMOVE))
+                    {
+                        TranslateMessage(&Msg);
+                        DispatchMessage(&Msg);
+                    }
+                    if (g_Running) App.DrawTriangle();
+                }
+            }
+            App.WaitForGPU();
+        } // 所有上层资源先释放，再关闭 RHI。
+        CheckDebugMessages();
+        RHIExit();
+        if (bValidate) std::ofstream("stage-a-validation.txt") << "PASS: descriptor reuse, GPU-gated lifetime, resize, render-pass clear/load, 120 swaps, image readback, clean debug queue, shutdown\n";
+        if (IsWindow(hwnd)) DestroyWindow(hwnd);
+        return 0;
+    }
+    catch (const std::exception& Error)
+    {
+        std::ofstream("stage-a-validation.txt") << "FAIL: " << Error.what() << '\n';
+        if (!bValidate) MessageBoxA(hwnd, Error.what(), "RHI error", MB_OK | MB_ICONERROR);
+        return 1;
+    }
 }

@@ -21,7 +21,7 @@ FD3D12Queue::FD3D12Queue(FD3D12Device* InDevice, ED3D12QueueType InType)
 
 	VERIFY_D3D12(D3DDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&Fence.D3DFence)));
 	Fence.FenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-	assert(Fence.FenceEvent != nullptr);
+	if (!Fence.FenceEvent) throw std::runtime_error("Create fence event failed");
 	Fence.OwnerQueue = this;
 }
 FD3D12Queue::~FD3D12Queue()
@@ -49,9 +49,12 @@ void FD3D12Queue::Wait(FD3D12Fence& InFence, uint64 Value)
 //CPU 端阻塞  GPU 当前 Fence 值,没追上就注册 event,CPU 睡在 WaitForSingleObjectEx。这是 UE InterruptThread 干的事,单线程下我们直接在调用线程做。
 void FD3D12Queue::WaitCPU(uint64 Value)
 {
+    if (Fence.D3DFence->GetCompletedValue() == UINT64_MAX)
+        throw std::runtime_error("Device removed while waiting for GPU");
 	if (Fence.D3DFence->GetCompletedValue() < Value)
 	{
 		VERIFY_D3D12(Fence.D3DFence->SetEventOnCompletion(Value, Fence.FenceEvent));
-		WaitForSingleObjectEx(Fence.FenceEvent, INFINITE, FALSE);
+		if (WaitForSingleObjectEx(Fence.FenceEvent, INFINITE, FALSE) != WAIT_OBJECT_0)
+            throw std::runtime_error("GPU fence wait failed");
 	}
 }

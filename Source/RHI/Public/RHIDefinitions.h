@@ -16,6 +16,8 @@ enum ERHIResourceType :uint8
     RRT_RasterizerState,
     RRT_DepthStencilState,
     RRT_BlendState,
+    RRT_ShaderResourceView,//用来标识SRV 对象的类型，与其引用的 RRT_Texture 是两个不同对象。
+    RRT_Viewport,
 };
 
 //实心或线框
@@ -135,3 +137,52 @@ enum EPrimitiveType : uint8
 {
     PT_TriangleList,
 };
+
+
+//Load 不是“从磁盘加载纹理”，而是保留这个附件进入 Pass 前已有的内容。
+enum class ERenderTargetLoadAction :uint8
+{
+    // ENoAction 也不是清零,而是不要求保留旧内容。选择它之后，就不能依赖那些未被重新写入的内容，要认为未被本 Pass 写入的区域内容不确定。
+    ENoAction,
+    // 保留附件原有内容。
+    ELoad,
+    // 在 Pass 开始时清空附件。
+    EClear,
+    Num,
+    NumBits = 2,
+};
+
+enum class ERenderTargetStoreAction : uint8
+{
+    // Pass 结束后，不要求保留附件内容。
+    ENoAction,
+
+    // 保留结果，供后续使用。
+    EStore,
+
+    // 将多重采样结果 Resolve 到目标。
+    // 先保留 UE 的枚举，当前后端尚不支持。
+    EMultisampleResolve,
+
+    Num,
+    NumBits = 2,
+};
+static_assert(
+    static_cast<uint32>(ERenderTargetLoadAction::Num) <=
+    (1u << static_cast<uint32>(ERenderTargetLoadAction::NumBits)));
+
+static_assert(
+    static_cast<uint32>(ERenderTargetStoreAction::Num) <=
+    (1u << static_cast<uint32>(ERenderTargetStoreAction::NumBits)));
+
+
+enum class ETextureCreateFlags : uint64
+{
+    None = 0,
+
+    RenderTargetable = 1ull << 0, // RenderTargetable 本步用于标记已有 backbuffer，暂不支持创建普通离屏颜色附件
+    DepthStencilTargetable = 1ull << 2,
+    ShaderResource = 1ull << 3,
+};
+
+ENUM_CLASS_FLAGS(ETextureCreateFlags)

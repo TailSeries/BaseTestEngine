@@ -18,4 +18,13 @@
 #include "D3D12RHIModule.h"
 
 
-#define VERIFY_D3D12(hr) assert(SUCCEEDED(hr)) //VERIFY_D3D12 对应 UE 的 VERIFYD3D12RESULT，现在先用 assert，后续可以改成打 log
+#include <stdexcept>
+#include <string>
+// HRESULT 表达式在 Release 中也必须执行；assert 会在 NDEBUG 下消去表达式。
+inline void VerifyD3D12Result(HRESULT Result, const char* Expression)
+{
+    if (FAILED(Result))
+        throw std::runtime_error(std::string(Expression) + " failed, HRESULT=" +
+            std::to_string(static_cast<unsigned long>(Result)));
+}
+#define VERIFY_D3D12(Expression) VerifyD3D12Result((Expression), #Expression)

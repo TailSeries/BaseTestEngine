@@ -29,12 +29,13 @@
 #include "D3D12RHIModule.h"
 #include "D3D12RHIPrivate.h"
 #include "GenericPlatform.h"
+#include <vector>
 
 using Microsoft::WRL::ComPtr;
 class FD3D12Device;
 
 // UE: class FD3D12DescriptorHeap（D3D12Descriptors.h，含 offline/online 管理器等）
-// 简化：单个堆封装 + 线性分配（NextFreeSlot），不做子分配/global/bindless
+// 简化：固定容量堆 + 单线程空闲槽回收，不做堆扩容/global/bindless
 class D3D12RHIMODULE FD3D12DescriptorHeap
 {
 public:
@@ -49,8 +50,11 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandle(uint32 slot) const;
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle(uint32 slot) const; // 仅对shaderisible 有效。
 
-	// 简单线性分配：返回下一个空slot
+	// 分配空闲槽；耗尽时抛异常，不覆盖仍在使用的描述符。
 	uint32 Allocate();
+    // 调用方必须确保 GPU 已不再使用该槽。View 的延迟析构负责这一点。
+    void Free(uint32 Slot);
+    uint32 GetAllocatedCount() const { return AllocatedCount; }
 
 private:
 	FD3D12Device* Parent = nullptr;
@@ -58,7 +62,9 @@ private:
 	D3D12_DESCRIPTOR_HEAP_TYPE Type;
 	uint32 NumDescriptors = 0;
 	uint32 DescriptorSize = 0;
-	uint32 NextFreeSlot = 0;
+	std::vector<uint32> FreeSlots;
+    std::vector<bool> AllocatedSlots;
+    uint32 AllocatedCount = 0;
 	bool bShaderVisible = false;
 	D3D12_CPU_DESCRIPTOR_HANDLE Cpubase{};
 	D3D12_GPU_DESCRIPTOR_HANDLE GpuBase{};

@@ -88,7 +88,7 @@ RHI(A) ─▶ RHICore(B) ─▶ RenderCore(C) ─▶ RDG(D) ─▶ Renderer(E) �
 
 ---
 
-### 阶段 A —— RHI 层（进行中）
+### 阶段 A —— RHI 层（已按教学范围验收，2026-09-27）
 
 - 我们目录：`Source/RHI/` + `Source/D3D12RHI/`；UE 对照：`Runtime/RHI/` + `Runtime/D3D12RHI/`
 - **执行文档：`RHI_Learning.md`**（第 1~9 章）
@@ -98,17 +98,17 @@ RHI(A) ─▶ RHICore(B) ─▶ RenderCore(C) ─▶ RDG(D) ─▶ Renderer(E) �
 | 里程碑 | 最小能力 | 状态 |
 |---|---|---|
 | A0 纯 DX12 基础 | SwapChain/Present、CmdQueue/List/Allocator、Fence、VB/IB、PSO/RootSig/Shader、Descriptor、Barrier | 通过 Frank Luna 教材覆盖 |
-| A1 Core 基础设施 | 引用计数（`FRHIResource + TRefCountPtr` 风格）、线程/事件/锁、TaskGraph 底座 | 部分（`Core/`） |
-| A2 RHI 抽象层 | `RHIDefinitions / RHIResources / DynamicRHI / RHIContext / RHICommandList`，**不含任何 D3D12 类型** | 🔶 A2-a、A2-b片1已通；片2已接通 Shader/顶点声明/固定状态/PSO 创建和 Adapter 动态根签名缓存；顶点流 Stride、RenderPass/Viewport/Context、View/资源绑定抽象待完成 |
+| A1 Core 基础设施 | 引用计数（`FRHIResource + TRefCountPtr` 风格）、线程/事件/锁、TaskGraph 底座 | 单线程 RHI 所需基础已具备；完整 TaskGraph/线程体系不作为本阶段门槛 |
+| A2 RHI 抽象层 | `RHIDefinitions / RHIResources / DynamicRHI / RHIContext / RHICommandList`，**不含任何 D3D12 类型** | ✅ 资源/状态/View/Viewport、Context 后端初始化和即时命令列表入口完成；RHI 接口无原生 D3D12 类型 |
 | A3-M1 | RHI 初始化 → Clear → Present | ✅ |
 | A3-M2 | 创建 Buffer / Texture / SRV / RTV / DSV | ✅ Buffer/RTV/DSV/Texture/SRV 均已通（棋盘格贴图立方体） |
-| A3-M3 | Test 只调 RHI，画出三角形 / 静态 Mesh | 🔶 已画出纹理立方体，draw loop 已走 RHI；初始化仍依赖具体后端，完整边界验收待完成 |
-| A3-M4 | 描述符管理、**多帧同步**、Fence 保护延迟释放；完整状态追踪/自动 Barrier 转阶段 B | 🔶 多帧同步已通；PendingDeletes/实际提交 Fence/DeletionQueue 已接入，真正的在飞资源释放验证和描述符回收待做 |
-| A3-M5 | 动态常量数据 / ring buffer | ✅ 单 CB→CB ring（每帧一个，随 M4-a 多帧同步一起做） |
+| A3-M3 | Test 只调 RHI，画出三角形 / 静态 Mesh | ✅ 普通创建/绘制走 RHI；平台启动与编译适配、专用后端诊断单独隔离；纹理立方体回读验收通过 |
+| A3-M4 | 描述符管理、多帧同步、Fence 保护延迟释放；自动 Barrier 转阶段 B | ✅ 固定堆槽位回收、GPU gate 在飞资源验证、120 次换纹理和退出通过 |
+| A3-M5 | 动态常量数据 / ring buffer | ✅ 两个帧槽，每帧 64 KiB 常量区，绑定按 256 字节对齐独立分配 |
 
-**当前检查点（2026-09-25）**：PSO 创建已走 RHI，根签名按 Shader 资源需求由 Adapter 中的 Manager 缓存共享；Context 根据根签名映射绑定 VS b0 / PS t0。RHITest Debug 编译链接通过，本次未验证图形运行或缓存命中。当前显式填写 Shader 元数据，仅支持 VS b0、PS t0/s0（space0、数量 0/1），保留 point/wrap 静态采样器；量化分档、完整编译产物解析、动态采样器及底层 PSO 缓存尚未实现。
+**当前检查点（2026-09-27）**：阶段 A 已验收。Debug / Release 编译运行均通过；D3D12 debug layer / GPU validation 下完成描述符边界与复用、GPU gate 真实在飞 draw 生命周期、24 次 Resize、24 次 DSV 重建、120 次 SRV 替换、Clear/Load、非零顶点 Offset、图像回读和退出验证。主要创建和绘制代码只使用 RHI。
 
-**阶段 A 剩余**：顶点流 Stride 接入、Texture/View/资源绑定抽象、RenderPass/Viewport/Context 获取抽象、描述符回收与生命周期验证，共 4 块实现工作，之后整体验收。完整自动 Barrier/状态追踪属于阶段 B；RHI 线程、完整 Shader 编译系统和完整 PSO 缓存不作为阶段 A 结束门槛。详细进度以 `RHI_Learning.md` 为准。
+**接续阶段 B**：通用资源状态与自动 Barrier。Shader 元数据仍显式填写，VS b0 / PS t0+s0、point/wrap 静态采样器、单颜色 backbuffer + D32、单采样；完整 Shader 编译系统、RHI 多线程及完整 PSO 缓存不属于此次完成范围。详见 [StageA_Completion.md](StageA_Completion.md)。
 
 **A 章节表**（对照 UE 文件，详见 `RHI_Learning.md`）：
 
@@ -316,3 +316,39 @@ RHICore     ：...\Runtime\RHICore\
 RenderCore  ：...\Runtime\RenderCore\
 Renderer    ：...\Runtime\Renderer\
 ```
+
+**SRV 接入检查（2026-09-26）**：RHI View 分层与后端 SRV 包装已接通；Device 持有资源描述符堆，RHI 创建和绑定 SRV，换纹理延迟释放旧 SRV 并保住其纹理。Debug 编译链接通过，运行验证待做。当前仅 Texture2D/RGBA8/mip0/PS t0，描述符仍为 8 槽线性分配。下一步进入 RenderPass Load/Store 描述。
+### DSV 后端封装完成（2026-09-27）
+
+- Device 持有非 shader-visible DSV 堆；CreateTexture 的深度分支创建 FD3D12DepthStencilView，由 FD3D12Texture 持有。View 先于纹理资源析构。
+- Context 从 RenderPass 深度纹理获取 DSV，验证同一 Device 和 View 初始化状态，不再依赖外部固定 DSV 槽位。Init 只接收 Device、Queue、Viewport。
+- RHITest 已删除 DSV 堆、深度纹理下转型和原生 DSV 创建。深度格式仍限 D32、单层/mip0/单采样，可写 DSV；资源维持 DEPTH_WRITE，尚无通用状态追踪。
+- SRV 堆约束移入 SRV 构造器；公共 GPU Handle 访问拒绝非 shader-visible View。两个描述符堆仍各为 8 槽线性分配，未实现回收。
+- RHITest Debug 编译链接通过；本次未运行图形程序，画面、换纹理、异常路径及 GPU 在飞释放仍待运行验证。
+- 下一步收拢 Context 获取与初始化；阶段 A 的描述符回收、生命周期验证及整体验收仍未完成。
+
+### 默认 Context 所有权归位（2026-09-27）
+
+- FD3D12Device 创建并持有 ImmediateCommandContext，通过 GetDefaultCommandContext 返回非拥有引用；成员顺序保证 Context 先于描述符堆与 Queue 析构。
+- RHITest 不再拥有或创建 Context，仅借用 Device 的默认 Context 构造 FRHICommandList；退出前仍通过 WaitForGPU 等待 GPU 完成。
+- 当前仅迁移所有权：Context::Init(Device, Queue, Viewport) 仍由测试调用，尚未完成初始化与视口解耦，也尚未收拢上层命令列表获取入口。
+- 验证：RHITest Debug 编译链接通过；本次未运行图形程序。
+- 下一步：解除 Context 初始化对 Viewport 的依赖，将初始化收回后端；描述符回收、生命周期验证及阶段 A 整体验收仍待完成。
+
+### RTV 类型补齐（2026-09-27）
+
+- 已增加 FD3D12RenderTargetView，复用 TD3D12View；校验非 shader-visible RTV 堆、资源所属 Device、RGBA8 Texture2D 单层/单 mip/单采样及 mip0/plane0 视图，创建 CPU 描述符。
+- 已同步公共 View 注释。RHITest Debug 编译链接通过；未运行图形验证。
+- 本步仅增加类型，尚未接入纹理所有权或 backbuffer 创建；Viewport 仍管理原 RTV 堆，Context 仍通过 Viewport 取得 RTV 和执行 Present。
+- 下一步将 RTV 接到 FD3D12Texture，再迁移 backbuffer RTV 创建与 RenderPass 绑定，随后解除 Context 初始化对 Viewport 的依赖。
+
+### 纹理 RTV 所有权接口完成（2026-09-27）
+
+- FD3D12Texture 新增 RenderTargetView 所有权及 GetRenderTargetView / SetRenderTargetView；当前仅单个 mip0、非数组 RTV，未创建时返回 nullptr。
+- View 成员位于 ResourcePtr 之后，确保先于资源析构；注释说明创建阶段接入和 GPU 使用期间不可替换的约束。
+- RHITest Debug 编译链接通过；未运行图形验证。backbuffer 尚未调用新 setter，现有 RTV 创建与绑定路径仍在 Viewport。
+- 下一步迁移 backbuffer RTV 创建，并让 RenderPass 从颜色纹理取得 RTV。
+
+### 阶段 A 收尾（2026-09-27）
+
+以本文阶段 A 表和 StageA_Completion.md 为当前状态。此前按日期保留的“待完成”条目为历史检查记录；RTV 接入、Context 初始化/呈现解耦、描述符回收及 GPU 生命周期验证现在均已完成。下一次从阶段 B 接续。

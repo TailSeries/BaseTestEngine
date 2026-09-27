@@ -11,13 +11,16 @@ class FD3D12Device;
 // UE: class FD3D12DynamicRHI : public FDynamicRHI（D3D12RHI 模块）
 // 精简：持有 Adapter，Init 里建三层；资源创建转发到 Device
 
-class D3D12RHIMODULE FD3D12DynamicRHI:public FDynamicRHI
+class D3D12RHIMODULE FD3D12DynamicRHI :public FDynamicRHI
 {
 public:
 	FD3D12DynamicRHI();
 	~FD3D12DynamicRHI();
 	virtual void Init() override;
 	virtual void Shutdown() override;
+    virtual IRHICommandContext* RHIGetDefaultContext() override;
+    virtual void RHIEndDrawingViewport(FRHICommandListImmediate& RHICmdList,
+        FRHIViewport* Viewport, const FRHIPresentArgs& PresentArgs) override;
 	virtual const char* GetName() override { return "D3D12"; };
 	virtual TRefCountPtr<FRHIBuffer> RHICreateBuffer(const FRHIBufferDesc& Desc, const void* InitialData) override;
 	virtual TRefCountPtr<FRHITexture> RHICreateTexture(const FRHITextureDesc& Desc, const void* InitialData) override;
@@ -28,7 +31,11 @@ public:
 	virtual TRefCountPtr<FRHIDepthStencilState> RHICreateDepthStencilState(const FDepthStencilStateInitializerRHI& Initializer) override;
 	virtual TRefCountPtr<FRHIBlendState> RHICreateBlendState(const FBlendStateInitializerRHI& Initializer) override;
 	virtual TRefCountPtr<FRHIGraphicsPipelineState> RHICreateGraphicsPipelineState(const FGraphicsPipelineStateInitializer& Initializer) override;
-	// 过渡期：Viewport / Queue / CommandList / SRV 仍是具体调用，需要拿 Adapter/Device
+	virtual TRefCountPtr<FRHIShaderResourceView> RHICreateShaderResourceView(TRefCountPtr<FRHIViewableResource> Resource, const FRHIViewDesc& ViewDesc) override;
+	virtual TRefCountPtr<FRHITexture> RHIGetViewportBackBuffer(FRHIViewport* Viewport) override;
+
+	virtual TRefCountPtr<FRHIViewport> RHICreateViewport(void* WindowHandle, uint32 SizeX, uint32 SizeY, bool bIsFullscreen, EPixelFormat PixelFormat) override;
+	// 后端内部及专用验证代码使用；普通绘制代码不获取具体 Device。
 	FD3D12Adapter* GetAdapter() const { return Adapter.get(); }
 	FD3D12Device* GetDevice()  const { return Device; }
 

@@ -37,7 +37,7 @@ bool FD3D12Adapter::FindAdapter(FD3D12AdapterDesc& OutDesc)
 		// 测试能否创建 D3D12 设备：最后一参传 nullptr = 只测试、不真正创建
 		// （成功时返回 S_FALSE，仍属 SUCCEEDED）
 
-		if (SUCCEEDED(D3D12CreateDevice(TempAdapter.Get(), MinFeatureLevel, __uuidof(ID3D12Device), nullptr)));
+		if (SUCCEEDED(D3D12CreateDevice(TempAdapter.Get(), MinFeatureLevel, __uuidof(ID3D12Device), nullptr)))
 		{
 			DXGI_ADAPTER_DESC AdapterDesc{};
 			TempAdapter->GetDesc(&AdapterDesc);

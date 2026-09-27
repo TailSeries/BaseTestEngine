@@ -1,15 +1,23 @@
 #include "D3D12Descriptors.h"
 #include "D3D12Device.h"
-#include <cassert>
+#include <stdexcept>
 
 FD3D12DescriptorHeap::FD3D12DescriptorHeap(FD3D12Device* InDevice, D3D12_DESCRIPTOR_HEAP_TYPE InType, uint32 InNumDescriptors, bool bInShaderVisible)
 	:Parent(InDevice)
 	,Type(InType)
 	,NumDescriptors(InNumDescriptors)
 {
-	ID3D12Device* D3DDevice = InDevice->GetDevice();
+    if (!InDevice || InNumDescriptors == 0 ||
+        (bInShaderVisible && InType != D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV &&
+         InType != D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER))
+        throw std::invalid_argument("Invalid descriptor heap description");
+    FreeSlots.reserve(NumDescriptors);
+    AllocatedSlots.resize(NumDescriptors, false);
+    for (uint32 Index = NumDescriptors; Index > 0; --Index)
+        FreeSlots.push_back(Index - 1);
+    ID3D12Device* D3DDevice = InDevice->GetDevice();
 
-	// RTV/DSV 堆强制非shader-visible（如果呆了SHADER_VISIBLE就要让它创建失败）
+	// RTV/DSV 的 shader-visible 请求已在上面拒绝。
 	bShaderVisible = bInShaderVisible && Type != D3D12_DESCRIPTOR_HEAP_TYPE_RTV && Type != D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 
 	D3D12_DESCRIPTOR_HEAP_DESC Desc = {};
@@ -32,6 +40,7 @@ FD3D12DescriptorHeap::~FD3D12DescriptorHeap() = default;
 
 D3D12_CPU_DESCRIPTOR_HANDLE FD3D12DescriptorHeap::GetCPUHandle(uint32 slot) const
 {
+    if (slot >= NumDescriptors) throw std::out_of_range("Descriptor slot out of range");
 	D3D12_CPU_DESCRIPTOR_HANDLE H = Cpubase;
 	H.ptr += static_cast<size_t>(slot * DescriptorSize);
 	return H;
@@ -39,7 +48,8 @@ D3D12_CPU_DESCRIPTOR_HANDLE FD3D12DescriptorHeap::GetCPUHandle(uint32 slot) cons
 
 D3D12_GPU_DESCRIPTOR_HANDLE FD3D12DescriptorHeap::GetGPUHandle(uint32 slot) const
 {
-	assert(bShaderVisible);
+    if (!bShaderVisible) throw std::logic_error("Heap has no GPU handle");
+    if (slot >= NumDescriptors) throw std::out_of_range("Descriptor slot out of range");
 	D3D12_GPU_DESCRIPTOR_HANDLE H = GpuBase;
 	H.ptr += static_cast<size_t>(slot * DescriptorSize);
 	return H;
@@ -47,13 +57,19 @@ D3D12_GPU_DESCRIPTOR_HANDLE FD3D12DescriptorHeap::GetGPUHandle(uint32 slot) cons
 
 uint32 FD3D12DescriptorHeap::Allocate()
 {
-	assert(NextFreeSlot < NumDescriptors);
-	return NextFreeSlot++;
+    if (FreeSlots.empty()) throw std::runtime_error("Descriptor heap exhausted");
+    const uint32 Slot = FreeSlots.back();
+    FreeSlots.pop_back();
+    AllocatedSlots[Slot] = true;
+    ++AllocatedCount;
+    return Slot;
 }
-/*
- * 说明
- * - GetCPUHandle 手动算偏移:UE 用 CD3DX12_CPU_DESCRIPTOR_HANDLE(base, slot, size) 辅助类,底层就是 base.ptr + slot*size,我们手写一样。
- * - GetGPUDescriptorHandleForHeapStart 只对 shader-visible 合法:对非 shader-visible 堆调用是未定义行为,所以 ctor 里用 bShaderVisible 守住。
- * - 线性 Allocate:UE 有 free-list、子分配、回收;我们先"下一个空槽"够用
- **/
 
+void FD3D12DescriptorHeap::Free(uint32 Slot)
+{
+    if (Slot >= NumDescriptors || !AllocatedSlots[Slot])
+        throw std::invalid_argument("Invalid or duplicate descriptor free");
+    AllocatedSlots[Slot] = false;
+    --AllocatedCount;
+    FreeSlots.push_back(Slot); // ctor 已 reserve，不在析构路径中重新分配内存。
+}

@@ -17,10 +17,9 @@
 - **Why:** 过度合并短期省事,但项目变大后命名 / 结构对不上 UE,反而难管理、难对照,背离「对照 UE 学习」的初衷。
 
 ## UE 源码参考路径(机器相关,以用户告知为准)
-- 接口层:`F:\shakervon_engine_merge\Engine\Source\Runtime\RHI\`
-- 实现层:`F:\shakervon_engine_merge\Engine\Source\Runtime\D3D12RHI\Private\`
+- 接口层:`F:\workspace\UnrealEngine58\Engine\Source\Runtime\RHI\`
+- 实现层:`F:\workspace\UnrealEngine58\Engine\Source\Runtime\D3D12RHI\Private\`
 
 ## 工程坑
 - 共享所有权类型统一写 `TRefCountPtr<T>`，不直接写 `std::shared_ptr<T>`；当前别名实现除外。创建对象仍可使用 `std::make_shared<T>()`。
-- **新建含中文注释的源文件,存成 UTF-8 with BOM**。中文系统(代码页 936)下 MSVC 会把无 BOM 的
-  UTF-8 当 GBK 解析,拼错多字节字符、连带打乱 `#if/#endif` 与大括号配对。仓库既有文件多为 GBK。
+- 源文件采用 **UTF-8 无 BOM**，根 CMakeLists 已启用 MSVC `/utf-8`；保留该选项，避免中文被按代码页 936 解析。换行遵守 `.gitattributes` 和 `.editorconfig`。

@@ -5,7 +5,7 @@
 #include <vector>
 #include <array>
 // 运行时编译 HLSL → 字节码 blob。
-// UE 是离线编译系统（ShaderCompilerWorker/DXC），我们学习阶段用 D3DCompile 直接运行时编译。
+// UE 通过 Shader 编译系统生成编译产物（编辑器也可触发编译）；当前用 D3DCompile 运行时编译，再交给 RHI 创建 Shader。
 // Target 形如 "vs_5_0" / "ps_5_0"；失败返回 nullptr 并打印错误。
 using Microsoft::WRL::ComPtr;
 

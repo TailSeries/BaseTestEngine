@@ -41,6 +41,6 @@ ComPtr<ID3DBlob> CompileShader(const char* source, const char* EntryPoint, const
 - 错误处理:编译失败时 Errors blob 里是人类可读的错误信息(哪行哪列语法错),打到调试输出——写 shader 时全靠它定位。
 - vs_5_0 / ps_5_0:Shader Model 5.0,D3D12 通用兼容。想用 SM6.0+(wave ops 等)得换 DXC 编译器,D3DCompile 只到 5.x,学习够用。
 - 返回 ComPtr<ID3DBlob>:字节码存在 blob 里,后面 PSO 的 VS/PS 字段会指向 blob->GetBufferPointer() + GetBufferSize()。
-- UE 对照:UE 从不运行时编译(太慢),它离线把所有 shader 变体编好打包。我们暂时单个三角形运行时编一次无所谓,属"学习阶段简化"。
+- UE 对照：Shader 编译系统生成产物，编辑器也会触发编译；本项目的测试编译适配器尚未复刻该系统。
 ---
  */
