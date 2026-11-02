@@ -25,24 +25,28 @@ public:
 	*/
 	std::vector<int> twoSum(std::vector<int>& nums, int target)
 	{
-		std::unordered_map<int, int> valuesMap;
+		std::vector<int> results;
+		std::unordered_map<int, int> map;// key:nums[i], value:下标
 		for (int i = 0; i < nums.size(); i++)
 		{
-			int tempvalue = target - nums[i];
-			auto it = valuesMap.find(tempvalue);
-			if (it != valuesMap.end())
+			if (map.find(target - nums[i]) != map.end())
 			{
-				return { it->second, i };
+				return { i, map[target - nums[i]] };
 			}
-			valuesMap.emplace(nums[i], i);
+			else
+			{
+				map.emplace(nums[i], i);
+			}
 		}
-		return {};
+		return results;
 	}
 
 
 
-	/*2. https://leetcode.cn/problems/two-sum/description/
+	/*2. https://leetcode.cn/problems/add-two-numbers/
 	* 链表要始终注意head所在的位置，每次步进操作的时候注意node = node->next的时候，node所在的真实位置
+	* 如果链表不等长，对应位置判空，默认它是0就可以了。
+	* 满足 			if (resolvevalue > 0 || l1 || l2) 条件的时候，就应该要新建Head的next了
 	*/
 	struct ListNode
 	{
@@ -56,29 +60,59 @@ public:
 	ListNode* addTwoNumbers(ListNode* l1, ListNode* l2)
 	{
 		ListNode* Head = new ListNode(0);
-		ListNode* result = Head;
+		ListNode* Result = Head;
+		int resolvevalue = 0;
 		while (l1 || l2)
 		{
-			int value = (l1 ? l1->val : 0) + (l2 ? l2->val : 0) + Head->val;
-			int high = value / 10;
-			int low = value % 10;
-			Head->val = low;
-			Head->next = (((l1 && l1->next) || (l2 && l2->next) || high > 0) == true) ? new ListNode(high) : nullptr;
+			int curvalue = (l1 == nullptr ? 0 : l1->val) + (l2 == nullptr ? 0 : l2->val) + resolvevalue;
+			resolvevalue = curvalue / 10;
+			curvalue = curvalue % 10;
+			Head->val = curvalue;
 			l1 = l1 ? l1->next : nullptr;
 			l2 = l2 ? l2->next : nullptr;
-			Head = Head->next;
-		}
+			if (resolvevalue > 0 || l1 || l2)
+			{
+				Head->next = new ListNode(resolvevalue);
+				Head = Head->next;
+			}
 
-		return result;
+
+		}
+		return Result;
 	}
 
 	/*3. https://leetcode.cn/problems/longest-substring-without-repeating-characters/
 	* 这里要注意，找到重复字符的时候，不能直接从重复位置开始重新计数，而应该从上次出现的下一个位置开始重新计数。
 	* 可以直接用滑动窗口，也可以像我这样用map记录左指针下一步直接跳到的位置，但是这种方法有个问题
 	* 	left = std::max(records[s[i]] + 1, left); 左指针是没有必要往回跳的，对应"cbacbacbaaabc";的情况，总的来说普通的滑动窗口更有普适性
+	*
+	*
+	* 关键是这个 	l = std::max(l, oldIndex + 1); 左指针不走回头路，
 	*/
 	int lengthOfLongestSubstring(std::string s)
 	{
+		{
+			std::map<char, int> checkvalues;// key char,value index
+			int l = 0;
+			int r = 0;
+			int tempsize = r - l;
+			for (; r < s.size(); r++)
+			{
+				if (checkvalues.find(s[r]) != checkvalues.end())
+				{
+					// 找到了就调整位置 
+					int oldIndex = checkvalues[s[r]];
+					tempsize = std::max(tempsize, r - l);
+					l = std::max(l, oldIndex + 1);
+
+				}
+				checkvalues[s[r]] = r;
+			}
+			tempsize = std::max(tempsize, r - l);
+			return tempsize;
+		}
+
+
 		std::unordered_map<char, int> records;
 		int maxLength = 0;
 		int left = 0;
@@ -100,7 +134,7 @@ public:
 		return maxLength;
 	}
 
-	/* TODO
+	/*
 	* 4.  https://leetcode.cn/problems/median-of-two-sorted-arrays/description/
 	* --注意返回值这里要直接/2.0
 	* -- 使用归并注意归并判while (l1 < nums1.size() && (l2 == nums2.size() || nums1[l1] <= nums2[l2]))里，
@@ -136,16 +170,65 @@ public:
 		}
 
 		{
-			int k = (nums1.size() + nums2.size()) / 2;
+			//不用真正合并数组，只要找到一个划分，让左半部分的所有数都不大于右半部分。max(aLeft, bLeft) < min(aRight, bRight)
+			// 
 
-			int temp = k / 2;
-			if (nums1[temp] < nums2[temp])
+			//保证A是比较短的数据
+			if (nums1.size() > nums2.size())
 			{
+				return findMedianSortedArrays(nums2, nums1);
+			}
+			int m = nums1.size();
+			int n = nums2.size();
+
+			// 左半部分应该包含的元素数量
+			int half = (m + n + 1) / 2;
+
+			// i 表示 A 分到左边的元素数量，可以取 0 到 m. 那么左侧最大值就是A[i - 1],右侧最小值就是A[i]
+			int low = 0;
+			int high = m;
+
+			while (low <= high)
+			{
+				// 3. 猜测 A 的划分位置，也就是 A数组的中间位置，推算 B 的划分位置
+				int i = low + (high - low) / 2;
+				int j = half - i;
+
+				//  4. 取出划分两侧的四个边界值
+				int aLeft = (i == 0) ? INT_MIN : nums1[i - 1];
+				int aRight = (i == m) ? INT_MAX : nums1[i];
+				int bLeft = (j == 0) ? INT_MIN : nums2[j - 1];
+				int bRight = (j == n) ? INT_MAX : nums2[j];
+
+
+				// 原本就有 aLeft 《 aRight; bLeft 《 bRight
+				if (aLeft > bRight)
+				{
+					// A 左边取多了,直接可以调整左界位置（这点很难想得到）
+					high = i - 1;
+				}
+				else if (bLeft > aRight)
+				{
+					// A 左边取少了
+					low = i + 1;
+				}
+				else
+				{
+					// 6. 划分正确，提取中位数
+					int leftMax = std::max(aLeft, bLeft);
+
+					if ((m + n) % 2 == 1) {
+						return leftMax;
+					}
+
+					int rightMin = std::min(aRight, bRight);
+
+					// 先转 double，避免整数加法溢出
+					return (static_cast<double>(leftMax) + rightMin) / 2.0;
+				}
 
 			}
-
-
-
+			return 0.0; // 题目保证输入合法，不会执行到这里
 		}
 
 	}
@@ -158,12 +241,16 @@ public:
 	 * 一个字符串是回文，当且仅当：
 	 * 1. 首尾字符相等 s[i] == s[j]
 	 * 2. 去掉首尾后，内部也是回文 dp[i+1][j-1] == true
-	 * 关键：dp[i][j] 依赖 dp[i+1][j-1]，所以要按子串长度从小到大填。
+	 * 3. 按长度len来开启遍历和问题的搜索
+	 * 关键：dp[i][j] 依赖 dp[i+1][j-1]
 	 */
 	std::string longestPalindrome(std::string s)
 	{
 
 		{
+			/*
+			* 暴力解法，考虑从中心向两边扩散，一种aba，从b开始扩散。另一种baab中间是个偶数进行扩散。
+			*/
 			if (s.size() <= 1) return s;
 			int start = 0;
 			int maxLen = 1;
@@ -195,19 +282,30 @@ public:
 		{
 
 
+			/*动态规划思路：dp[i][j] = s[i..j]是否回文？true，false
+				 一个字符串是回文：s[i]==s[j], 并且dp[i+1][j-1] == true
+
+			 */
+			if (s.size() <= 1) return s;
 			int n = s.size();
-			std::vector<std::vector<bool>> dp(n, std::vector<bool>(n, false));
-			for (int i = 0; i < n; i++) dp[i][i] = true;
-			int start = 0;
-			int maxLen = 1;
-			for (int len = 2; len <= n; len++)
+			std::vector<std::vector<int>> dp(n, std::vector<int>(n, false));
+			for (int i = 0; i < n; i++)
 			{
-				for (int i = 0; i + len - 1 < n; i++)
+				dp[i][i] = true;// 每个元素自身都是回文子串
+			}
+
+			int start = 0;// 记录最大长度回文串的起点
+			int maxLen = 1; // 初始最大长度是1
+			for (int len = 2; len <= n; len++) // 从长度是2的回文串开始尝试找
+			{
+				//
+				for (int i = 0; i <= n - len; i++)
 				{
+					// 长度为len时，j的下标
 					int j = i + len - 1;
 					if (s[i] == s[j])
 					{
-						dp[i][j] = (len == 2 || dp[i + 1][j - 1]);
+						dp[i][j] = (len == 2 || dp[i + 1][j - 1]); // // 长度为2额时候这里有个小坑，i+1 > j-1 了。但这里幸好可以 s[i] == s[j] 可以直接得到true
 					}
 					if (dp[i][j] && len > maxLen)
 					{
@@ -217,13 +315,14 @@ public:
 				}
 
 			}
+
 			return s.substr(start, maxLen);
 		}
 	}
 
 	/*
 	 * 6. https://leetcode.cn/problems/zigzag-conversion/
-	 *  关键：每行其实都是一个新字符串，按行重新构建字符串就行
+	 *   关键：每行都是一个新字符串，关键在于看穿字符串遍历顺序与行字符串之间的关系
 	 */
 	std::string convert(std::string s, int numRows)
 	{
@@ -251,7 +350,8 @@ public:
 
 	/*
 	 * 7. https://leetcode.cn/problems/reverse-integer/
-	 * / 与 %的应用
+	 * / 与 %的应用，%拿到最后一位这是要倒序放到前面的值。/就是继续运算。
+	 * 关键在于：如何判断溢出？[−2^31,  2^31 − 1] ，最后一位数实际上就是[-8, 7]
 	 */
 	int reverse(int x)
 	{
@@ -302,11 +402,13 @@ public:
 
 	/*
 	 * 9. https://leetcode.cn/problems/palindrome-number/
-	 * 转成字符串看回文
+	 * 1.转成字符串看回文
+	 * 2.翻转x来测
 	 *
 	 */
 	bool isPalindrome(int x)
 	{
+		// 1.转成字符串来判断
 		std::string s = std::to_string(x);
 		int tailIndex = s.size() - 1;
 		for (int i = 0; i < s.size(); i++, tailIndex--)
@@ -320,6 +422,37 @@ public:
 		{
 			return x == reverse(x);
 		}
+
+
+		//2.翻转x来测
+		{
+
+			//2. 翻转x来测
+			if (x < 0 || (x % 10 == 0 && x != 0/*0的补丁*/)) return false;
+
+			int res = 0;
+			int temp = x;
+			while (temp != 0)
+			{
+				int digit = temp % 10;
+				temp = temp / 10;
+				{
+					//先认为 翻转之后超过int限制，那一定不是和原来的数相等了。
+					if (res > INT_MAX / 10 || (res == INT_MAX / 10 && digit > 7))
+					{
+						return false;
+					}
+				}
+
+				res = res * 10 + digit;
+			}
+
+			if (res == x)
+			{
+				return true;
+			}
+			return false;
+		}
 	}
 
 	/*
@@ -329,7 +462,9 @@ public:
 
 	 /*
 	  * 11. https://leetcode.cn/problems/container-with-most-water/description/
-	  * 双指针，从左右两侧移动矮的那一侧
+	  *
+	  *
+	  * 双指针，从左右两侧移动矮的那一侧,每次淘汰掉一定不会是答案的那一侧，而不是"移向更好的那侧"。
 	  * area = min(h[l], h[r])(r - l), 移动r或者l 宽度一定减小，在宽度减小的前提下，移动更矮的那一侧：两种情况 更小/更大，移动更高的一侧呢，h[]只会更小。
 	  * 结论反过来理解：正因为移动 r 一定更小，所以 r 可以直接排除——既然移动 r 不可能变大，何必试？，
 	  * 移动 l 虽然"可能更小也可能更大"，但至少还有变大的可能，值得继续探索。
@@ -438,6 +573,100 @@ public:
 			}
 		}
 		return results;
+
+
+		{
+			/*
+			* 一种低效写法，牢记
+			*/
+			// 题目要求不重复，先排序 以备后用
+			std::sort(nums.begin(), nums.end());
+
+			//更好的去重思路
+			std::function<std::vector<std::vector<int>>(int, int)> twosum2 = [&](int target, int j)->std::vector<std::vector<int>>
+				{
+					std::vector<std::vector<int>> results;
+					int left = j + 1;
+					int right = (int)nums.size() - 1;
+					while (left < right)
+					{
+						int sum = nums[left] + nums[right];
+						if (sum == target)
+						{
+							results.push_back({ nums[left], nums[right] });
+							// 去重：跳过相同的 left 和 right
+							int lv = nums[left];
+							int rv = nums[right];
+							while (left < right && nums[left] == lv) left++;
+							while (left < right && nums[right] == rv) right--;
+						}
+						else if (sum < target)
+						{
+							// 偏大的时候left++
+							left++;
+						}
+						else
+						{
+							// 偏小的时候 right--
+							right--;
+						}
+
+					}
+					return results;
+
+				};
+
+
+			// 先指定目标值target，从数组中排除idx = j的元素之后，剩下的两数之和为target
+			std::function<std::vector<std::vector<int>>(int, int)> twosum = [&](int target, int j)->std::vector<std::vector<int>>
+				{
+					std::map<int, int> tempvalues;// key nums[i],  value :idx
+					std::vector<std::vector<int>> results;
+					for (int i = j + 1; i < nums.size(); i++) // i 从 j + 1 开始？
+					{
+						// if(i > j + 1 && nums[i] == nums[i - 1])
+						// {// 这里有问题 跳过了重复元素，但同时也跳过了把第一个重复元素放进 tempvalues 的机会
+						//     continue;
+						// }
+
+						int temptarget = target - nums[i];
+						if (tempvalues.find(temptarget) != tempvalues.end())
+						{
+							// 找到一组
+							results.push_back({ temptarget, nums[i] });
+						}
+						else
+						{
+							tempvalues[nums[i]] = i;
+						}
+					}
+
+					std::sort(results.begin(), results.end());
+
+					// unique 把相邻重复元素移到末尾，返回新的逻辑结尾
+					results.erase(std::unique(results.begin(), results.end()), results.end());
+					return results;
+				};
+			std::vector<std::vector<int>> all;
+			for (int i = 0; i < nums.size(); i++)
+			{
+				if (i > 0 && nums[i] == nums[i - 1])
+				{
+					continue;
+				}
+
+				int temptarget = 0 - nums[i];
+				std::vector<std::vector<int>> tempresult = twosum(temptarget, i);
+				for (auto& it : tempresult)
+				{
+					it.push_back(nums[i]);
+					all.push_back(it);
+				}
+			}
+
+			return all;
+
+		}
 	}
 
 
@@ -494,29 +723,35 @@ public:
 
 	std::vector<std::string> letterCombinations(std::string digits)
 	{
-		std::vector<std::string> marks = { "","", "abc", "def", "ghi", "jkl", "mno", "pqrs", "tuv", "wxyz" };
+		// 实际上是一个统计全排列的问题
+		std::vector<std::string> marks{ "","", "abc", "def", "ghi", "jkl", "mno", "pqrs", "tuv", "wxyz" };
+
 		std::vector<std::string> results;
+
+		/*
+		如何记录全排列？
+		深搜：1.每一层的结果以拷贝的形式带入下一层 2.只有到达最后一层的时候才将结果记录到全局
+		*/
 		std::function<void(std::string, int)> func = [&](std::string resultStr, int digitIndex)
 			{
 				int markIndex = digits[digitIndex] - '0';
 				const std::string& markStr = marks[markIndex];
-				int msize = markStr.size();
 				digitIndex++;
-				for (int i = 0; i < msize; i++)
+				for (int i = 0; i < markStr.size(); i++)
 				{
 					char c = markStr[i];
-					std::string tempStr = resultStr + c;
+					std::string tempstr = resultStr + c;
 					if (digitIndex < digits.size())
 					{
-						func(tempStr, digitIndex);
+						func(tempstr, digitIndex);
 					}
 					else
 					{
-						results.push_back(tempStr);
+						results.push_back(tempstr);
 					}
+
 				}
 			};
-
 
 		func("", 0);
 		return results;
@@ -1128,8 +1363,46 @@ public:
 	 * words 放进一个先收集放进一个set里，然后找出所有可能的位置，再把可能的位置进行筛选。如果剪枝的话,这种暴力法剪枝思考很绕
 	 *
 	 */
+
+	void backTrack(const std::vector<std::string>& words,std::vector<bool>& used, std::string tempStr, std::vector<std::string>& results)
+	{
+		// 每一层选好上一层已经没用过的
+		bool isalldone = true;
+		for (int i = 0; i < words.size(); i++)
+		{
+			if (used[i])
+			{
+				continue;
+			}
+			isalldone = false;
+			used[i] = true; // 排列组合，注意这里是正确的：每一轮本来i为true之后，下一轮可能完毕退栈之后，本轮i=false，那本轮i+1的时候，下一轮又能选中i了
+			std::string newTempStr = tempStr + words[i];
+			backTrack(words, used, newTempStr, results);
+			used[i] = false;
+		};
+		if (isalldone)
+		{
+			results.push_back(tempStr);
+		}
+	};
+
 	std::vector<int> findSubstring(std::string s, std::vector<std::string>& words)
 	{
+
+		std::vector<int> hasused;
+		std::function<void(std::vector<int>&)> backTrack = [&](std::vector<int>& used)
+		{
+				// 每一层选好上一层已经没用过的
+				for (int i = 0; i < words.size(); i++)
+				{
+
+				}
+				
+
+		};
+
+
+
 		std::vector<int> result;
 		if (words.empty()) return result;
 
@@ -1443,6 +1716,66 @@ public:
 	 * 非递减，那么这个值的位置一定是相邻的,我们注意用二分找边界
 	 *
 	 */
+
+	// 有序数组二分法查找第一个>=x 的下标
+	int LowerBound(std::vector<int>& nums, int target)
+	{
+		int left = 0;
+		int right = nums.size();
+		while (left < right)
+		{
+			int mid = (left + right) / 2;
+			/* 直接返回可能不是最左的
+			if (target == nums[mid])
+			{
+				return mid;
+			}*/
+
+			if (nums[mid] < target)
+			{
+				// mid 及其左边都< target，精髓在于left永远不会是<的，
+				left = mid + 1;
+			}
+			else
+			{
+				right = mid;
+			}
+		};
+
+		// 返回左界
+		return left;
+	}
+
+
+	// 有序数组二分法查找第一个>x的下标
+	int UpperBound(std::vector<int>& nums, int target)
+	{
+		int left = 0;
+		int right = nums.size();
+		while (left < right)
+		{
+			int mid = (left + right) / 2;
+			/* 直接返回可能不是最左的
+			if (target == nums[mid])
+			{
+				return mid;
+			}*/
+
+			if (nums[mid] <= target)
+			{
+				// mid 及其左边都<= target，精髓在于left永远不会是<=的
+				left = mid + 1;
+			}
+			else
+			{
+				right = mid;
+			}
+		};
+
+		// 返回左界
+		return left;
+	}
+
 	std::vector<int> searchRange(std::vector<int>& nums, int target)
 	{
 
@@ -1475,7 +1808,7 @@ public:
 			int right = lowerBound(target + 1) - 1;  // 第一个 > target 的前一格
 			return { left, right };
 		}
-
+		
 
 
 		int left = 0;
@@ -3677,16 +4010,16 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 		{
 			bool firstRow = false;
 			bool firstCol = false;
-			for (int i = 0; i < m;i++)
+			for (int i = 0; i < m; i++)
 			{
-				if (matrix[i][0]==0)
+				if (matrix[i][0] == 0)
 				{
 					firstCol = true;
 					break;
 				}
 			}
 
-			for (int j = 0; j < n;j++)
+			for (int j = 0; j < n; j++)
 			{
 				if (matrix[0][j] == 0)
 				{
@@ -3696,15 +4029,15 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 			}
 
 			//用0行 0 列标记其余格子的清零标记
-			for (int i = 0; i < m;i++)
+			for (int i = 0; i < m; i++)
 			{
-				for (int j = 0; j < n;j++)
+				for (int j = 0; j < n; j++)
 				{
 					if (matrix[i][j] == 0)
 					{
 						matrix[0][j] = 0;
 						matrix[i][0] = 0;
-		
+
 					}
 				}
 			}
@@ -3731,7 +4064,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 			// 再来处理 第0行第0列
 			if (firstRow)
 			{
-				for (int j = 0; j < n;j++)
+				for (int j = 0; j < n; j++)
 				{
 					matrix[0][j] = 0;
 				}
@@ -3752,40 +4085,40 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 
 		{
 			//递归思路本身是错误的，它只能保证退栈的时候不在当前子树的前面，无法保证不在所有分支的前面
-	
-		std::function<void(int, int)> backtrack = [&](int a, int b)
-		{
-				bool bshouldzero = false;
-				if (matrix[a][b] == 0)
-				{
-					bshouldzero = true;
-				}
 
-				if (b < n - 1)
+			std::function<void(int, int)> backtrack = [&](int a, int b)
 				{
-					backtrack(a, b + 1);
-				}
-	
-				if (a < m - 1)
-				{
-					backtrack(a + 1, b);
-				}
-
-				if (bshouldzero)
-				{
-					//a 行 b列全部改0
-					for (int i = 0; i < m;i++)
+					bool bshouldzero = false;
+					if (matrix[a][b] == 0)
 					{
-						matrix[i][b] = 0;
+						bshouldzero = true;
 					}
-					for (int j = 0; j < n;j++)
-					{
-						matrix[a][j] = 0;
-					}
-				}
-		};
 
-		backtrack(0, 0);
+					if (b < n - 1)
+					{
+						backtrack(a, b + 1);
+					}
+
+					if (a < m - 1)
+					{
+						backtrack(a + 1, b);
+					}
+
+					if (bshouldzero)
+					{
+						//a 行 b列全部改0
+						for (int i = 0; i < m; i++)
+						{
+							matrix[i][b] = 0;
+						}
+						for (int j = 0; j < n; j++)
+						{
+							matrix[a][j] = 0;
+						}
+					}
+				};
+
+			backtrack(0, 0);
 		}
 
 	}
@@ -3797,7 +4130,7 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 	 * 边界条件要分清，如果lo < hi 而不是lo <=hi的话，mid永远娶不到hi，得做额外判断。如果lo <= hi了，那么注意每次hi = mid -1，lo = mid + 1 这个后面的1就得带上了
 	 */
 
-	bool searchMatrix(std::vector<std::vector<int>>& matrix, int target) 
+	bool searchMatrix(std::vector<std::vector<int>>& matrix, int target)
 	{
 		/*
 		 * 行主序的递增，二分法
@@ -3855,17 +4188,17 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 	/*
 	 * 75. https://leetcode.cn/problems/sort-colors/
 	 * 感觉类似三分快排，pivot = 1 罢了 三路划分能成立的关键不变量是:[low, mid) 区间里全是 1。
-	 * 
+	 *
 
 	 */
-	void sortColors(std::vector<int>& nums) 
+	void sortColors(std::vector<int>& nums)
 	{
 		int left = 0;
 		int right = nums.size() - 1;
 		int piovt = 0;
 
 		/*
-		 * 先保证right一定是2，这样的话nums[piovt] 与 nums[left]一定是0 或者 1. 
+		 * 先保证right一定是2，这样的话nums[piovt] 与 nums[left]一定是0 或者 1.
 		 * 然后遍历nums[pivot] == 0 就和 nums[left]交换
 		 */
 		while (piovt <= right)
@@ -3887,14 +4220,14 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 			}
 		}
 
-		
+
 	}
 
 
 	/*
 	 * 76. https://leetcode.cn/problems/minimum-window-substring/
 	 */
-	std::string minWindow(std::string s, std::string t) 
+	std::string minWindow(std::string s, std::string t)
 	{
 		int m = s.size();
 		int n = t.size();
@@ -3966,4 +4299,10 @@ int boxes[9];  // boxes[b] = 第 b 宫用了哪些数字
 			return "";
 		}
 	}
+
+
+
 };
+
+
+extern void TestSolutionForReview();

@@ -2,7 +2,7 @@
 
 #include "ScopeLock.h"
 #include "Threads/RunnableThread.h"
-bool FThreadManager::bIsInitialized = false;
+std::atomic<bool> FThreadManager::bIsInitialized{false};
 FThreadManager& FThreadManager::Get()
 {
 	static FThreadManager Singleton;
@@ -28,7 +28,7 @@ void FThreadManager::AddThread(uint32 ThreadId, class FRunnableThread* Thread)
 
 	FScopeLock ThreadsLock(&ThreadsCritical);
 	auto it = Threads.find(ThreadId);
-	if (it != Threads.end())
+	if (it == Threads.end())
 	{
 		Threads.emplace(ThreadId, Thread);
 	}
@@ -40,7 +40,7 @@ void FThreadManager::RemoveThread(class FRunnableThread* Thread)
 
 	uint32 TID =  Thread->GetThreadID();
 	auto it = Threads.find(TID);
-	if (it != Threads.end())
+	if (it != Threads.end() && it->second == Thread)
 	{
 		Threads.erase(it);
 	}

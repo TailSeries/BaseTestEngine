@@ -13,6 +13,7 @@ class FD3D12DescriptorHeap;
 class FD3D12CommandAllocator;
 class FD3D12CommandList;
 class FD3D12Buffer;
+class FD3D12Resource;
 class FD3D12RootSignature;
 class FD3D12GraphicsPipelineState;
 
@@ -27,6 +28,10 @@ public:
     // Device 在自身初始化时创建默认 Context；视口不是 Context 的初始化依赖。
     void Init(FD3D12Device* InDevice);
     bool IsFrameOpen() const { return bFrameOpen; }
+    void RHIBeginTransitions(std::span<const FRHITransition* const> Transitions) override;
+    void RHIEndTransitions(std::span<const FRHITransition* const> Transitions) override;
+    void RHICopyTexture(FRHITexture* Source, FRHITexture* Dest) override;
+    uint64 GetBarrierCount() const { return BarrierCount; } // 验证去重/批量提交，非 GPU 时间统计。
 
 	virtual void BeginFrame() override;
 	virtual void BeginRenderPass(const FRHIRenderPassInfo& Info, const char* Name) override;
@@ -41,6 +46,9 @@ public:
 	virtual void WaitForGPU() override;
 	virtual void DeferredDelete(TRefCountPtr<FRHIResource> Resource) override;
 private:
+    uint32 OpenTransitions = 0;
+    uint64 BarrierCount = 0;
+    std::vector<FD3D12Resource*> SubmittedBuffers; // 借用；资源必须保活到提交及 GPU 完成。
 	static constexpr uint32 FrameCount = 2;
 
 	FD3D12Device* Device = nullptr;
@@ -53,7 +61,7 @@ private:
 	TRefCountPtr<FD3D12Buffer> CBs[FrameCount];// 每帧独立的常量 arena，按 draw 分配 256 字节对齐区域。
 	uint64 FrameFenceValue[FrameCount] = {};
 	uint32 FrameIndex = 0;
-	uint32 Slot = 0; // 当前帧 slot（BeginFrame 更新）
+	uint32 Slot = 0; // 当前帧 slot（BeginFrame 更新）,当前帧是整个多帧循环里的第几帧
 
 	FD3D12DeferredDeletionQueue DeletionQueue;
 

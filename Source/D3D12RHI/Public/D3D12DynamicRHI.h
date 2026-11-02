@@ -18,6 +18,8 @@ public:
 	~FD3D12DynamicRHI();
 	virtual void Init() override;
 	virtual void Shutdown() override;
+    void RHICreateTransition(FRHITransition* Transition, const FRHITransitionCreateInfo& Info) override;
+    void RHIReleaseTransition(FRHITransition* Transition) noexcept override;
     virtual IRHICommandContext* RHIGetDefaultContext() override;
     virtual void RHIEndDrawingViewport(FRHICommandListImmediate& RHICmdList,
         FRHIViewport* Viewport, const FRHIPresentArgs& PresentArgs) override;

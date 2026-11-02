@@ -1,7 +1,9 @@
 # RHI 与 D3D12RHI UML 类图
 
-> 更新于 2026-09-27，依据当前 `Source/RHI/Public`、`Source/D3D12RHI/Public` 和 `Source/RHITest` 源码。
-> 阶段 A 已按教学范围收尾；详细变更、验收和简化边界见 [StageA_Completion.md](StageA_Completion.md)。这里描述的是项目当前实现，不是 UE 完整类图。
+> 2026-10-30：[完整成员大画布 HTML](D3D12RHI_UML_Full.html) · [完整成员 Mermaid 分图](D3D12RHI_UML_Full.md)。以下保留架构与帧流程视图。
+
+> 更新于 2026-10-26，依据当前 `Source/RHI/Public`、`Source/D3D12RHI/Public` 和 `Source/RHITest` 源码。
+> 阶段 A/B 已按教学范围收尾；阶段 B 的调用链、验收和边界见 [StageB_Learning.md](StageB_Learning.md)。这里描述的是项目当前实现，不是 UE 完整类图。
 >
 > 图例：`<|--` 继承；`*--` 独占拥有或按值成员；`o--` 引用计数持有；`-->` 非拥有指针/使用关系；`..>` 创建或参数依赖。`TRefCountPtr` 当前为共享引用别名；原生 COM 对象由 `ComPtr` 引用计数持有。
 > 为控制图的大小，省略导出宏、部分访问器与校验代码。模板层的不同实例合并为一个节点，不表示不同 View 共用同一个对象。
@@ -113,7 +115,7 @@ FD3D12View --> FD3D12Device : borrowed parent
 - `TD3D12View<ViewType, ViewDescType>` 保存对应的原生描述。当前支持 Texture2D RGBA8 SRV/RTV、D32 DSV，单 mip、非数组、单采样。
 - RTV/DSV 只用 CPU handle；SRV 使用 shader-visible 资源堆的 CPU/GPU handle。对非 shader-visible View 调用 `GetGPUHandle()` 会报错。
 - 纹理中的 View 成员在 `ResourcePtr` 后声明，因此先于资源析构。View 析构归还槽位，Device 的堆必须仍存活。
-- `FD3D12Resource::State` 当前记录构造状态，不代表通用运行时状态追踪已经实现。
+- `FD3D12Resource::State` 按单一 Direct Queue 的录制/提交顺序追踪整资源状态；不是 GPU 实时查询值。
 
 ## 二、Shader、顶点声明、固定状态与 PSO
 
@@ -333,8 +335,14 @@ class FD3D12DynamicRHI
 class FRHICommandListExecutor {
     +GetImmediateCommandList() FRHICommandListImmediate
 }
+class FRHICommandListBase {
+    #IRHICommandContext* Context
+}
+class FRHIComputeCommandList {
+    +Transition(Infos)
+    +CopyTexture(Source, Dest)
+}
 class FRHICommandList {
-    -IRHICommandContext* Context
     +BeginFrame()
     +BeginRenderPass(Info, Name)
     +SetGraphicsPipelineState(PSO)
@@ -371,9 +379,12 @@ RHIStorage *-- FDynamicRHI : BackendOwner
 RHIStorage *-- FRHICommandListImmediate
 GDynamicRHI --> FDynamicRHI : borrowed alias
 FDynamicRHI <|-- FD3D12DynamicRHI
+FRHICommandListBase <|-- FRHIComputeCommandList
+FRHIComputeCommandList <|-- FRHICommandList
 FRHICommandList <|-- FRHICommandListImmediate
+IRHIComputeContext <|-- IRHICommandContext
 FRHICommandListExecutor --> FRHICommandListImmediate : returns borrowed reference
-FRHICommandList --> IRHICommandContext : borrowed, immediate forwarding
+FRHICommandListBase --> IRHICommandContext : borrowed, immediate forwarding
 IRHICommandContext <|-- FD3D12CommandContext
 FRHICommandListImmediate ..> FDynamicRHI : presentation dispatch
 FD3D12CommandContext --> FD3D12Device : borrowed
@@ -428,7 +439,7 @@ RHITestPeriod1 ..> FRHIRenderPassInfo : constructs each frame
 FRHIRenderPassInfo --> FRHITexture : borrowed color and depth attachments
 ```
 
-RenderPass 描述保存附件裸指针和 Load/Store 动作；清除值来自纹理的 `FClearValueBinding`。当前只接受一个 backbuffer + D32，支持 Clear_Store / Load_Store。`DrawTriangle` 保留历史函数名，实际绘制纹理立方体。
+RenderPass 描述保存附件裸指针和 Load/Store 动作；清除值来自纹理的 `FClearValueBinding`。当前接受一个 RGBA8 颜色附件（离屏或 backbuffer）+ D32，支持 Clear_Store / Load_Store。`DrawTriangle` 保留历史函数名，实际先离屏绘制纹理立方体，再全屏采样合成。
 
 ```mermaid
 sequenceDiagram
@@ -445,14 +456,20 @@ Context->>Context: ReleaseCompleted / Reset / reset constant offset
 App->>RHI: RHIGetViewportBackBuffer(Viewport)
 RHI->>VP: GetBackBufferRef()
 VP-->>App: shared texture reference
-App->>List: BeginRenderPass(Info, Name)
+App->>List: Transition(SceneColor, Unknown to RTV)
+List->>Context: Begin/EndTransitions, tracked barriers
+App->>List: BeginRenderPass(ScenePass)
 List->>Context: BeginRenderPass(Info, Name)
-Context->>Context: Get RTV/DSV from textures, PRESENT to RT, bind/clear
+Context->>Context: Validate RTV/DSV states, bind/clear
 App->>List: Set PSO / constants / SRV / stream, DrawIndexedPrimitive
 List->>Context: immediate forwarding
 App->>List: EndRenderPass()
-List->>Context: RT to PRESENT, clear borrowed color target
-Note over App,Context: Current demo then executes an empty Load_Store pass
+List->>Context: Unbind attachments, no implicit transition
+App->>List: Transition(SceneColor RTV to SRV, BackBuffer Present to RTV)
+List->>Context: Validate batch, ResourceBarrier, update states
+App->>List: CompositePass, draw fullscreen quad sampling SceneColor
+Note over App,Context: Then execute an empty Load_Store pass
+App->>List: Transition(BackBuffer RTV to Present)
 App->>List: EndFrame()
 List->>Context: EndFrame()
 Context->>Queue: ExecuteCommandLists, Signal
@@ -507,12 +524,12 @@ end
 |---|---|---|
 | 同步 | 两个帧槽，Direct Queue Fence，复用前等待 | 独立提交/中断线程、并行命令列表 |
 | 描述符 | 三种固定容量堆、空闲槽回收、在飞 SRV 延迟析构 | 扩容、offline/online managers、复制缓存、bindless |
-| RenderPass | backbuffer + D32，Clear/Load，手写 PRESENT 与 RT 屏障 | 阶段 B 的 ERHIAccess / FRHITransition / 状态追踪 |
+| RenderPass | 离屏/交换链 RGBA8 + D32，Clear/Load，显式 Transition 与整资源状态追踪 | 局部子资源、UAV、跨队列、MRT |
 | Shader 绑定 | VS b0、PS t0、静态 point/wrap s0 | 完整 Shader 参数与 UniformBuffer 系统、动态采样器 |
 | PSO | RHI initializer、后端包装、Adapter 根签名缓存 | 底层 PSO 缓存和完整布局量化 |
 | 资源生命周期 | TRefCountPtr、显式 DeferredDelete、Fence 完成后释放 | UE 侵入式计数与更完整的自动生命周期管理 |
 
-本图没有加入尚未实现的 RHI Thread、StateCache、RDG 或通用资源状态机。
+本图没有加入尚未实现的 RHI Thread、StateCache、RDG 和并行命令列表状态对账。
 
 源码入口：
 
@@ -522,3 +539,21 @@ end
 - [D3D12View.h](D3D12RHI/Public/D3D12View.h)、[D3D12Descriptors.h](D3D12RHI/Public/D3D12Descriptors.h)、[D3D12Resources.h](D3D12RHI/Public/D3D12Resources.h)：视图、槽位和资源。
 - [D3D12PipelineState.h](D3D12RHI/Public/D3D12PipelineState.h)、[D3D12RootSignature.h](D3D12RHI/Public/D3D12RootSignature.h)：PSO 分层与根签名缓存。
 - [main.cpp](RHITest/main.cpp)、[BackendValidation.cpp](RHITest/BackendValidation.cpp)：RHI 调用示例及后端验收。
+
+## 八、阶段 B 转换对象与后端数据
+
+```mermaid
+classDiagram
+FRHISubresourceRange <|-- FRHITransitionInfo
+FRHITransitionCreateInfo --> FRHITransitionInfo : borrowed span
+FRHIComputeCommandList ..> FRHITransition : creates and scope-releases
+FRHITransition *-- FD3D12LegacyBarriersTransitionData : aligned tail storage
+FD3D12LegacyBarriersTransitionData *-- FRHITransitionInfo : copied vector
+FD3D12CommandContext ..> FD3D12TransitionPlan : validate entire batch
+FD3D12TransitionPlan --> FD3D12Resource : borrowed resources and predicted states
+FD3D12CommandContext ..> FD3D12LegacyBarriersTransitionData : Begin/End
+```
+
+后端私有数据与 FRHITransition 是同次分配中的两个对象，没有继承关系。
+本版 Begin 只记录配对，End 验证并录制普通屏障，不等同于原生 split barrier。
+转换对象的 CPU 生命周期与 Texture/View 的 GPU 生命周期分开。

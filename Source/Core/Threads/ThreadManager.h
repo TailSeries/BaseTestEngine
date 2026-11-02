@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include <unordered_map>
 
 #include "Core.h"
@@ -16,7 +17,7 @@ class COREMODULE FThreadManager
 	 * 对于Threads的本身的管理，就需要加锁
 	 */
 	FCriticalSection ThreadsCritical;
-	static bool bIsInitialized;
+	static std::atomic<bool> bIsInitialized;
 
 	/*
 	 * 要被tick的所有线程的列表

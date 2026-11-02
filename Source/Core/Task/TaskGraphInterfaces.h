@@ -171,11 +171,8 @@ public:
 
 	/**
 	 * 显式地初始化 Task Graph 系统和其工作线程池，是整个异步任务系统的启动入口。
-	 * @param NumThreads
-	 * 	一般而言：
-		禁用 TaskGraph（单线程执行）	NumThreads = 0
-		启用但不启用渲染线程（非 threaded rendering）	至少 2
-		启用并启用渲染线程	至少 3（主线程、渲染线程、至少一个 worker）
+	 * @param NumThreads 每个启用的优先级组的 worker 数量，正数限制为最多 26。
+	 * 非正数使用平台默认数量；当前平台尚不支持用此参数切换单线程模式。
 	 */
 	static void Startup(int32 NumThreads);
 
@@ -511,15 +508,13 @@ public:
 
 	bool AddSubsequent(FBaseGraphTask* Task)
 	{
-		// UE 的TClosableLockFreePointerListUnorderedSingleConsumer 有closed状态功能，我们这里IsClosed 假装一下
+		// 检查关闭状态和插入必须与 DispatchSubsequents 的关闭/取出互斥。
+		FRWScopeLock<SLT_Write> RWScopeLock(SubsequentListLock);
 		if (IsClosed.load())
 		{
 			return false;
 		}
-		{
-			FRWScopeLock<SLT_Write> RWScopeLock(SubsequentListLock);
-			SubsequentList.push_front(Task);
-		}
+		SubsequentList.push_front(Task);
 		return true;
 	}
 
@@ -592,7 +587,7 @@ private:
 	 */
 	std::forward_list<FBaseGraphTask*> SubsequentList;
 	FRWLock SubsequentListLock;
-	std::atomic_bool IsClosed;
+	std::atomic_bool IsClosed{false};
 
 	// 前置事件列表
 	FGraphEventArray EventsToWaitFor;

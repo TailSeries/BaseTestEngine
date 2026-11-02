@@ -75,8 +75,10 @@ public:
 	}
 	void EmptyPool()
 	{
-		while (FEvent* Event = Pool.front())
+		FScopeLock ScopeLock(&PoolCriticalSection);
+		while (!Pool.empty())
 		{
+			FEvent* Event = Pool.front();
 			Pool.pop_front();
 			delete Event;
 		}

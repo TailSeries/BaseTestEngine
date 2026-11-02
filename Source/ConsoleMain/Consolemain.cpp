@@ -431,6 +431,35 @@ int main()
 	}
 
 
+	// review 
+	{
+		std::vector<int> temp = { 3,2,3 };
+		s.twoSum(temp, 6);
+	}
+
+	{
+		s.lengthOfLongestSubstring("ccbbcc");
+	}
+
+
+	{
+		std::vector<std::string> values{"a","b","c"};
+		std::vector<bool> used(values.size(), false);
+		std::string tempstr;
+		std::vector<std::string> results;
+		s.backTrack(values, used, tempstr, results);
+		int a = 45;
+	}
+
+	{
+		std::vector<int> values{ 1,2,3,4,6,5 };
+		std::vector<int> value2 = values;
+		s.nextPermutation(values);
+		std::next_permutation(value2.begin(), value2.end());
+		int a = 54;
+	}
+
+
 	return 0;
 }
 #include "TestGFoo.hpp"

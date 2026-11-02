@@ -8,7 +8,8 @@ using Microsoft::WRL::ComPtr;
  * FD3D12Resource是对 ID3D12Resource 的低层封装——不是 FRHIResource(那是 RHI 抽象层;FD3D12Resource 是 D3D12 内部对象,后面 FD3D12Buffer/FD3D12Texture 会 持有 它)。
 我们保留:ID3D12Resource + Device 回指 + Desc + HeapType + GPU 虚拟地址 + 一个当前状态。
 砍掉:residency(显存驻留)、aftermath(崩溃调试)、reserved tiles(稀疏资源)、UAV 别名、per-subresource 状态位——这些都是进阶/多线程细节。
-状态记录限制：State 当前只保存构造时传入的状态；Context 的手写屏障没有同步更新它。通用访问状态与屏障追踪留阶段 B。
+阶段 B：State 是按单一 Direct Queue 录制/提交顺序预测的整资源状态，不是 GPU 实时查询值。
+尚未实现并行录制的 command-list local/global state reconciliation，也不支持局部子资源转换。
 DeviceChild 内联:和之前 FD3D12Device 内联 AdapterChild 一样,这里把 FD3D12DeviceChild 内联成 FD3D12Device* Parent。
  */
 
@@ -17,20 +18,22 @@ class D3D12RHIMODULE FD3D12Resource
 public:
 	FD3D12Resource(FD3D12Device* InParent, ID3D12Resource* InResource, D3D12_RESOURCE_STATES InInitialSatte, const D3D12_RESOURCE_DESC& InDesc, D3D12_HEAP_TYPE InHeapType);
 	~FD3D12Resource();
+    D3D12_RESOURCE_STATES GetState() const { return State; }
+    void SetState(D3D12_RESOURCE_STATES InState) { State = InState; }
 
 	ID3D12Resource* GetResource()          const { return Resource.Get(); }
 	const D3D12_RESOURCE_DESC& GetDesc()              const { return Desc; }
 	D3D12_HEAP_TYPE            GetHeapType()          const { return HeapType; }
 	D3D12_GPU_VIRTUAL_ADDRESS  GetGPUVirtualAddress() const { return GPUVirtualAddress; }
 	FD3D12Device* GetParentDevice()      const { return Parent; }  // UE: FD3D12DeviceChild
-	
+
 
 private:
 	//回指Device
 	FD3D12Device* Parent = nullptr;// UE: FD3D12DeviceChild::ParentDevice（内联）
 	//真正的资源句柄
 	ComPtr<ID3D12Resource> Resource;//  UE: TRefCountPtr<ID3D12Resource>
-	//资源默认状态
+	// 下一条按顺序录制的命令应看到的状态；由已验证的转换计划更新。
 	D3D12_RESOURCE_STATES State = D3D12_RESOURCE_STATE_COMMON;
 	D3D12_RESOURCE_DESC       Desc{}; //  资源描述
 	//资源堆类型
@@ -58,11 +61,11 @@ public:
 	void* GetMappedData();
 	FD3D12Device* GetParentDevice() const { return Parent; }
 	void SetResource(std::unique_ptr<FD3D12Resource> InResource) { ResourcePtr = std::move(InResource); }
-	
+
 private:
 	FD3D12Device* Parent = nullptr;
 	std::unique_ptr<FD3D12Resource> ResourcePtr;// UE: FD3D12ResourceLocation 里的 TRefCountPtr<FD3D12Resource>
-	void* MappedData = nullptr;
+	void* MappedData = nullptr;// 映射的upload堆里在cpu地址空间下的地址
 };
 
 
@@ -103,5 +106,3 @@ private:
     std::unique_ptr<FD3D12RenderTargetView> RenderTargetView;
     std::unique_ptr<FD3D12DepthStencilView> DepthStencilView;
 };
-
-

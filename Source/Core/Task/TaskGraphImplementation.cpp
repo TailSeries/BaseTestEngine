@@ -22,13 +22,15 @@ void FTaskGraphImplementation::Desconstruct()
 	TaskGraphImplementationSingleton = nullptr;
 }
 
-FTaskGraphImplementation::FTaskGraphImplementation()
+FTaskGraphImplementation::FTaskGraphImplementation(int32 InNumWorkerThreads)
 {
 	int32 MaxTaskThreads = MAX_THREADS;
 	bCreatedHiPriorityThreads = !!ENamedThreads::bHasHighPriorityThreads;
 	bCreatedBackgroundPriorityThreads = !!ENamedThreads::bHasBackgroundThreads;
-	// 获取可以工作的线程数量 2 ~ 26个
-	int32 NumTaskThreads = FPlatformProcess::NumberOfWorkerThreadsToSpawn();
+	// 显式配置每组 1~26 个 worker；非正数使用平台建议数量。
+	int32 NumTaskThreads = InNumWorkerThreads > 0
+		? std::min(InNumWorkerThreads, 26)
+		: FPlatformProcess::NumberOfWorkerThreadsToSpawn();
 
 	/*
 	 * 如果不启用多线程（如启动参数里禁用了或者处于 -onethread 模式）：
@@ -181,6 +183,13 @@ FTaskGraphImplementation::~FTaskGraphImplementation()
 		}
 		WorkerThreads[ThreadIndex].bAttached = false;
 	}
+	// 所有内部线程退出后才销毁执行器，归还事件并释放其任务队列。
+	for (int32 ThreadIndex = 0; ThreadIndex < NumThreads; ++ThreadIndex)
+	{
+		delete WorkerThreads[ThreadIndex].TaskGraphWorker;
+		WorkerThreads[ThreadIndex].TaskGraphWorker = nullptr;
+	}
+	FPlatformTLS::SetTlsValue(PerThreadIDTLSSlot, nullptr);
 	TaskGraphImplementationSingleton = nullptr;
 	NumTaskThreadsPerSet = 0;
 	FPlatformTLS::FreeTlsSlot(PerThreadIDTLSSlot);
@@ -255,7 +264,9 @@ void FTaskGraphImplementation::QueueTask(FBaseGraphTask* Task, ENamedThreads::Ty
 
 void FTaskGraphImplementation::StartTaskThread(int32 Priority, int32 IndexToStart)
 {
-	ENamedThreads::Type ThreadToWake = static_cast<ENamedThreads::Type>(IndexToStart + Priority * NumTaskThreadsPerSet + NumNamedThreads);
+	// 背景组逻辑编号始终为 2；未创建高优先级组时，其物理组编号为 1。
+	const int32 SetIndex = Priority == 2 && !bCreatedHiPriorityThreads ? 1 : Priority;
+	ENamedThreads::Type ThreadToWake = static_cast<ENamedThreads::Type>(IndexToStart + SetIndex * NumTaskThreadsPerSet + NumNamedThreads);
 	static_cast<FTaskThreadAnyThread&>(Thread(ThreadToWake)).WakeUp();
 }
 
@@ -280,13 +291,13 @@ FBaseGraphTask* FTaskGraphImplementation::FindWork(ENamedThreads::Type ThreadInN
 {
 	int32 LocalNumWorkingThread = GetNumWorkerThreads();
 	int32 MyIndex = int32((uint32(ThreadInNeed) - NumNamedThreads) % NumTaskThreadsPerSet);
-	int32 Priority = int32((uint32(ThreadInNeed) - NumNamedThreads) / NumTaskThreadsPerSet);
+	int32 Priority = ThreadIndexToPriorityIndex(ThreadInNeed);
 	return IncomingAnyThreadTasks[Priority].Pop(MyIndex, true);
 }
 
 void FTaskGraphImplementation::StallForTuning(int32 Index, bool Stall)
 {
-	for (int32 Priority = 0; Priority < ENamedThreads::NumThreadPriorities; Priority++)
+	for (int32 Priority = 0; Priority < NumTaskThreadSets; Priority++)
 	{
 		ENamedThreads::Type ThreadToWake = ENamedThreads::Type(Index + Priority * NumTaskThreadsPerSet + NumNamedThreads);
 		((FTaskThreadAnyThread&)Thread(ThreadToWake)).StallForTuning(Stall);
@@ -318,7 +329,7 @@ ENamedThreads::Type FTaskGraphImplementation::GetCurrentThread()
 		}
 		else
 		{
-			int32 Priority = (ThreadIndex - NumNamedThreads) / NumTaskThreadsPerSet;
+			int32 Priority = ThreadIndexToPriorityIndex(ThreadIndex);
 			CurrentThreadIfKnown = ENamedThreads::SetPriorities(ENamedThreads::Type(ThreadIndex), Priority, false);
 
 		}
@@ -335,6 +346,10 @@ FTaskThreadBase& FTaskGraphImplementation::Thread(int32 Index)
 int32 FTaskGraphImplementation::ThreadIndexToPriorityIndex(int32 ThreadIndex)
 {
 	int32 Result = (ThreadIndex - NumNamedThreads) / NumTaskThreadsPerSet;
+	if (Result == 1 && !bCreatedHiPriorityThreads)
+	{
+		Result = 2;
+	}
 	return Result;
 }
 
@@ -490,7 +505,8 @@ void FTaskGraphImplementation::AddShutdownCallback(std::function<void()>& Callba
 void FTaskGraphImplementation::WakeNamedThread(ENamedThreads::Type ThreadToWake)
 {
 	const ENamedThreads::Type ThreadIndex = ENamedThreads::GetThreadIndex(ThreadToWake);
-	if (ThreadToWake)
+	assert(ThreadIndex >= 0 && ThreadIndex < NumNamedThreads);
+	if (ThreadIndex >= 0 && ThreadIndex < NumNamedThreads)
 	{
 		Thread(ThreadIndex).WakeUp(ENamedThreads::GetQueueIndex(ThreadToWake));
 	}

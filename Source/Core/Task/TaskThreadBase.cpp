@@ -11,7 +11,7 @@ FTaskThreadBase::FTaskThreadBase()
 void FTaskThreadBase::Setup(ENamedThreads::Type InThreadId, uint32 InPerThreadIDTLSSlot, FWorkerThread* InOwnerWorker)
 {
 	ThreadId = InThreadId;
-	assert(ThreadId > 0);
+	assert(ThreadId >= 0 && ThreadId < ENamedThreads::AnyThread);
 	PerThreadIDTLSSlot = InPerThreadIDTLSSlot;
 	OwnerWorker = InOwnerWorker;
 }

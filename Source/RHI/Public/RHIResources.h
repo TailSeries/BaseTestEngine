@@ -448,7 +448,8 @@ public:
 
 
 // UE 同名结构位于 RenderCore/ShaderCore.h。
-// 当前尚未建立对应的 Shader 编译产物模块，暂放这里。
+// 阶段 C 已建立编译产物；为兼容现有 RHI 入口暂留此处，避免 RHI 反向依赖 RenderCore。
+// 各计数表示占用寄存器范围的上界，例如仅使用 b1 时 NumCBs = 2，不是资源对象个数。
 // 暂不包含 UsageFlags 和序列化信息。
 struct FShaderCodePackedResourceCounts
 {
@@ -464,7 +465,7 @@ struct FRHICreateShaderDesc
 {
 	std::span<const uint8> Code;
 
-	// 教学阶段的显式元数据入口。
+	// 编译器反射结果通过此入口传给后端；也用于底层验证构造显式布局。
 	// UE 从 Code 携带的附加数据中解包，不是直接加这个成员。
 	FShaderCodePackedResourceCounts ResourceCounts{};
 
@@ -581,6 +582,9 @@ public:
 };
 
 
+// 单个附件的 Load/Store 组合：Load 决定 Pass 开始时如何处理旧内容，Store 决定结束后是否要求保留结果。
+// DontLoad/DontStore 都不是清零；不要求保留的内容不能依赖，即使某个后端碰巧保留了它。
+// Store 表示保留附件内容供后续 GPU 操作使用，不是复制到 CPU，也不表示 CPU 等待 GPU。
 enum class ERenderTargetActions : uint8
 {
 	// 与 UE 保持一致：这里的 2 实际表示 Load 的移位数。
@@ -594,27 +598,36 @@ enum class ERenderTargetActions : uint8
     ((static_cast<uint8>(ERenderTargetLoadAction::Load) << 2) | \
      static_cast<uint8>(ERenderTargetStoreAction::Store))
 
+	// 开始时不要求保留旧内容；结束后也不要求保留结果。只适合内容仅在本 Pass 内有用的情况。
 	DontLoad_DontStore =
 	RTACTION_MAKE_MASK(ENoAction, ENoAction),
 
+	// 开始时不要求保留旧内容；结束后保留结果。后续会读取的区域必须由本 Pass 正确初始化或写入。
 	DontLoad_Store =
 	RTACTION_MAKE_MASK(ENoAction, EStore),
 
+	// 开始时按附件指定的清除值清空；结束后保留结果。常用于从头绘制并供后续使用的附件。
 	Clear_Store =
 	RTACTION_MAKE_MASK(EClear, EStore),
 
+	// 开始时保留旧内容，供测试、混合或继续绘制使用；结束后保留结果，未被改写的区域仍保留旧内容。
 	Load_Store =
 	RTACTION_MAKE_MASK(ELoad, EStore),
 
+	// 开始时清空，供本 Pass 使用；结束后不要求保留结果。例如只在本 Pass 内使用的深度附件。
 	Clear_DontStore =
 	RTACTION_MAKE_MASK(EClear, ENoAction),
 
+	// 开始时需要旧内容；结束后不再需要保留。例如使用已有深度做测试，但后续不再使用该深度。
 	Load_DontStore =
 	RTACTION_MAKE_MASK(ELoad, ENoAction),
 
+	// 开始时清空多重采样附件；结束时把多重采样结果解析（Resolve）到解析目标，不承诺保留原多重采样内容。
+	// Resolve 需要多重采样附件和解析目标；枚举能表达该动作，不代表当前后端已支持 MSAA Resolve。
 	Clear_Resolve =
 	RTACTION_MAKE_MASK(EClear, EMultisampleResolve),
 
+	// 开始时保留多重采样附件旧内容；结束时解析到解析目标，不承诺保留原多重采样内容。
 	Load_Resolve =
 	RTACTION_MAKE_MASK(ELoad, EMultisampleResolve),
 
@@ -647,34 +660,44 @@ inline constexpr ERenderTargetStoreAction GetStoreAction(ERenderTargetActions Ac
 }
 
 
+// 将深度和模板各自的 Load/Store 动作打包；它们可以独立选择，并不是深度/模板测试或写入开关。
+// 实际测试与写入由深度模板状态控制；附件格式还必须包含对应的深度/模板部分。
 enum class EDepthStencilTargetActions : uint8
 {
+	// 名称沿用 UE；4 实际是深度动作的移位数，不是位掩码，也不是一种附件操作。
+	// 高 4 位保存 Depth 的 ERenderTargetActions，低 4 位保存 Stencil 的 ERenderTargetActions。
 	DepthMask = 4,
 
+// 将深度动作左移 4 位，再与模板动作按位或，合成一个 uint8 编码。
 #define RTACTION_MAKE_MASK(Depth, Stencil) \
     ((static_cast<uint8>(ERenderTargetActions::Depth) << 4) | \
      static_cast<uint8>(ERenderTargetActions::Stencil))
 
+	// 深度、模板：开始时都不要求保留旧内容，结束后都不要求保留结果；不是清零，也不是禁用测试。
 	DontLoad_DontStore =
 	RTACTION_MAKE_MASK(
 		DontLoad_DontStore,
 		DontLoad_DontStore),
 
+	// 开始时分别用指定的深度清除值和模板清除值清空两部分；结束后保留深度和模板结果。
 	ClearDepthStencil_StoreDepthStencil =
 	RTACTION_MAKE_MASK(
 		Clear_Store,
 		Clear_Store),
 
+	// 开始时保留已有深度和模板，继续用于本 Pass；结束后保留两部分结果。
 	LoadDepthStencil_StoreDepthStencil =
 	RTACTION_MAKE_MASK(
 		Load_Store,
 		Load_Store),
 
+	// 深度：开始时保留旧内容，结束后保留结果。模板：开始和结束都不要求保留内容。
 	LoadDepthNotStencil_StoreDepthNotStencil =
 	RTACTION_MAKE_MASK(
 		Load_Store,
 		DontLoad_DontStore),
 
+	// 开始时清空深度和模板，两部分都可在本 Pass 内使用；结束后只要求保留深度，不要求保留模板。
 	ClearDepthStencil_StoreDepthNotStencil =
 	RTACTION_MAKE_MASK(
 		Clear_Store,

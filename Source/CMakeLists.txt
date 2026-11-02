@@ -13,6 +13,8 @@ add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 add_subdirectory(Core)
 add_subdirectory(RHI)
 add_subdirectory(D3D12RHI)
+add_subdirectory(RenderCore)
+add_subdirectory(ShaderFormatD3D)
 add_subdirectory(RHITest)
 
 #add_subdirectory(Transfer)

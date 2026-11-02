@@ -4,5 +4,6 @@
 #include "Base/NumericLimit.h"
 #include "Base/GenericPlatformProcess.h"
 #include "Base/BaseDefines.h"
+#include "Logging/Log.h"
 
 

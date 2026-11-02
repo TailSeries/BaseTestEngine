@@ -142,9 +142,9 @@ enum EPrimitiveType : uint8
 //Load 不是“从磁盘加载纹理”，而是保留这个附件进入 Pass 前已有的内容。
 enum class ERenderTargetLoadAction :uint8
 {
-    // ENoAction 也不是清零,而是不要求保留旧内容。选择它之后，就不能依赖那些未被重新写入的内容，要认为未被本 Pass 写入的区域内容不确定。
+    // 在 Pass 开始时 ENoAction 也不是清零,而是不要求保留旧内容。选择它之后，就不能依赖那些未被重新写入的内容，要认为未被本 Pass 写入的区域内容不确定。
     ENoAction,
-    // 保留附件原有内容。
+    // 在 Pass 开始时 必须保留旧内容	
     ELoad,
     // 在 Pass 开始时清空附件。
     EClear,
@@ -180,9 +180,37 @@ enum class ETextureCreateFlags : uint64
 {
     None = 0,
 
-    RenderTargetable = 1ull << 0, // RenderTargetable 本步用于标记已有 backbuffer，暂不支持创建普通离屏颜色附件
+    RenderTargetable = 1ull << 0, // 允许作为颜色附件；阶段 B 支持离屏 RTV，并可与 ShaderResource 组合
     DepthStencilTargetable = 1ull << 2,
     ShaderResource = 1ull << 3,
 };
 
 ENUM_CLASS_FLAGS(ETextureCreateFlags)
+
+
+
+
+
+/*
+| 类型 | 作用范围 |
+|---|---|
+| `EResourceTransitionFlags` | 某一条资源转换描述 |
+| `ERHITransitionCreateFlags` | 包含多条资源转换的整个 Transition |
+*/
+// UE：EResourceTransitionFlags。
+// 当前仅支持普通资源转换，特殊转换策略后续按需扩展。
+enum class EResourceTransitionFlags : uint8
+{
+    None = 0,
+};
+
+ENUM_CLASS_FLAGS(EResourceTransitionFlags)
+
+// 整个 Transition 对象的创建选项。
+// 当前仅支持默认行为，后续按需补充 UE 的特殊选项。
+enum class ERHITransitionCreateFlags
+{
+    None = 0,
+};
+
+ENUM_CLASS_FLAGS(ERHITransitionCreateFlags)

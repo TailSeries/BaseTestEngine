@@ -34,7 +34,7 @@ public:
 	       ├─ 创建实际 OS 线程（FRunnableThread）
 	       └─ 设置单例 TaskGraphImplementationSingleton
 	 */
-	FTaskGraphImplementation();
+	explicit FTaskGraphImplementation(int32 InNumWorkerThreads = 0);
 
 
 	/**
@@ -199,7 +199,7 @@ private:
 
 	//线程安全的计数器，用于检测是否出现递归进入的情况（reentrant call）
 	//比如某个线程正在执行任务，但任务中又递归触发 ProcessTasks() 等，可能产生调度死锁
-	std::atomic<int32> ReentrancyCheck;
+	std::atomic<int32> ReentrancyCheck{0};
 	//TLS 槽位
 	uint32 PerThreadIDTLSSlot;
 	//在任务图系统关闭时，会依次调用的清理回调。

@@ -15,10 +15,11 @@ public:
 	virtual ~FDynamicRHI() = default;
 	virtual void Init() = 0;
 	virtual void Shutdown() = 0;
+    virtual void RHICreateTransition(FRHITransition* Transition, const FRHITransitionCreateInfo& CreateInfo) = 0;
+    virtual void RHIReleaseTransition(FRHITransition* Transition) noexcept = 0;
     // 供 RHI 内部初始化命令列表；上层通过 Executor 获取 ImmediateCommandList。
     virtual IRHICommandContext* RHIGetDefaultContext() = 0;
-    virtual void RHIEndDrawingViewport(FRHICommandListImmediate& RHICmdList,
-        FRHIViewport* Viewport, const FRHIPresentArgs& PresentArgs) = 0;
+    virtual void RHIEndDrawingViewport(FRHICommandListImmediate& RHICmdList, FRHIViewport* Viewport, const FRHIPresentArgs& PresentArgs) = 0;
 	virtual const char* GetName() = 0;
 	virtual TRefCountPtr<FRHIBuffer> RHICreateBuffer(const FRHIBufferDesc& Desc, const void* InitialData = nullptr) = 0;
 	/*
@@ -50,6 +51,16 @@ inline TRefCountPtr<FRHIBuffer> RHICreateBuffer(const FRHIBufferDesc& Desc, cons
 {
 	return GDynamicRHI->RHICreateBuffer(Desc, InitialData);
 }
+
+
+/*
+ * 创建 DEFAULT 纹理
+  → 创建临时 UPLOAD Buffer
+  → 按 RowPitch 逐行写入像素
+  → CopyTextureRegion
+  → 转为 PIXEL_SHADER_RESOURCE
+  → 提交并等待上传完成(完成后即位于Default堆)
+ */
 
 inline TRefCountPtr<FRHITexture> RHICreateTexture(const FRHITextureDesc& Desc, const void* InitialData = nullptr)
 {

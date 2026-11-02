@@ -10,6 +10,8 @@
 #include <cstring>
 #include <stdexcept>
 #include "D3D12View.h"
+#include "D3D12LegacyBarriers.h"
+#include <algorithm>
 FD3D12CommandContext::FD3D12CommandContext() = default;
 
 FD3D12CommandContext::~FD3D12CommandContext() = default;
@@ -52,6 +54,7 @@ void FD3D12CommandContext::BeginFrame()
 	CurrentGraphicsPipelineState = nullptr;
     ConstantOffset = 0;
     bFrameOpen = true;
+    SubmittedBuffers.clear();
 }
 
 void FD3D12CommandContext::BeginRenderPass(const FRHIRenderPassInfo& Info, const char* Name)
@@ -64,19 +67,18 @@ void FD3D12CommandContext::BeginRenderPass(const FRHIRenderPassInfo& Info, const
 	}
 	const auto& Color = Info.ColorRenderTargets[0];
 	const auto& Depth = Info.DepthStencilRenderTarget;
-	FD3D12Texture* BackBufferTexture = static_cast<FD3D12Texture*>(Color.RenderTarget);
+	FD3D12Texture* ColorTexture = static_cast<FD3D12Texture*>(Color.RenderTarget);
 	if (!Color.RenderTarget ||
-		!BackBufferTexture->IsBackBuffer() ||
 		Color.ResolveTarget ||
 		Color.MipIndex != 0 ||
 		Color.ArraySlice != -1)
 	{
 		throw std::invalid_argument(
-			"Current pass requires a swap-chain backbuffer, mip 0");
+			"Current pass requires a color texture, mip 0");
 	}
 
-    FD3D12RenderTargetView* ColorView = BackBufferTexture->GetRenderTargetView();
-    if (BackBufferTexture->GetParentDevice() != Device || !ColorView || !ColorView->IsInitialized())
+    FD3D12RenderTargetView* ColorView = ColorTexture->GetRenderTargetView();
+    if (ColorTexture->GetParentDevice() != Device || !ColorView || !ColorView->IsInitialized())
         throw std::invalid_argument("Color attachment requires an initialized RTV on this device");
 
 	for (uint32 Index = 1; Index < Info.ColorRenderTargets.size(); ++Index)
@@ -104,7 +106,7 @@ void FD3D12CommandContext::BeginRenderPass(const FRHIRenderPassInfo& Info, const
     {
         throw std::invalid_argument("Depth attachment requires a valid DSV on this device");
     }
-    // 当前深度纹理创建为 DEPTH_WRITE，尚不支持运行中转换为其他用途。
+    // 当前只提供可写 DSV；即使允许 DSVRead 状态转换，也不能用这个 View 作为只读 DSV。
     const FRHITextureDesc& ColorDesc = Color.RenderTarget->GetDesc();
 
 	const FRHITextureDesc& DepthDesc =Depth.DepthStencilTarget->GetDesc();
@@ -158,17 +160,10 @@ void FD3D12CommandContext::BeginRenderPass(const FRHIRenderPassInfo& Info, const
 
 	ID3D12GraphicsCommandList* CL = CmdList->GetCommandList();
 
-	ID3D12Resource* BackBuffer = 	BackBufferTexture->GetResource()->GetResource();
-
-	D3D12_RESOURCE_BARRIER Barrier{};
-	Barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	Barrier.Transition.pResource = BackBuffer;
-	Barrier.Transition.Subresource =
-		D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	Barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-
-	CL->ResourceBarrier(1, &Barrier);
+    // RenderPass 只检查并使用附件；状态变化必须由外部 Transition 显式声明。
+    if (ColorTexture->GetResource()->GetState() != D3D12_RESOURCE_STATE_RENDER_TARGET ||
+        DepthTexture->GetResource()->GetState() != D3D12_RESOURCE_STATE_DEPTH_WRITE)
+        throw std::logic_error("Transition color/depth attachments before BeginRenderPass");
 
 	const D3D12_CPU_DESCRIPTOR_HANDLE RTV =
 		ColorView->GetCPUHandle();
@@ -176,6 +171,7 @@ void FD3D12CommandContext::BeginRenderPass(const FRHIRenderPassInfo& Info, const
 	const D3D12_CPU_DESCRIPTOR_HANDLE DSV =
 		DepthView->GetCPUHandle();
 
+	// 注意这里这个接口，同时绑定了颜色附件和深度附件
 	CL->OMSetRenderTargets(1, &RTV, false, &DSV);
 
 	if (bClearColor)
@@ -214,7 +210,7 @@ void FD3D12CommandContext::BeginRenderPass(const FRHIRenderPassInfo& Info, const
 	CL->RSSetViewports(1, &VP);
 	CL->RSSetScissorRects(1, &Scissor);
 
-	CurrentColorTarget = BackBufferTexture;
+	CurrentColorTarget = ColorTexture;
 	bInsideRenderPass = true;
 }
 
@@ -299,8 +295,12 @@ void FD3D12CommandContext::SetShaderResourceViewParameter(uint32 ResourceIndex,F
 
 	FD3D12ShaderResourceView_RHI* D3DView = static_cast<FD3D12ShaderResourceView_RHI*>(View);
 
-	ID3D12GraphicsCommandList* CL = CmdList->GetCommandList();
-	CL->SetGraphicsRootDescriptorTable(static_cast<UINT>(RootSlot),D3DView->GetGPUHandle());
+    auto* Texture = static_cast<FD3D12Texture*>(View->GetResource());
+    if (Texture->GetParentDevice() != Device ||
+        !(Texture->GetResource()->GetState() & D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE))
+        throw std::logic_error("Transition texture to pixel SRV before binding");
+    ID3D12GraphicsCommandList* CL = CmdList->GetCommandList();
+    CL->SetGraphicsRootDescriptorTable(static_cast<UINT>(RootSlot),D3DView->GetGPUHandle());
 }
 
 void FD3D12CommandContext::SetStreamSource(uint32 StreamIndex, FRHIBuffer* VertexBuffer, uint32 Offset)
@@ -320,7 +320,9 @@ void FD3D12CommandContext::SetStreamSource(uint32 StreamIndex, FRHIBuffer* Verte
 	D3D12_VERTEX_BUFFER_VIEW VBV = {};
 	if (VertexBuffer)
 	{
-		FD3D12Buffer* VB = static_cast<FD3D12Buffer*>(VertexBuffer);
+        FD3D12Buffer* VB = static_cast<FD3D12Buffer*>(VertexBuffer);
+        if (VB->GetParentDevice() != Device || !(VB->GetResource()->GetState() & D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
+            throw std::logic_error("Vertex buffer requires vertex-readable state on this device");
 		if (Offset > VB->GetSize())
 		{
 			throw std::out_of_range(
@@ -348,6 +350,8 @@ void FD3D12CommandContext::DrawIndexedPrimitive(FRHIBuffer* IndexBuffer, uint32 
         IndexCount > IndexBuffer->GetSize() / IndexBuffer->GetStride())
         throw std::invalid_argument("Invalid index stride or draw range");
     FD3D12Buffer* IB = static_cast<FD3D12Buffer*>(IndexBuffer);
+    if (IB->GetParentDevice() != Device || !(IB->GetResource()->GetState() & D3D12_RESOURCE_STATE_INDEX_BUFFER))
+        throw std::logic_error("Index buffer requires index-readable state on this device");
 	D3D12_INDEX_BUFFER_VIEW IBV ={};
 	IBV.BufferLocation = IB->GetResource()->GetGPUVirtualAddress();
 	IBV.SizeInBytes = IB->GetSize();
@@ -366,16 +370,9 @@ void FD3D12CommandContext::EndRenderPass()
 		throw std::logic_error("No render pass is active");
 	}
 
-	ID3D12GraphicsCommandList* CL = CmdList->GetCommandList();
-	// 当前 backbuffer 专用流程：Pass 结束转回 PRESENT；不是任意附件的通用状态策略。
-	D3D12_RESOURCE_BARRIER Barrier = {};
-	Barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	Barrier.Transition.pResource = CurrentColorTarget->GetResource()->GetResource();
-	Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	Barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-	CL->ResourceBarrier(1, &Barrier);
-
+    // Pass 结束不推测后续用途：下一步可能是采样、复制、继续写入或 Present。
+    // 解除原生附件绑定，随后由调用方声明下一次访问。
+    CmdList->GetCommandList()->OMSetRenderTargets(0, nullptr, false, nullptr);
 	bInsideRenderPass = false;
     CurrentColorTarget = nullptr;
 }
@@ -389,7 +386,8 @@ void FD3D12CommandContext::EndFrame()
 		throw std::logic_error(
 			"End the active render pass before changing frames");
 	}
-	CmdList->Close();
+    if (OpenTransitions != 0) throw std::logic_error("Unpaired Begin/EndTransitions at EndFrame");
+    CmdList->Close();
 	ID3D12CommandList* Lists[] = {CmdList->GetCommandList()};
 	Queue->GetD3DQueue()->ExecuteCommandLists(1, Lists);
 	FrameFenceValue[Slot] = Queue->Signal(Queue->Fence); // 只记一下对应slot帧需要等的fencevalue，不用等
@@ -400,7 +398,11 @@ void FD3D12CommandContext::EndFrame()
 	}
 	PendingDeletes.clear();
 
-	FrameIndex++;
+    // D3D12 的 buffer 在 ExecuteCommandLists 批次完成后衰减为 COMMON。
+    // CPU 这里预测下一批命令的起始状态；不表示 GPU 此刻已经执行完成。
+    for (auto* Resource : SubmittedBuffers) Resource->SetState(D3D12_RESOURCE_STATE_COMMON);
+    SubmittedBuffers.clear();
+    FrameIndex++;
     bFrameOpen = false;
     CurrentGraphicsPipelineState = nullptr;
     CurrentRootSignature = nullptr;
@@ -442,4 +444,73 @@ void FD3D12CommandContext::DeferredDelete(TRefCountPtr<FRHIResource> Resource)
 void FD3D12CommandContext::RequireFrame() const
 {
     if (!bFrameOpen) throw std::logic_error("Command requires an active frame");
+}
+
+// Begin 在当前单管线路径只记录配对关系；不是 D3D12 BEGIN_ONLY 屏障。
+// 跨队列 release/acquire、Fence 和真正 split barrier 是后续扩展。
+void FD3D12CommandContext::RHIBeginTransitions(std::span<const FRHITransition* const> Transitions)
+{
+    RequireFrame();
+    if (bInsideRenderPass) throw std::logic_error("Transitions must be outside render passes");
+    for (size_t I = 0; I < Transitions.size(); ++I)
+    {
+        if (!Transitions[I]) throw std::invalid_argument("Null transition");
+        const auto* Data = Transitions[I]->GetPrivateData<FD3D12LegacyBarriersTransitionData>();
+        if (Data->Context || Data->bEnded ||
+            std::find(Transitions.begin(), Transitions.begin() + I, Transitions[I]) != Transitions.begin() + I)
+            throw std::logic_error("Transition cannot begin twice");
+    }
+    for (const auto* Transition : Transitions)
+        Transition->GetPrivateData<FD3D12LegacyBarriersTransitionData>()->Context = this;
+    OpenTransitions += static_cast<uint32>(Transitions.size());
+}
+
+void FD3D12CommandContext::RHIEndTransitions(std::span<const FRHITransition* const> Transitions)
+{
+    RequireFrame();
+    if (bInsideRenderPass) throw std::logic_error("Transitions must be outside render passes");
+    std::vector<FRHITransitionInfo> Infos;
+    for (size_t I = 0; I < Transitions.size(); ++I)
+    {
+        if (!Transitions[I]) throw std::invalid_argument("Null transition");
+        const auto* Data = Transitions[I]->GetPrivateData<FD3D12LegacyBarriersTransitionData>();
+        if (Data->Context != this || Data->bEnded ||
+            std::find(Transitions.begin(), Transitions.begin() + I, Transitions[I]) != Transitions.begin() + I)
+            throw std::logic_error("EndTransitions requires one matching Begin on this context");
+        Infos.insert(Infos.end(), Data->TransitionInfos.begin(), Data->TransitionInfos.end());
+    }
+    // 本批 End 消费 Begin；即使计划验证失败，也不会留下无法结束帧的配对计数。
+    // 失败对象不可重试，调用方修正参数后创建新的 Transition。
+    for (const auto* Transition : Transitions)
+        Transition->GetPrivateData<FD3D12LegacyBarriersTransitionData>()->bEnded = true;
+    OpenTransitions -= static_cast<uint32>(Transitions.size());
+    auto Plan = BuildTransitionPlan(Device, Infos);
+    // 一切可能分配内存的操作先完成，避免提交 GPU 命令后因分配失败漏记 CPU 状态。
+    SubmittedBuffers.reserve(SubmittedBuffers.size() + Plan.FinalStates.size());
+    for (const auto& [Resource, State] : Plan.FinalStates)
+        if (Resource->GetDesc().Dimension == D3D12_RESOURCE_DIMENSION_BUFFER &&
+            Resource->GetHeapType() == D3D12_HEAP_TYPE_DEFAULT &&
+            std::find(SubmittedBuffers.begin(), SubmittedBuffers.end(), Resource) == SubmittedBuffers.end())
+            SubmittedBuffers.push_back(Resource);
+    if (!Plan.Barriers.empty())
+        CmdList->GetCommandList()->ResourceBarrier(static_cast<UINT>(Plan.Barriers.size()), Plan.Barriers.data());
+    BarrierCount += Plan.Barriers.size();
+    for (const auto& [Resource, State] : Plan.FinalStates) Resource->SetState(State);
+}
+
+void FD3D12CommandContext::RHICopyTexture(FRHITexture* Source, FRHITexture* Dest)
+{
+    RequireFrame();
+    if (bInsideRenderPass || !Source || !Dest || Source == Dest)
+        throw std::invalid_argument("CopyTexture requires two distinct textures outside a pass");
+    auto* Src = static_cast<FD3D12Texture*>(Source);
+    auto* Dst = static_cast<FD3D12Texture*>(Dest);
+    if (Src->GetParentDevice() != Device || Dst->GetParentDevice() != Device ||
+        Source->GetDesc().Width != Dest->GetDesc().Width || Source->GetDesc().Height != Dest->GetDesc().Height ||
+        Source->GetDesc().Format != Dest->GetDesc().Format)
+        throw std::invalid_argument("CopyTexture requires matching dimensions/format on this device");
+    if (!(Src->GetResource()->GetState() & D3D12_RESOURCE_STATE_COPY_SOURCE) ||
+        Dst->GetResource()->GetState() != D3D12_RESOURCE_STATE_COPY_DEST)
+        throw std::logic_error("Transition textures to CopySrc/CopyDest before copying");
+    CmdList->GetCommandList()->CopyResource(Dst->GetResource()->GetResource(), Src->GetResource()->GetResource());
 }

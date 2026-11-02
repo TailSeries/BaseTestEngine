@@ -15,7 +15,7 @@ public:
 		/*用于防止线程重入执行任务（例如任务中递归触发任务执行）。非零表示当前处于任务处理中。*/
 		uint32 RecursionGuard;
 		/*如果为 true，表示线程要退出执行循环，用于关机流程中终止线程*/
-		bool QuitForShutdown;
+		std::atomic<bool> QuitForShutdown;
 
 		/*todo 如果调优开关打开，线程会主动阻塞，开发期间用于人工干预（通常仅在调试构建中使用）。和下面的锁 StallForTuning 配套使用，我们暂时没有分析*/
 		//bool bStallForTuning;

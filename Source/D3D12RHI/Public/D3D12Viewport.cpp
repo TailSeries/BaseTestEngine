@@ -45,7 +45,7 @@ Present 这个动作要绑在能执行图形/呈现命令的队列上,Copy 队�
 	Desc.SampleDesc.Count = 1;//Flip 模型本身不支持 MSAA，但实现 MSAA 的“标准做法”是自己创建一个独立的、开启了多采样的渲染目标，在它上面完成所有渲染，然后在最后一步将数据“解析”（Resolve）到用于显示的单采样后备缓冲区（Back Buffer）上
 	Desc.SampleDesc.Quality = 0;
 	Desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	Desc.BufferCount = NumBackBuffers;
+	Desc.BufferCount = NumBackBuffers; // 指定我要几个backbuffer
 	Desc.Scaling = DXGI_SCALING_NONE;//后备缓冲尺寸和窗口/输出尺寸不一致时怎么缩放:不缩放,1:1 像素映射。窗口变大时边缘区域未定义——要求你自己处理 resize(我们正是这么做的,所以用 NONE)
 	Desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;//对于D3D12 我们强制指定flip
 	Desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;//后备缓冲的 alpha 通道如何参与桌面合成(和 DWM/其他窗口叠加):IGNORE / PREMULTIPLIED / STRAIGHT / UNSPECIFIED。只对透明/分层窗口有意义;普通不透明 HWND 窗口填 UNSPECIFIED 即可。
@@ -237,6 +237,9 @@ void FD3D12DynamicRHI::RHIEndDrawingViewport(FRHICommandListImmediate& RHICmdLis
     // 单线程简化：EndFrame 已完成提交；UE 在此调度 flush/present payload。
     if (!Viewport || Device->GetDefaultCommandContext().IsFrameOpen())
         throw std::logic_error("EndFrame before presenting a valid viewport");
+    auto* D3DViewport = static_cast<FD3D12Viewport*>(Viewport);
+    if (D3DViewport->GetBackBuffer()->GetResource()->GetState() != D3D12_RESOURCE_STATE_PRESENT)
+        throw std::logic_error("Transition backbuffer to Present before EndDrawingViewport");
     if (PresentArgs.bPresent)
-        static_cast<FD3D12Viewport*>(Viewport)->PresentInternal(PresentArgs.bLockToVsync ? 1 : 0);
+        D3DViewport->PresentInternal(PresentArgs.bLockToVsync ? 1 : 0);
 }

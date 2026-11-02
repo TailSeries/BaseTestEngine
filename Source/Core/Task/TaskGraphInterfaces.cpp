@@ -27,7 +27,8 @@ FTaskGraphInterface::~FTaskGraphInterface()
 
 void FTaskGraphInterface::Startup(int32 NumThreads)
 {
-	new FTaskGraphImplementation();
+	assert(!IsRunning());
+	new FTaskGraphImplementation(NumThreads);
 }
 
 void FTaskGraphInterface::Shutdown()

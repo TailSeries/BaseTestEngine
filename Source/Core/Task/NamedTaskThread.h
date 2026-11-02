@@ -11,7 +11,7 @@ public:
 
 	struct FThreadTaskQueue
 	{
-		//todo 我们还没有无锁结构，FStallingTaskQueue 我们先直接用锁 + std::priority_queue 来实现
+		// 高/普通任务优先级各一条 Boost.Lockfree FIFO，共用空闲/唤醒协议。
 		FStallingTaskQueue<FBaseGraphTask, 2> StallQueue; // 内部先只用两个队列吧
 
 		/*
@@ -22,9 +22,9 @@ public:
 		uint32 RecursionGuard;
 
 		//前执行的任务是一个“return to pool”的特殊任务，即当前线程可以归还；
-		bool QuitForReturn;
+		std::atomic<bool> QuitForReturn;
 		//当前执行的任务是一个“shutdown”指令，即线程要永久退出，整个线程池可能要销毁了。
-		bool QuitForShutdown;
+		std::atomic<bool> QuitForShutdown;
 
 		//用于线程在“没有任务可执行”时，挂起自己、等待被唤醒
 		FEvent* StallRestartEvent;

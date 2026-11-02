@@ -18,7 +18,7 @@
 
 ```text
 A. 复刻线（原理 / 源码 / 复刻）—— 自底向上，一层不悬空再上一层
-   DX12 基础 → Core → RHI/D3D12RHI → RHICore(屏障) → RenderCore → RDG → Renderer → 整合 → UE 高级系统
+   DX12 基础 → Core → RHI/D3D12RHI → RHI 资源转换(屏障) → RenderCore → RDG → Renderer → 整合 → UE 高级系统
 
 B. 使用 / 观察线（只聚焦渲染）—— 从外到内
    编辑器 → 场景/资产 → 材质 → 光照/阴影 → 渲染路径/可见性 → 后处理 → 性能分析/抓帧 → C++/Plugin 渲染扩展
@@ -63,8 +63,8 @@ B. 使用 / 观察线（只聚焦渲染）—— 从外到内
 │   └─ 抽象   FShader / FGlobalShader / FVertexFactory /           │
 │             FMeshDrawCommand / FPrimitiveSceneProxy / FSceneView │
 ├───────────────────────────────────────────────────────────────┤
-│ RHICore 层 (Runtime/RHICore)  FRHIComputeCommandList            │
-│   → FRHITransition（资源状态 / 屏障自动追踪）                     │
+│ RHI 资源转换 (Runtime/RHI)  FRHIComputeCommandList            │
+│   → FRHITransition（D3D12RHI 后端追踪 / 屏障）                     │
 ├───────────────────────────────────────────────────────────────┤
 │ RHI 层 (Runtime/RHI + D3D12RHI)  FDynamicRHI / FRHICommandList   │
 │   → 硬件抽象：Device / Queue / 资源 / 描述符 / PSO / 命令列表     │
@@ -80,7 +80,7 @@ B. 使用 / 观察线（只聚焦渲染）—— 从外到内
 ### 阶段依赖（别跳层）
 
 ```text
-RHI(A) ─▶ RHICore(B) ─▶ RenderCore(C) ─▶ RDG(D) ─▶ Renderer(E) ─▶ 整合(F) ─▶ UE 高级(G)
+RHI(A) ─▶ 资源转换(B) ─▶ RenderCore(C) ─▶ RDG(D) ─▶ Renderer(E) ─▶ 整合(F) ─▶ UE 高级(G)
  地基       命令列表+屏障     shader/网格抽象    Pass 组织     具体管线
 ```
 
@@ -132,16 +132,22 @@ RHI(A) ─▶ RHICore(B) ─▶ RenderCore(C) ─▶ RDG(D) ─▶ Renderer(E) �
 
 ---
 
-### 阶段 B —— RHICore 层（屏障 / 状态自动追踪）
+### 阶段 B —— RHI / D3D12RHI 资源转换（2026-10-26 已按教学范围验收）
 
-- 复刻 `FRHIComputeCommandList` + `FRHITransition`
-- 核心：D3D12 的 `ResourceBarrier` 最易错，UE5 把它抽象成「资源状态机 + 自动插屏障」
-- 产出：单线程命令列表 + 资源状态表，自动推导并插入 Barrier（即 A3-M4 的自动 Barrier 部分的正式化）
-- UE 对照：`Runtime/RHICore/`
+- 执行与阅读文档：[StageB_Learning.md](StageB_Learning.md)。
+- `ERHIAccess`、`FRHITransitionInfo/CreateInfo/Transition`、命令列表四层继承、`IRHIComputeContext` 属于 RHI；后端转换和状态映射属于 D3D12RHI。
+- 已接入尾部私有存储、Begin/End 配对、批量验证/提交、读状态合并、Unknown 查询追踪状态、UPLOAD 固定状态、DEFAULT Buffer 提交后衰减。
+- 示例：离屏立方体 RTV → PS SRV，全屏合成 backbuffer RTV → Present；附加 Load/Store 回归 Pass。
+- 范围：单线程、同一 Direct Queue、整资源、RGBA8 单颜色附件 + D32、传统屏障。局部范围、UAV、跨管线等未实现能力明确拒绝。
+- “自动屏障”指调用方声明访问后由后端追踪、映射、去重和提交；自动推导 Pass 依赖仍属于阶段 D。
+- 更正旧路线图：本阶段不是把这些 RHI 类放到 Runtime/RHICore 模块。
 
 ---
 
 ### 阶段 C —— RenderCore 层（渲染抽象）
+
+- 2026-11-02：C1 接入编译输出、反射参数映射与自动资源统计，见 [StageC_Learning.md](StageC_Learning.md)。FShader/FGlobalShader 和场景绘制抽象尚待实现。
+- 模块归属修正：本阶段横跨 RenderCore、Engine 场景接口与 Renderer，下面的类并非全部属于 RenderCore。
 
 - 复刻 `FShader`/`FGlobalShader`、`FVertexFactory`、`FMeshDrawCommand`、`FPrimitiveSceneProxy`/`FSceneView`、`FRenderResource`
 - 核心：把「网格 / 材质 / 着色器」从「硬件资源」里解耦——这是 UE 能挂几百个 Pass 而不乱的原因

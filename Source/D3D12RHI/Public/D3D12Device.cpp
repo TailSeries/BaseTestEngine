@@ -8,6 +8,7 @@
 #include "D3D12View.h"
 #include <stdexcept>
 #include <utility>
+#include <algorithm>
 
 FD3D12Device::FD3D12Device(FD3D12Adapter* InAdapter, uint32 InGPUIndex)
 	: Adapter(InAdapter)
@@ -201,11 +202,13 @@ TRefCountPtr<FD3D12Texture> FD3D12Device::CreateTexture(const FRHITextureDesc& I
 
 		return CreateDepthBuffer(InDesc);
 	}
-	if (InDesc.Flags != ETextureCreateFlags::ShaderResource ||
+	const bool bRenderTarget = EnumHasAnyFlags(InDesc.Flags, ETextureCreateFlags::RenderTargetable);
+    const auto AllowedFlags = ETextureCreateFlags::ShaderResource | ETextureCreateFlags::RenderTargetable;
+    if (InDesc.Flags == ETextureCreateFlags::None || EnumHasAnyFlags(InDesc.Flags, ~AllowedFlags) ||
 		InDesc.Format != PF_R8G8B8A8_UNORM)
 	{
 		throw std::invalid_argument(
-			"Only RGBA8 shader resources and D32 depth targets are supported");
+			"Only RGBA8 SRV/RTV textures and D32 depth targets are supported");
 	}
 
 	ID3D12Device* D3DDevice = GetDevice();
@@ -223,12 +226,21 @@ TRefCountPtr<FD3D12Texture> FD3D12Device::CreateTexture(const FRHITextureDesc& I
 	Desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	Desc.SampleDesc.Count = 1;
 	Desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;// 纹理让驱动来决定布局
-	Desc.Flags = D3D12_RESOURCE_FLAG_NONE;//// 只采样，不当 RT/DS
+	Desc.Flags = bRenderTarget ? D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET : D3D12_RESOURCE_FLAG_NONE;
+    // RT 初始为 RTV；采样纹理初始为 PS SRV。创建能力和初始访问是不同概念。
+    const auto FinalState = bRenderTarget ? D3D12_RESOURCE_STATE_RENDER_TARGET : D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    D3D12_CLEAR_VALUE OptimizedClear{};
+    OptimizedClear.Format = Desc.Format;
+    if (bRenderTarget)
+    {
+        const auto Color = InDesc.ClearValue.GetClearColor();
+        std::copy(Color.begin(), Color.end(), OptimizedClear.Color);
+    }
 
 	// 1.先建出Default堆上的资源
 	ComPtr<ID3D12Resource> D3DResource;
 	// 有初始数据时先上传；无初始数据时直接处于可采样状态（内容未定义）。
-	VERIFY_D3D12(D3DDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &Desc, InitialData ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&D3DResource)));
+	VERIFY_D3D12(D3DDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &Desc, InitialData ? D3D12_RESOURCE_STATE_COPY_DEST : FinalState, bRenderTarget ? &OptimizedClear : nullptr, IID_PPV_ARGS(&D3DResource)));
 
 	// 2. 填充InitialData，注意：RowPitch 已 256 对齐，因此拷贝字节必须一行行拷贝,而不能简单把InitialData塞里面
 	if (InitialData)
@@ -239,8 +251,8 @@ TRefCountPtr<FD3D12Texture> FD3D12Device::CreateTexture(const FRHITextureDesc& I
 		uint64 RowSizeInBytes = 0;
 		uint64 TotalBytes = 0;
 		/*NumRows —— 真实行数(无对齐概念)
-		 *RowSizeInBytes —— 每一行的真实大小(不含 padding)
-		 *Footprint.Footprint.RowPitch —— 对齐后大小
+		 *RowSizeInBytes —— 每行真正有效的纹理数据大小(不含 padding)
+		 *Footprint.Footprint.RowPitch —— 每行在上传缓冲区中占用的跨度（对齐后大小）
 		 *Footprint.Offset 这段纹理数据在 buffer 中的起始字节偏移(多个子资源(mip/切片)打包在同一个 buffer 里时,靠各自的 Offset 区分位置)。
 		 *TotalBytes —— 对齐后的总大小 ≠ RowPitch × NumRows 最后一行通常不补 padding,所以一般是: TotalBytes = RowPitch × (NumRows - 1) + RowSizeInBytes
 		 */
@@ -305,7 +317,7 @@ TRefCountPtr<FD3D12Texture> FD3D12Device::CreateTexture(const FRHITextureDesc& I
 		B.Transition.pResource = D3DResource.Get();
 		B.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		B.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-		B.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		B.Transition.StateAfter = FinalState;
 		CL->ResourceBarrier(1, &B);
 		List.Close();
 
@@ -317,11 +329,20 @@ TRefCountPtr<FD3D12Texture> FD3D12Device::CreateTexture(const FRHITextureDesc& I
 	}
 
 
-	// 上传路径和无初始数据路径最终均可作为 PS SRV 使用。
-	const D3D12_RESOURCE_STATES FinalState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+	// 同步上传完成后才发布包装对象，追踪状态必须与最后一次原生屏障一致。
 	auto Res = std::make_unique<FD3D12Resource>(this, D3DResource.Get(), FinalState, Desc, D3D12_HEAP_TYPE_DEFAULT);
 
 	TRefCountPtr<FD3D12Texture> Texture = std::make_unique<FD3D12Texture>(this, InDesc);
-	Texture->SetResource(std::move(Res));
-	return Texture;
+    Texture->SetResource(std::move(Res));
+    if (bRenderTarget)
+    {
+        // 同一资源的 RTV 与 SRV 是不同描述符；SRV 仍由 RHI 调用方单独创建。
+        D3D12_RENDER_TARGET_VIEW_DESC RTVDesc{};
+        RTVDesc.Format = Desc.Format;
+        RTVDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+        auto View = std::make_unique<FD3D12RenderTargetView>(this, RenderTargetDescriptorHeap.get());
+        View->CreateView(Texture->GetResource(), RTVDesc);
+        Texture->SetRenderTargetView(std::move(View));
+    }
+    return Texture;
 }

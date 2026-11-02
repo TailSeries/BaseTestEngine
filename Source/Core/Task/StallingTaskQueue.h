@@ -1,103 +1,143 @@
 #pragma once
-#include <queue>
+
+#include <atomic>
+#include <cassert>
+#include <new>
+#include <boost/lockfree/queue.hpp>
 
 #include "Core.h"
-#include "Threads/ScopeLock.h"
-//todo 	我们还没有无锁结构，FStallingTaskQueue 我们先直接用锁 + std::priority_queue 来实现
-/**
- *我们的规则是这样的：
- *一共 4 +  26 * 3 = 82 个线程，前面4个是namedthread.那么 4 ~  29  >> 0 ; 30 ~ 55 >> 1; 56 ~ 79 >> 2
- *0 1 2 是三个不同等级的thread，每一组set有一个queue，可以认为其一共可以操作的线程编号均为 0 ~ 26. 这个数值叠*priority + namedthread 就可以得到原来的线程编号了。
- *在ue原来的操作用，用bit位来记录当前究竟那个线程在操作queue，尤其是pop的时候传入了当前的thread，pop之后，这个线程就是挂起状态了
- *
- * @tparam T
- * @tparam NumPriorities 内部不同优先度的队列数量
- */
-template<typename T, int32 NumPriorities>
+
+// 每个优先级一条 MPMC FIFO，0 为最高任务优先级。
+// 只保存任务指针；任务生命周期由调用方管理。构造/析构时不得有并发访问。
+// 预分配池内的操作无锁；池耗尽后允许分配内存，该慢路径可能阻塞。
+template<typename T, int32 NumPriorities, uint32 InitialCapacityPerPriority = 1024>
 class FStallingTaskQueue : public FNoncopyable
 {
+	static_assert(NumPriorities > 0);
 public:
-	FStallingTaskQueue() {}
+	// 成功发布任务后返回一个已认领的空闲线程编号，调用方负责 Trigger 其 Event。
+	// -1 表示当前没有空闲线程；不是入队失败。
 	int32 Push(T* InPayload, uint32 Priority)
 	{
-
+		assert(InPayload != nullptr);
+		assert(Priority < NumPriorities);
+		auto& Tasks = PriorityQueues[Priority].Tasks;
+		if (!Tasks.bounded_push(InPayload))
 		{
-			FRWScopeLock<SLT_Write> ScopeLock(PriorityQueueLocks[Priority]);
-			PriorityQueues[Priority].push(InPayload);
+			AllocationFallbackCount.fetch_add(1, std::memory_order_relaxed);
+			// 入队失败不能伪装成“不需要唤醒线程”，否则任务会永久丢失。
+			if (!Tasks.push(InPayload))
+			{
+				throw std::bad_alloc();
+			}
 		}
 
-		int32 threadToWake = FindThreadToWake(masterState.load(std::memory_order_acquire));
-		if (threadToWake >= 0) {
-			TurnOffBit(threadToWake);
+		// Invalidate a Pop that observed empty queues before publication.
+		uint64 OldState = MasterState.load(std::memory_order_acquire);
+		for (;;)
+		{
+			const int32 ThreadToWake = FindThreadToWake(OldState & IdleMask);
+			const uint64 WakeBit = ThreadToWake >= 0 ? (uint64(1) << ThreadToWake) : 0;
+			const uint64 NewState = ((OldState + GenerationStep) & ~IdleMask) |
+				((OldState & IdleMask) & ~WakeBit);
+			if (MasterState.compare_exchange_weak(OldState, NewState,
+				std::memory_order_acq_rel, std::memory_order_acquire))
+			{
+				return ThreadToWake;
+			}
 		}
-		return threadToWake;
 	}
 
-	T* Pop(int32 threadId = 0, bool bAllowStall = false)
+	// ThreadId 是调用线程在本队列内的唯一编号 [0, 32)。
+	// bAllowStall=true 且返回 nullptr 后，调用方应等待保留信号的 auto-reset Event。
+	T* Pop(int32 ThreadId = 0, bool bAllowStall = false)
 	{
-		// 遍历所有的队列，直接拿出一个能用的
-		for (int32 Index = 0; Index < NumPriorities; Index++)
+		assert(ThreadId >= 0 && ThreadId < 32);
+		const uint64 MyBit = uint64(1) << ThreadId;
+		for (;;)
 		{
+			const uint64 ObservedState = MasterState.load(std::memory_order_acquire);
+			// WakeUp/StartAllTaskThreads 也可能不经过 Push 直接触发 Event。
+			// 调用 Pop 的线程已在运行，先撤销自己的空闲登记。
+			if (ObservedState & MyBit)
 			{
-				FRWScopeLock<SLT_Write> ScopeLock(PriorityQueueLocks[Index]);
-				if (PriorityQueues[Index].size() > 0)
+				uint64 Expected = ObservedState;
+				const uint64 RunningState = ((ObservedState + GenerationStep) & ~IdleMask) |
+					((ObservedState & IdleMask) & ~MyBit);
+				MasterState.compare_exchange_weak(Expected, RunningState,
+					std::memory_order_acq_rel, std::memory_order_acquire);
+				continue;
+			}
+			for (int32 Index = 0; Index < NumPriorities; ++Index)
+			{
+				T* Result = nullptr;
+				if (PriorityQueues[Index].Tasks.pop(Result))
 				{
-					auto& Result = PriorityQueues[Index].top();
-					PriorityQueues[Index].pop();
 					return Result;
 				}
 			}
 
+			if (!bAllowStall)
+			{
+				return nullptr;
+			}
+
+			// Retry if a producer published work while we checked the queues.
+			uint64 Expected = ObservedState;
+			const uint64 NewState = ((ObservedState + GenerationStep) & ~IdleMask) |
+				((ObservedState & IdleMask) | MyBit);
+			if (MasterState.compare_exchange_weak(Expected, NewState,
+				std::memory_order_acq_rel, std::memory_order_acquire))
+			{
+				return nullptr;
+			}
 		}
-		if (!bAllowStall) return nullptr;
-		// 没任务，标记自己为空闲
-		TurnOnBit(threadId);
-		return nullptr;
 	}
 
+	// 检查原子实现，不包含扩容分配器的行为。
+	bool IsLockFree() const
+	{
+		if (!MasterState.is_lock_free() || !AllocationFallbackCount.is_lock_free())
+			return false;
+		for (const auto& Queue : PriorityQueues)
+			if (!Queue.Tasks.is_lock_free())
+				return false;
+		return true;
+	}
 
+	// 进入允许分配的慢路径次数；竞争中节点可能刚被归还，因此不等于实际分配次数。
+	uint64 GetAllocationFallbackCount() const
+	{
+		return AllocationFallbackCount.load(std::memory_order_relaxed);
+	}
 
 private:
+	// 低 32 位为空闲线程位图，高 32 位为代数，任何入队/空闲登记变化都推进代数。
+	// 与有限宽度的 ABA 标签一样，要求单次操作期间代数不能完整回绕。
+	static constexpr uint64 IdleMask = 0xffffffffull;
+	static constexpr uint64 GenerationStep = uint64(1) << 32;
 
-	static int32 FindThreadToWake(uint64 state)
+	static int32 FindThreadToWake(uint64 IdleBits)
 	{
-		if (state == 0) return -1;
-		int32 idx = 0;
-		while ((state & 1) == 0) {
-			state >>= 1;
-			++idx;
-		}
-		return idx;
-	}
-	void TurnOnBit(int32 ThreadID)
-	{
-		uint64 OldState = masterState.load();
-		uint64 NewState;
-		do
+		if (IdleBits == 0)
 		{
-			NewState = OldState | uint64(1) << ThreadID;
+			return -1;
 		}
-		while (masterState.compare_exchange_weak(OldState, NewState));
-	}
-
-
-	void TurnOffBit(int32 ThreadID)
-	{
-		uint64 OldState = masterState.load();
-		uint64 NewState;
-		do
+		int32 Index = 0;
+		while ((IdleBits & 1) == 0)
 		{
-			NewState = OldState &  ~(uint64(1) << ThreadID);
+			IdleBits >>= 1;
+			++Index;
 		}
-		while (masterState.compare_exchange_weak(OldState, NewState));
+		return Index;
 	}
 
+	struct FPriorityQueue
+	{
+		boost::lockfree::queue<T*> Tasks{InitialCapacityPerPriority};
+	};
 
-
-
-private:
-	// 每个bit位 1 代表该线程处在空闲状态 
-	std::atomic<uint64>  masterState;
-	std::priority_queue<T*> PriorityQueues[NumPriorities];
-	FRWLock PriorityQueueLocks[NumPriorities];
+	alignas(64) std::atomic<uint64> MasterState{0};
+	alignas(64) std::atomic<uint64> AllocationFallbackCount{0};
+	FPriorityQueue PriorityQueues[NumPriorities];
 };

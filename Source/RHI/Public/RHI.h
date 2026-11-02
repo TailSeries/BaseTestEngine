@@ -1,6 +1,8 @@
 #pragma once
 #include "RHIModule.h"
 #include "RHIDefinitions.h"
+#include "RHIAccess.h"
+#include "RHITransition.h"
 #include <vector>
 #include <array>
 

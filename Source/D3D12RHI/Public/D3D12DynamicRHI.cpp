@@ -4,6 +4,7 @@
 #include "D3D12Resources.h"
 #include "D3D12Shader.h"
 #include "D3D12CommandContext.h"
+#include "D3D12LegacyBarriers.h"
 
 FD3D12DynamicRHI::FD3D12DynamicRHI() = default;
 
@@ -17,6 +18,8 @@ void FD3D12DynamicRHI::Init()
 	Adapter = std::make_unique<FD3D12Adapter>(Desc);
 	Adapter->InitializeDevices();
 	Device = Adapter->GetDevice();
+    GRHITransitionPrivateData_SizeInBytes = sizeof(FD3D12LegacyBarriersTransitionData);
+    GRHITransitionPrivateData_AlignInBytes = alignof(FD3D12LegacyBarriersTransitionData);
 }
 
 void FD3D12DynamicRHI::Shutdown()
