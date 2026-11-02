@@ -1,7 +1,9 @@
 #include "D3DShaderCompiler.h"
+#include "TestShaders.h"
 #include <fstream>
 
-// 编译元数据验证不依赖 GPU；用异常而非 assert，确保 Release 也执行检查。
+// C1 编译元数据不依赖 GPU；C2 资源容器测试需要 RHI 已初始化。
+// 用异常而非 assert，确保 Release 也执行检查。
 void ValidateStageCCompiler()
 {
     const auto Require = [](bool Condition, const char* Message)
@@ -52,6 +54,48 @@ void ValidateStageCCompiler()
         "float4 Main() : SV_Target { return B[0]; }", "Main", SF_Pixel});
     Require(!Unsupported.bSucceeded && !Unsupported.Diagnostics.empty(),
         "C1: unsupported resource silently accepted");
+    // C2：Bind 解析位置与真正提交分离。非零寄存器不能被误认为根参数槽位。
+    FShaderUniformBufferParameter Uniform;
+    Uniform.Bind(VS.ParameterMap, "CB", SPF_Mandatory);
+    Require(Uniform.GetBaseIndex() == 1 && Uniform.GetNumBytes() == 64, "C2: UB binding lost reflection data");
+    FShaderResourceParameter Texture;
+    Texture.Bind(PS.ParameterMap, "Images[1]", SPF_Mandatory);
+    Require(Texture.GetBaseIndex() == 4 && Texture.GetNumResources() == 1, "C2: SRV binding index incorrect");
+    const auto ExpectFailure = [&Require](auto&& Operation)
+    {
+        bool Failed = false;
+        try { Operation(); } catch (const std::exception&) { Failed = true; }
+        Require(Failed, "C2: invalid parameter operation was accepted");
+    };
+    ExpectFailure([&] { Uniform.Bind(PS.ParameterMap, "S", SPF_Mandatory); });
+    Require(!Uniform.IsBound(), "C2: failed rebind retained old slot");
+    ExpectFailure([&] { Texture.Bind(VS.ParameterMap, "CB", SPF_Mandatory); });
+    ExpectFailure([&] { Uniform.Bind(VS.ParameterMap, "Missing", SPF_Mandatory); });
+    Uniform.Bind(VS.ParameterMap, "Missing", SPF_Optional);
+    Require(!Uniform.IsBound(), "C2: optional missing parameter was bound");
+
+    // 不调用底层 Context：这些情况必须在 RenderCore 参数检查阶段就返回或抛错。
+    FRHICommandList NoContext(nullptr);
+    SetShaderConstantBufferData(NoContext, SF_Vertex, Uniform, nullptr, 0);
+    Uniform.Bind(VS.ParameterMap, "CB", SPF_Mandatory);
+    float Values[16]{};
+    ExpectFailure([&] { SetShaderConstantBufferData(NoContext, SF_Vertex, Uniform, Values, 4); });
+    ExpectFailure([&] { SetShaderConstantBufferData(NoContext, SF_Pixel, Uniform, Values, sizeof(Values)); });
+    FShaderResourceParameter SamplerParameter;
+    SamplerParameter.Bind(PS.ParameterMap, "S", SPF_Mandatory);
+    ExpectFailure([&] { SetSRVParameter(NoContext, SF_Pixel, SamplerParameter, nullptr); });
+
+    // RHI 已初始化。资源容器独立拥有 RHI Shader；类型对象只保存参数信息。
+    const TShaderRef<FTestVS> Shader = CreateShader<FTestVS>(VS);
+    Require(Shader.GetVertexShader()->GetFrequency() == SF_Vertex, "C2: wrong RHI stage");
+    ExpectFailure([&] { (void)Shader.GetPixelShader(); });
+    ExpectFailure([&] { (void)CreateShader<FTestVS>(PS); });
+    ExpectFailure([&] { (void)CreateShader<FTestVS>(Invalid); });
+    std::ofstream ParameterReport("stage-c-parameter-checks.txt");
+    ParameterReport << "PASS: named parameter binding, nonzero indices, mandatory/optional lookup, "
+        "type/size/stage checks, failed rebind reset, shader resource creation and typed access.\n";
+    if (!ParameterReport) throw std::runtime_error("Cannot write Stage C parameter report");
+
     std::ofstream Report("stage-c-compiler-checks.txt");
     Report << "PASS: b1 binding/64-byte cbuffer, register extents, t3 array, s2, "
         "parameter lookup, RHI bridge, compilation diagnostics, unsupported resource rejection.\n";

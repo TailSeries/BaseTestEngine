@@ -4,6 +4,7 @@
 #include "RHICommandList.h"
 #include "TestPlatform.h"
 #include "D3DShaderCompiler.h"
+#include "TestShaders.h"
 #include <cstddef>
 #include <cstring>
 #include <fstream>
@@ -111,11 +112,9 @@ public:
         const auto PSOutput = CompileD3DShader({g_ShaderSrc, "PSMain", SF_Pixel});
         if (!VSOutput.bSucceeded || !PSOutput.bSucceeded)
             throw std::runtime_error(VSOutput.Diagnostics + PSOutput.Diagnostics);
-        const auto VSDesc = VSOutput.MakeRHICreateDesc();
-        const auto PSDesc = PSOutput.MakeRHICreateDesc();
-
-		TRefCountPtr<FRHIVertexShader> VertexShader = RHICreateVertexShader(VSDesc);
-		TRefCountPtr<FRHIPixelShader> PixelShader = RHICreatePixelShader(PSDesc);
+        // 参数成员在构造时按名字解析一次；TShaderRef 将元信息与 RHI 资源关联。
+        VertexShader = CreateShader<FTestVS>(VSOutput);
+        PixelShader = CreateShader<FTestPS>(PSOutput);
 
 
 
@@ -135,7 +134,7 @@ public:
 		 */
 		FGraphicsPipelineStateInitializer Initialier;
 		TRefCountPtr<FRHIVertexDeclaration> VertexDeclaration = RHICreateVertexDeclaration(Elements);
-		Initialier.BoundShaderState = FBoundShaderStateInput(VertexDeclaration, VertexShader, PixelShader);
+		Initialier.BoundShaderState = FBoundShaderStateInput(VertexDeclaration, VertexShader.GetVertexShader(), PixelShader.GetPixelShader());
 		FRasterizerStateInitializerRHI RasterInitializer(FM_Solid, CM_None, false);
 		Initialier.RasterizerState = RHICreateRasterizerState(RasterInitializer);
 		FBlendStateInitializerRHI BlendStateInitializer;
@@ -246,10 +245,10 @@ public:
 			FrameCB Constants;
 			XMStoreFloat4x4(&Constants.WVP, XMMatrixTranspose(WVP));
 
-			// 这里的0 对应b0，而不是根签名中的第几个参数。
-			RHICmdList->SetShaderConstants(0, &Constants, sizeof(FrameCB));
+			// Shader 参数成员已从反射表解析 CB 的绑定位置，这里只提交数据。
+			VertexShader->SetParameters(*RHICmdList, &Constants, sizeof(FrameCB));
 		}
-		RHICmdList->SetShaderResourceViewParameter(0, TexSRV.get());// 这里的0对应shader中的t0，而
+		PixelShader->SetParameters(*RHICmdList, TexSRV.get());
 		RHICmdList->SetStreamSource(0, VB.get(), 16); // Buffer 前 16 字节为前缀，Stride 仍来自声明。
 		RHICmdList->DrawIndexedPrimitive(IB.get(), 36);
 		RHICmdList->EndRenderPass();
@@ -265,8 +264,8 @@ public:
         RHICmdList->SetGraphicsPipelineState(FullscreenPSO.get());
         FrameCB Identity;
         DirectX::XMStoreFloat4x4(&Identity.WVP, DirectX::XMMatrixIdentity());
-        RHICmdList->SetShaderConstants(0, &Identity, sizeof(Identity));
-        RHICmdList->SetShaderResourceViewParameter(0, SceneColorSRV.get());
+        VertexShader->SetParameters(*RHICmdList, &Identity, sizeof(Identity));
+        PixelShader->SetParameters(*RHICmdList, SceneColorSRV.get());
         RHICmdList->SetStreamSource(0, FullscreenVB.get());
         RHICmdList->DrawIndexedPrimitive(FullscreenIB.get(), 6);
         RHICmdList->EndRenderPass();
@@ -323,6 +322,8 @@ public:
         CheckDebugMessages();
     }
 private:
+    TShaderRef<FTestVS> VertexShader;
+    TShaderRef<FTestPS> PixelShader;
     TRefCountPtr<FRHITexture> SceneColor;
     TRefCountPtr<FRHIShaderResourceView> SceneColorSRV;
     TRefCountPtr<FRHIGraphicsPipelineState> FullscreenPSO;

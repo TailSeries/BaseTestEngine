@@ -13,6 +13,7 @@ struct FShaderCompilerOutput
 {
     // 输出拥有字节码与参数元数据；反射接口在编译函数返回前释放。
     std::vector<uint8> ShaderCode;
+    //	按名称查找参数，例如 CB 对应哪个 b 寄存器
     FShaderParameterMap ParameterMap;
     FShaderCodePackedResourceCounts ResourceCounts{};
     EShaderFrequency Frequency = SF_Vertex;

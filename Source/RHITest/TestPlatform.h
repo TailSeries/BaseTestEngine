@@ -15,5 +15,5 @@ void CheckDebugMessages();
 // 后端诊断：等待同队列回读并恢复原状态，输出紧密 RGBA8 数据。
 std::vector<uint8> ReadbackTextureRGBA(FRHITexture* Texture);
 
-// 阶段 C 第一节：编译/反射元数据回归验证。
+// 阶段 C：编译/反射元数据及 Shader 参数对象验证（调用时 RHI 已初始化）。
 void ValidateStageCCompiler();

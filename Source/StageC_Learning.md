@@ -4,7 +4,7 @@
 
 本节把测试程序的 CompileTestShader 升级为独立 ShaderFormatD3D 平台编译入口。
 RenderCore 提供平台无关的 FShaderCompilerInput、FShaderCompilerOutput、FShaderParameterMap。
-当前 RenderCore 只有头文件类型，CMake 使用 INTERFACE target；后续加入运行时实现再调整。
+C1 最初只包含头文件类型；C2 加入运行时实现后，RenderCore 已改为 STATIC target。
 
 ### 从示例追调用链
 
@@ -51,8 +51,64 @@ RHITest --validate 在初始化时执行 StageCValidation.cpp，生成 stage-c-c
 覆盖 b1 与 64 字节 cbuffer、t3 纹理数组、s2、寄存器范围、缺失参数、RHI 描述转换、错误诊断与不支持资源拒绝。
 继续运行原有 A/B 验收，检查双 Pass 图像、GPU 生命周期、资源屏障和调试层。
 
+## C2：Shader 对象与按名称解析参数（2026-11-02）
+
+### 对象职责与所有权
+
+- FShader：记录阶段，派生类拥有已解析的参数成员；不直接持有 RHI Shader。
+- FGlobalShader：不依赖材质和 VertexFactory 排列的 Shader 基类；不是单例，也不自动编译。
+- FShaderMapResource：本节为单 Shader 容器，持有 TRefCountPtr<FRHIShader>。
+- TShaderRef<T>：共享拥有元信息对象与资源容器，提供 GetVertexShader/GetPixelShader。
+- CreateShader<T>：显式创建入口，确保两部分来自同一编译产物；TShaderRef 配对构造不向外开放。
+- App 在 WaitForGPU 后析构，全部 Shader 引用在 RHIExit 前释放。运行中替换 Shader 的延迟释放尚不由这些类自动处理。
+
+### 实际调用链
+
+1. CompileD3DShader 返回编译输出。
+2. CreateShader<FTestVS/FTestPS> 构造派生 Shader；构造器调用参数成员的 Bind。
+3. Bind 在 ParameterMap 按名字查找 CB/gTex/gSamp，把数字索引和类型缓存到成员。
+4. FShaderMapResource 创建 FRHIVertexShader/FRHIPixelShader；TShaderRef 关联元信息和资源。
+5. PSO 从 TShaderRef 取得 RHI Shader。Draw 前先设置匹配的 PSO。
+6. VertexShader->SetParameters 提交矩阵；PixelShader->SetParameters 提交 SRV。
+7. RenderCore 辅助函数检查大小/类型/阶段，再将已解析的索引传给 RHI。
+8. D3D12RHI 沿用现有根 CBV 上传与 SRV 表绑定路径。
+
+Bind 是“建立 CPU 参数映射”，不是“绑定 GPU 资源”。每次 Draw 不再通过字符串查表。
+FShaderUniformBufferParameter 的 GetBaseIndex 返回 ParameterMap 中的 BufferIndex（b 寄存器）。
+FShaderResourceParameter 的 GetBaseIndex 返回 ParameterMap 中的 BaseIndex（t/s/u 寄存器）。
+两者不是根参数槽位。
+
+### 必需参数与可选参数
+
+SPF_Mandatory 找不到名字就报错，包括拼写错误或资源被优化掉的情况。
+SPF_Optional 找不到则保持未绑定，提交辅助函数直接跳过。
+重新 Bind 时先清空旧映射，失败后不能沿用旧位置。
+整块常量数据大小必须等于反射的 cbuffer 大小；C++ 结构布局仍须由调用方与 HLSL 对齐。
+类型检查无法证明字节内容正确，例如同为 64 字节也可能使用了错误的矩阵布局。
+
+### 与 UE 的关系及当前边界
+
+对照 UE RenderCore/Public 的 Shader.h、GlobalShader.h、ShaderParameters.h。
+保留 FShader、FGlobalShader、FShaderMapResource、TShaderRef 和参数类的职责分层。
+本节仍未实现 FShaderType/GlobalShaderMap 注册、permutation、ShaderMap 指针表、序列化、延迟 RHI Shader 创建。
+FShaderMapResource 尚未继承后续要建立的 FRenderResource，也不实现 UE 的批量资源/异步清理机制。
+当前 TShaderRef 用共享引用持有对象，UE 的 ShaderMap 生命周期实现不同。
+
+我们没有 FRHIUniformBuffer，所以 SetShaderConstantBufferData 是明确命名的教学桥接：
+上传整个 CPU 字节块到帧常量 arena，而不是冒充 UE 的 SetUniformBufferParameter 对象绑定。
+FTestPS 检查静态采样器 s0 的元数据；没有动态设置 sampler 的调用。
+只支持 VS b0、PS t0/s0 的限制保持不变；本节验证非零索引的解析，不宣称非零索引已能绘制。
+调用方必须设置与参数所属 Shader 一致的 PSO；当前 RHI 没有通用的 Shader 身份绑定校验。
+
+### 验证入口
+
+2026-11-02：C2 的 Debug / Release 构建及 C1/C2/A/B 回归全部通过，图像逐像素一致，D3D12 调试队列无警告/错误。
+
+RunStageCValidation.ps1 执行 C1、C2 与 A/B 图像回归。
+C2 输出 stage-c-parameter-checks.txt，覆盖非零索引解析、必需/可选参数、类型/大小/阶段拒绝、
+失败重新绑定清空、RHI Shader 创建与错误阶段访问。正常双 Pass 验证按名解析后的真实 GPU 提交。
+
 ### 接下来
 
-C1 之后建立 FShader / FGlobalShader 与参数绑定对象，使示例通过参数名绑定编译所得位置。
-随后完善 VertexFactory、网格/材质/视图、Mesh Pass 与 MeshDrawCommand。阶段 C 尚未完成。
-这些职责分属 RenderCore、Engine 接口与 Renderer，不应全部堆入 RenderCore。
+继续完善 Shader 类型注册与 GlobalShaderMap，再推进 FRenderResource、VertexFactory 与场景绘制抽象。
+多寄存器根签名与绑定扩展需要单独打通；阶段 C 尚未完成。
