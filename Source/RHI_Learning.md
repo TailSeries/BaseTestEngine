@@ -1,6 +1,6 @@
 # UE RHI 封装 DX12 学习笔记
 
-> **2026-11-02：进入阶段 C，C1 已接入 Shader 编译输出、反射参数映射与自动资源统计；C2 已接入 FShader/FGlobalShader、独立 RHI 资源容器、TShaderRef 与按名称解析参数。阶段 C 尚未完成。**
+> **2026-11-02：进入阶段 C，C1 已接入 Shader 编译输出、反射参数映射与自动资源统计；C2 已接入 FShader/FGlobalShader、独立 RHI 资源容器、TShaderRef 与按名称解析参数。C3 已接入 Shader 类型注册、GlobalShaderMap 与独立 .usf 源码；C4 已接入 FRenderResource 与 Shader 资源初始化/释放流程。阶段 C 尚未完成。**
 > 见 [StageC_Learning.md](StageC_Learning.md)。原有 A/B 状态与历史记录保留。
 
 > **当前状态（2026-10-26）：阶段 A 已验收；阶段 B 已实现并通过 Debug / Release 编译与运行验收。**

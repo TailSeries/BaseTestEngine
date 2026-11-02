@@ -146,7 +146,7 @@ RHI(A) ─▶ 资源转换(B) ─▶ RenderCore(C) ─▶ RDG(D) ─▶ Renderer
 
 ### 阶段 C —— RenderCore 层（渲染抽象）
 
-- 2026-11-02：C1 接入编译输出、反射参数映射与自动资源统计，见 [StageC_Learning.md](StageC_Learning.md)。C2 已接入 FShader/FGlobalShader、FShaderMapResource、TShaderRef 和参数绑定成员；完整 ShaderMap、VertexFactory 与场景绘制抽象尚待实现。
+- 2026-11-02：C1 接入编译输出、反射参数映射与自动资源统计，见 [StageC_Learning.md](StageC_Learning.md)。C2 已接入 FShader/FGlobalShader、FShaderMapResource、TShaderRef 和参数绑定成员；C3 已接入默认排列的类型注册与 GlobalShaderMap；C4 已接入 FRenderResource 的同步生命周期和 Shader 资源管理。完整 ShaderMap/permutation、VertexFactory 与场景绘制抽象尚待实现。
 - 模块归属修正：本阶段横跨 RenderCore、Engine 场景接口与 Renderer，下面的类并非全部属于 RenderCore。
 
 - 复刻 `FShader`/`FGlobalShader`、`FVertexFactory`、`FMeshDrawCommand`、`FPrimitiveSceneProxy`/`FSceneView`、`FRenderResource`

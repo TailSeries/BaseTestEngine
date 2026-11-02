@@ -5,6 +5,7 @@
 // 当前测试的固定顶点格式 Shader；尚未引入材质与 VertexFactory 排列。
 class FTestVS : public FGlobalShader
 {
+    DECLARE_GLOBAL_SHADER(FTestVS);
 public:
     explicit FTestVS(const CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
     {
@@ -21,6 +22,7 @@ private:
 
 class FTestPS : public FGlobalShader
 {
+    DECLARE_GLOBAL_SHADER(FTestPS);
 public:
     explicit FTestPS(const CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer)
     {
@@ -41,3 +43,7 @@ private:
     FShaderResourceParameter Texture;
     FShaderResourceParameter Sampler;
 };
+
+// 启动阶段注册类型并提供源码加载；不创建 GPU 对象。
+void RegisterTestShaderTypes();
+std::string LoadTestShaderSource(const std::string& VirtualPath);

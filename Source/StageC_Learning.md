@@ -91,7 +91,7 @@ SPF_Optional 找不到则保持未绑定，提交辅助函数直接跳过。
 对照 UE RenderCore/Public 的 Shader.h、GlobalShader.h、ShaderParameters.h。
 保留 FShader、FGlobalShader、FShaderMapResource、TShaderRef 和参数类的职责分层。
 本节仍未实现 FShaderType/GlobalShaderMap 注册、permutation、ShaderMap 指针表、序列化、延迟 RHI Shader 创建。
-FShaderMapResource 尚未继承后续要建立的 FRenderResource，也不实现 UE 的批量资源/异步清理机制。
+C2 时 FShaderMapResource 尚未继承 FRenderResource；C4 已接入生命周期基类，仍不实现 UE 的批量资源/异步清理机制。
 当前 TShaderRef 用共享引用持有对象，UE 的 ShaderMap 生命周期实现不同。
 
 我们没有 FRHIUniformBuffer，所以 SetShaderConstantBufferData 是明确命名的教学桥接：
@@ -108,7 +108,111 @@ RunStageCValidation.ps1 执行 C1、C2 与 A/B 图像回归。
 C2 输出 stage-c-parameter-checks.txt，覆盖非零索引解析、必需/可选参数、类型/大小/阶段拒绝、
 失败重新绑定清空、RHI Shader 创建与错误阶段访问。正常双 Pass 验证按名解析后的真实 GPU 提交。
 
+## C3：类型注册与 GlobalShaderMap（2026-11-02）
+
+### 为什么增加这一层
+
+C2 的 CreateShader<T> 仍需要调用方逐个填写入口、阶段、编译和创建。
+C3 把这些规则集中到 FShaderType/FGlobalShaderType，FGlobalShaderMap 统一编译缺少的类型并保存实例。
+FShaderType 是“如何生成 Shader”的描述，FShader 是某份已编译实例的元信息，二者不同。
+
+### 从应用追调用链
+
+1. TestShaders.h 使用 DECLARE_GLOBAL_SHADER 声明 GetStaticType。
+2. TestShaders.cpp 使用 IMPLEMENT_GLOBAL_SHADER 关联类型、虚拟源码路径、入口、Shader 阶段与构造工厂。
+3. RegisterTestShaderTypes 显式访问两个静态类型，使其进入注册表；没有编译或 GPU 操作。
+4. App 的 GlobalShaderMap.CompileMissing 遍历注册表，跳过已有类型。
+5. 源码加载回调把 /Demo/TestShaders.usf 映射到 RHITest/Shaders/TestShaders.usf。
+6. 编译回调 CompileD3DShader 生成字节码、参数表、统计；RenderCore 不依赖 ShaderFormatD3D。
+7. 类型工厂构造 FTestVS/FTestPS，解析参数；独立 FShaderMapResource 创建对应 RHI Shader。
+8. 全部成功后提交到 Map；应用通过 GetShader<FTestVS/FTestPS>() 取 TShaderRef。
+9. 后续 PSO 与 Draw 链路沿用 C2；不会每次 Draw 重编译或查字符串。
+
+### 生命周期、缓存与失败行为
+
+- 注册表只借用静态类型描述，不持有 GPU 资源；仅支持启动线程访问。
+- App 持有 Map，Map 持有每个条目的元信息和资源。TShaderRef 共享持有，Map 销毁后仍可存活。
+- 正常路径仍然先 WaitForGPU，再析构 App，最后 RHIExit；Map 不能替代 GPU Fence。
+- 重复 CompileMissing 仅编译新增类型，不检测文件是否变化，不是热重载或磁盘字节码缓存。
+- 新条目先进入临时 Map；任何源码加载、编译或创建失败都会丢弃新增条目，原 Map 不变。
+- 编译回调必须返回与注册阶段匹配的输出；异常追加类型名、文件路径和入口方便定位。
+- 同一静态类型重复注册安全；不同描述使用相同类型名会报错。
+
+### 与 UE 的对应和精简
+
+对应 RenderCore/Public/Shader.h 的 FShaderType，以及 GlobalShader.h 的 FGlobalShaderType、FGlobalShaderMap 和注册宏。
+宏名称及声明/实现的使用方式对齐，内部不是直接复制 UE 的实现。
+UE 有自动静态注册；本 Demo 显式 RegisterTestShaderTypes，避免静态初始化顺序与静态库链接裁剪问题。
+当前只支持一个运行平台和默认排列，没有 permutation、ShaderMapSection、类型序列化、异步编译 Worker、DDC 或热重载。
+Map 的每个条目仍使用单 Shader 的 FShaderMapResource；UE 的批量资源容器/索引体系尚未实现。
+源码路径由 CMake 注入绝对源码目录，独立于当前工作目录；程序打包后必须部署 Shader 并调整路径。
+本节没有增加 #include 解析或修改后自动重新编译能力。
+
+### 验证
+
+2026-11-02：C3 Debug / Release 构建及 C1/C2/C3/A/B 回归全部通过，图像一致，调试队列无警告/错误。
+
+stage-c-map-checks.txt 覆盖重复/冲突注册、未编译查询、重复编译不创建新对象、
+第二个 Shader 失败时整体不提交、源码加载失败、阶段错误、失败后重试及资源引用保持。
+正常 A/B 双 Pass 现在使用 Map 中的 Shader，继续做图像逐像素比较和调试队列检查。
+
+## C4：FRenderResource 生命周期（2026-11-02）
+
+### 两种资源层次
+
+FRenderResource 是上层资源生命周期基类，不继承 FRHIResource。
+FRHIResource 是后端硬件资源抽象；一个 FRenderResource 可以持有一份或多份 RHI 资源。
+本节将 FShaderMapResource 改为继承 FRenderResource，因此 C2/C3 中直接创建 RHI Shader 的时机更新为 InitRHI。
+
+### 创建链路
+
+1. FShaderMapResource(Output) 仅复制字节码、资源统计和阶段，不需要借用 Output 后续存储。
+2. CreateShader<T> / GlobalShaderMap::CompileMissing 调用 BeginInitResource(Resource.get())。
+3. BeginInitResource 取得即时命令列表，同步调用 InitResource。
+4. InitResource 检查 RHI 已初始化，进入 Initializing，虚调用派生类 InitRHI。
+5. FShaderMapResource::InitRHI 调用 RHICreateVertexShader/PixelShader，成功后状态变为 Initialized。
+6. GetShader 只允许访问已初始化资源；未初始化或已释放会报错，避免空指针继续传递。
+
+### 释放链路
+
+BeginReleaseResource → ReleaseResource → 派生 ReleaseRHI → 重置 RHI 引用 → Uninitialized。
+释放不会销毁上层 C++ 对象，其保留的 CPU 数据可用于再次 InitResource。
+FShaderMapResource 的派生析构器会调用 ReleaseResource；基类析构器只诊断未释放状态。
+不能在基类析构时指望虚调用进入已经析构的派生类。
+PSO/外部引用仍可持有旧 RHI Shader；重新初始化不会自动更新已有 PSO。
+
+### 与 Fence 的边界
+
+InitResource/ReleaseResource 管理 CPU 对象及其 RHI 引用，不判断 GPU 工作是否完成。
+BeginReleaseResource 既不 WaitForGPU，也不自动把对象放入 PendingDeletes。
+当前 App 保持 WaitForGPU → 析构 App/Map/TShaderRef → RHIExit 的顺序。
+编译失败时新 Shader 从未用于 Draw，因此可直接清理；其他在飞资源仍需显式同步或延迟释放。
+
+### 状态和异常契约
+
+重复 InitResource（已初始化）和 ReleaseResource（未初始化）均不重复执行钩子。
+初始化失败会调用不抛异常的 ReleaseRHI 清理部分结果，再恢复 Uninitialized，允许重试。
+派生 ReleaseRHI 必须能处理空资源和部分初始化；本节通过 noexcept 声明这一约束。
+初始化/释放钩子不得重入生命周期入口；复制和移动 FRenderResource 被禁用。
+
+### UE 对照及简化
+
+参考 Engine/Source/Runtime/RenderCore/Public/RenderResource.h 与 Private/RenderResource.cpp。
+保留 InitResource/InitRHI、ReleaseResource/ReleaseRHI 和 BeginInitResource/BeginReleaseResource 的职责。
+UE Begin* 安排渲染线程命令；当前同一线程直接执行，没有 RenderCommandPipe、线程切换或 RenderCommandFence。
+UE 能注册 RHI 启动前的资源，稍后统一 InitRHI；当前必须先 RHIInit，未实现全局资源列表、初始化阶段及设备重建。
+当前 IsInitialized 表示本资源已成功完成 InitRHI；UE 在 RHI 尚未启动时的注册状态含义更丰富。
+本节也没有按首次 GetShader 延迟创建 RHI Shader，而是在编译填充 Map 时立即 InitResource。
+
+### 验证
+
+2026-11-02：C4 Debug / Release 构建及 C1～C4、A/B 回归全部通过；图像一致，调试队列无警告/错误，未出现未释放资源诊断。
+
+stage-c-resource-checks.txt 验证初始化/释放幂等、失败回滚、重入拒绝与重试，
+编译输出销毁后仍可初始化、访问状态检查、重新创建 RHI Shader、析构释放与外部引用保持。
+原有 C1/C2/C3/A/B 回归继续使用真实 GPU 执行验证。
+
 ### 接下来
 
-继续完善 Shader 类型注册与 GlobalShaderMap，再推进 FRenderResource、VertexFactory 与场景绘制抽象。
-多寄存器根签名与绑定扩展需要单独打通；阶段 C 尚未完成。
+建立 FVertexBuffer/FIndexBuffer 与 FVertexFactory，逐步把网格的数据布局和顶点流绑定从示例中抽离。
+参数结构体自动绑定、Shader permutation、多寄存器绑定和场景绘制抽象仍待实现；阶段 C 尚未完成。

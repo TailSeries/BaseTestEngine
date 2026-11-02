@@ -13,35 +13,7 @@
 
 struct FrameCB { DirectX::XMFLOAT4X4 WVP; };
 struct Vertex { float Pos[3]; float UV[2]; };
-static const char* g_ShaderSrc = R"(
-cbuffer CB:register(b0)
-{
-	float4x4 WVP;
-};
-Texture2D gTex:register(t0);
-SamplerState gSamp:register(s0);
 
-struct VSInput {
-	float3 Pos : ATTRIBUTE0;
-	float2 UV:ATTRIBUTE1;
-};
-
-struct PSInput {
-	float4 Pos : SV_POSITION;
-	float2 UV : TEXCOORD;
-};
-
-PSInput VSMain(VSInput v) {
-	PSInput o;
-	o.Pos =  mul(float4(v.Pos, 1.0), WVP); //float4(v.Pos, 1.0);
-	o.UV = v.UV;
-	return o;
-}
-
-float4 PSMain(PSInput i) : SV_TARGET {
-	return gTex.Sample(gSamp, i.UV);
-}
-)";
 static bool g_Running = true;
 static bool g_SwapTexture = false;   // ← 加
 class RHITestPeriod1
@@ -106,15 +78,11 @@ public:
 		/*
 		 * 6. 编译 Shader，并创建 RHI Shader 对象
 		 */
-        // 阶段 C：编译产物同时拥有字节码、参数映射和反射得到的资源范围。
-        // 编译器属于平台工具层，RHI 只消费编译结果，不依赖 RenderCore。
-        const auto VSOutput = CompileD3DShader({g_ShaderSrc, "VSMain", SF_Vertex});
-        const auto PSOutput = CompileD3DShader({g_ShaderSrc, "PSMain", SF_Pixel});
-        if (!VSOutput.bSucceeded || !PSOutput.bSucceeded)
-            throw std::runtime_error(VSOutput.Diagnostics + PSOutput.Diagnostics);
-        // 参数成员在构造时按名字解析一次；TShaderRef 将元信息与 RHI 资源关联。
-        VertexShader = CreateShader<FTestVS>(VSOutput);
-        PixelShader = CreateShader<FTestPS>(PSOutput);
+        // 注册只描述如何编译；Map 统一创建并复用 Shader 实例，Draw 不再编译。
+        RegisterTestShaderTypes();
+        GlobalShaderMap.CompileMissing(CompileD3DShader, LoadTestShaderSource);
+        VertexShader = GlobalShaderMap.GetShader<FTestVS>();
+        PixelShader = GlobalShaderMap.GetShader<FTestPS>();
 
 
 
@@ -322,6 +290,7 @@ public:
         CheckDebugMessages();
     }
 private:
+    FGlobalShaderMap GlobalShaderMap;
     TShaderRef<FTestVS> VertexShader;
     TShaderRef<FTestPS> PixelShader;
     TRefCountPtr<FRHITexture> SceneColor;
