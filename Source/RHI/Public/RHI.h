@@ -25,7 +25,7 @@ struct FVertexElement
 	uint8 StreamIndex = 0; // 输入槽位
 	uint8 Offset = 0; //结构体内偏移
 	EVertexElementType Type = VET_None;// 数据类型
-	uint8 AttributeIndex = 0; // 语义索引（默认要求必须是ATTRIBUTE0~开始）
+	uint8 AttributeIndex = 0; // ATTRIBUTE 语义索引，不要求连续；例如 LocalVertexFactory 使用 Position=0、UV=4。
 	uint16 Stride = 0;// 步长
 	uint16 bUseInstanceIndex = 0; // 用于instance渲染
 

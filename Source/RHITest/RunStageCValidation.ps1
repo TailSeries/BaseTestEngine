@@ -11,6 +11,10 @@ $mapReport = Join-Path $projectRoot "out/stage-b/$Configuration/stage-c-map-chec
 if (Test-Path -LiteralPath $mapReport) { Remove-Item -LiteralPath $mapReport }
 $resourceReport = Join-Path $projectRoot "out/stage-b/$Configuration/stage-c-resource-checks.txt"
 if (Test-Path -LiteralPath $resourceReport) { Remove-Item -LiteralPath $resourceReport }
+$vertexReport = Join-Path $projectRoot "out/stage-b/$Configuration/stage-c-vertex-factory-checks.txt"
+if (Test-Path -LiteralPath $vertexReport) { Remove-Item -LiteralPath $vertexReport }
+$meshReport = Join-Path $projectRoot "out/stage-b/$Configuration/stage-c-mesh-draw-checks.txt"
+if (Test-Path -LiteralPath $meshReport) { Remove-Item -LiteralPath $meshReport }
 # 清理本节旧报告，防止把上一次成功当成本次通过；A/B 脚本负责进程超时及退出检查。
 if (Test-Path -LiteralPath $report) { Remove-Item -LiteralPath $report }
 & (Join-Path $PSScriptRoot 'RunStageBValidation.ps1') -Configuration $Configuration
@@ -25,3 +29,9 @@ Get-Content -LiteralPath $mapReport
 
 if (-not (Test-Path -LiteralPath $resourceReport)) { throw "Stage C resource report missing." }
 Get-Content -LiteralPath $resourceReport
+
+if (-not (Test-Path -LiteralPath $vertexReport)) { throw "Stage C vertex factory report missing." }
+Get-Content -LiteralPath $vertexReport
+
+if (-not (Test-Path -LiteralPath $meshReport)) { throw "Stage C mesh draw report missing." }
+Get-Content -LiteralPath $meshReport

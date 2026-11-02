@@ -15,6 +15,8 @@ add_subdirectory(RHI)
 add_subdirectory(D3D12RHI)
 add_subdirectory(RenderCore)
 add_subdirectory(ShaderFormatD3D)
+add_subdirectory(Engine)
+add_subdirectory(Renderer)
 add_subdirectory(RHITest)
 
 #add_subdirectory(Transfer)

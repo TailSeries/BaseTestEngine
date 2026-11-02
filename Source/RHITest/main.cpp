@@ -5,6 +5,9 @@
 #include "TestPlatform.h"
 #include "D3DShaderCompiler.h"
 #include "TestShaders.h"
+#include "TestMeshResources.h"
+#include "LocalVertexFactory.h"
+#include "MeshPassProcessor.h"
 #include <cstddef>
 #include <cstring>
 #include <fstream>
@@ -24,7 +27,7 @@ public:
 
 	void Initialize(HWND hwnd, bool bValidate)
 	{
-        if (bValidate) { Width = 640; Height = 480; ValidateStageCCompiler(); }
+        if (bValidate) { Width = 640; Height = 480; ValidateStageCCompiler(); ValidateStageCVertexFactory(); }
 		/*1. 获取创建好的即时命令列表*/
         RHICmdList = &FRHICommandListExecutor::GetImmediateCommandList();
 
@@ -66,14 +69,10 @@ public:
 		// 我们要求创建一个uploadbuffer上的顶点buffer区
 		std::vector<uint8> VertexData(16 + sizeof(Cube));// +16 验证一下顶点缓冲的Offset功能
         std::memcpy(VertexData.data() + 16, Cube, sizeof(Cube));
-        FRHIBufferDesc VBDesc(static_cast<uint32>(VertexData.size()), sizeof(Vertex),
-            EBufferUsageFlags::VertexBuffer | EBufferUsageFlags::Dynamic);
-        VB = RHICreateBuffer(VBDesc, VertexData.data());
-
-
-		FRHIBufferDesc IBDesc(sizeof(Indices), sizeof(uint16), EBufferUsageFlags::IndexBuffer | EBufferUsageFlags::Dynamic);
-		IB = RHICreateBuffer(IBDesc, Indices);
-
+        VB.SetData(VertexData.data(), static_cast<uint32>(VertexData.size()), sizeof(Vertex));
+        IB.SetData(Indices, sizeof(Indices), sizeof(uint16));
+        BeginInitResource(&VB);
+        BeginInitResource(&IB);
 
 		/*
 		 * 6. 编译 Shader，并创建 RHI Shader 对象
@@ -89,19 +88,18 @@ public:
 		/*
 		 * 7. 定义顶点声明 默认语义名是ATTRIBUTE
 		 */
-		static_assert(sizeof(Vertex) <= 65535);
-		static_assert(offsetof(Vertex, Pos) <= 255);
-		static_assert(offsetof(Vertex, UV) <= 255);
-		FVertexDeclarationElementList Elements{
-			FVertexElement(0, static_cast<uint8>(offsetof(Vertex, Pos)),VET_Float3, 0, static_cast<uint16>(sizeof(Vertex))),
-			FVertexElement(0, static_cast<uint8>(offsetof(Vertex, UV)),VET_Float2, 1, static_cast<uint16>(sizeof(Vertex)))
-		};
+        // 同一 Buffer、流起点和 Stride 的两个属性自动合并为 Stream 0。
+        FLocalVertexFactory::FDataType CubeData;
+        CubeData.PositionComponent = FVertexStreamComponent(&VB, 16, offsetof(Vertex, Pos), sizeof(Vertex), VET_Float3);
+        CubeData.TextureCoordinates.push_back(FVertexStreamComponent(&VB, 16, offsetof(Vertex, UV), sizeof(Vertex), VET_Float2));
+        CubeFactory.SetData(CubeData);
+        BeginInitResource(&CubeFactory);
 
 		/*
 		 * 8.汇总固定状态，创建 PSO
 		 */
 		FGraphicsPipelineStateInitializer Initialier;
-		TRefCountPtr<FRHIVertexDeclaration> VertexDeclaration = RHICreateVertexDeclaration(Elements);
+		TRefCountPtr<FRHIVertexDeclaration> VertexDeclaration = CubeFactory.GetDeclaration();
 		Initialier.BoundShaderState = FBoundShaderStateInput(VertexDeclaration, VertexShader.GetVertexShader(), PixelShader.GetPixelShader());
 		FRasterizerStateInitializerRHI RasterInitializer(FM_Solid, CM_None, false);
 		Initialier.RasterizerState = RHICreateRasterizerState(RasterInitializer);
@@ -115,21 +113,39 @@ public:
 		Initialier.DepthStencilTargetFormat = PF_D32_FLOAT;
 		Initialier.NumSamples = 1;
 
-		// 注意这一步内部会根据 Initialier.BoundShaderState 创建出对应的根签名
-        PSO = RHICreateGraphicsPipelineState(Initialier);
+		// Processor 构造器本身只是保存模板
+        SceneProcessor = std::make_unique<FMeshPassProcessor>(Initialier);
+        // 如果 GetPipelineState 缓存未命中、进入 RHI PSO 创建路径时，会处理对应根签名；
+        PSO = SceneProcessor->GetPipelineState(CubeFactory);
 
 
         // 全屏 Pass 使用同一个 Shader，WVP 为单位矩阵，关闭深度写入/比较限制。
         Initialier.DepthStencilState = RHICreateDepthStencilState(FDepthStencilStateInitializerRHI(false, CF_Always));
-        FullscreenPSO = RHICreateGraphicsPipelineState(Initialier);
         const Vertex Quad[] = {
             {{-1,-1,0},{0,1}}, {{-1,1,0},{0,0}}, {{1,1,0},{1,0}}, {{1,-1,0},{1,1}}
         };
         const uint16 QuadIndices[] = {0,1,2,0,2,3};
-        FullscreenVB = RHICreateBuffer(FRHIBufferDesc(sizeof(Quad), sizeof(Vertex),
-            EBufferUsageFlags::VertexBuffer | EBufferUsageFlags::Dynamic), Quad);
-        FullscreenIB = RHICreateBuffer(FRHIBufferDesc(sizeof(QuadIndices), sizeof(uint16),
-            EBufferUsageFlags::IndexBuffer | EBufferUsageFlags::Dynamic), QuadIndices);
+        // 全屏网格拆成两条流，实际验证 Position 与 UV 按同一个顶点索引读取。
+        float Positions[4][3], UVs[4][2];
+        for (uint32 Index = 0; Index < 4; ++Index)
+        {
+            std::memcpy(Positions[Index], Quad[Index].Pos, sizeof(Positions[Index]));
+            std::memcpy(UVs[Index], Quad[Index].UV, sizeof(UVs[Index]));
+        }
+        FullscreenVB.SetData(Positions, sizeof(Positions), sizeof(Positions[0]));
+        FullscreenUV.SetData(UVs, sizeof(UVs), sizeof(UVs[0]));
+        FullscreenIB.SetData(QuadIndices, sizeof(QuadIndices), sizeof(uint16));
+        BeginInitResource(&FullscreenVB);
+        BeginInitResource(&FullscreenUV);
+        BeginInitResource(&FullscreenIB);
+        FLocalVertexFactory::FDataType QuadData;
+        QuadData.PositionComponent = FVertexStreamComponent(&FullscreenVB, 0, sizeof(Positions[0]), VET_Float3);
+        QuadData.TextureCoordinates.push_back(FVertexStreamComponent(&FullscreenUV, 0, sizeof(UVs[0]), VET_Float2));
+        FullscreenFactory.SetData(QuadData);
+        BeginInitResource(&FullscreenFactory);
+        Initialier.BoundShaderState.VertexDeclarationRHI = FullscreenFactory.GetDeclaration();
+        CompositeProcessor = std::make_unique<FMeshPassProcessor>(Initialier);
+        FullscreenPSO = CompositeProcessor->GetPipelineState(FullscreenFactory);
         FRHITextureDesc SceneDesc(Width, Height, PF_R8G8B8A8_UNORM);
         SceneDesc.Flags = ETextureCreateFlags::RenderTargetable | ETextureCreateFlags::ShaderResource;
         SceneDesc.ClearValue = FClearValueBinding(std::array<float, 4>{0.2f, 0.4f, 0.8f, 1.0f});
@@ -171,6 +187,8 @@ public:
         for (uint32& Pixel : Pixels)
             Pixel = Pixel == 0xFFFFFFFFu ? 0xFF00FFFFu : 0xFFFF00FFu;
         TextureVariants[1] = RHICreateTexture(TexDesc, Pixels.data());
+        if (bValidate) ValidateStageCMeshDraw(Initialier, VertexShader->GetConstantsParameter(),
+            PixelShader->GetTextureParameter(), TexSRV);
 
 	}
 
@@ -192,7 +210,7 @@ public:
 		PassInfo.DepthStencilRenderTarget.Action = MakeDepthStencilTargetActions(ERenderTargetActions::Clear_Store, ERenderTargetActions::DontLoad_DontStore);
 		RHICmdList->BeginRenderPass(PassInfo, "ScenePass");
 
-		RHICmdList->SetGraphicsPipelineState(PSO.get());
+        FrameCB Constants;
 		// WVP 常量
 		{
 			using namespace DirectX;
@@ -210,15 +228,12 @@ public:
 				100.0f);
 
 			XMMATRIX WVP = World * View * Proj;
-			FrameCB Constants;
 			XMStoreFloat4x4(&Constants.WVP, XMMatrixTranspose(WVP));
 
-			// Shader 参数成员已从反射表解析 CB 的绑定位置，这里只提交数据。
-			VertexShader->SetParameters(*RHICmdList, &Constants, sizeof(FrameCB));
-		}
-		PixelShader->SetParameters(*RHICmdList, TexSRV.get());
-		RHICmdList->SetStreamSource(0, VB.get(), 16); // Buffer 前 16 字节为前缀，Stride 仍来自声明。
-		RHICmdList->DrawIndexedPrimitive(IB.get(), 36);
+        }
+        const std::vector<FMeshDrawCommand> SceneCommands = BuildMeshCommands(
+            *SceneProcessor, CubeFactory, IB, 12, Constants, TexSRV);
+        for (const FMeshDrawCommand& Command : SceneCommands) Command.SubmitDraw(*RHICmdList);
 		RHICmdList->EndRenderPass();
         // 第二个真正绘制 Pass：前一 Pass 的输出成为本 Pass 的输入。
         // 两条描述一次提交：RTV -> SRV；Present -> RTV。
@@ -229,13 +244,11 @@ public:
         RHICmdList->Transition(BetweenPasses);
         PassInfo.ColorRenderTargets[0].RenderTarget = BackBuffer.get();
         RHICmdList->BeginRenderPass(PassInfo, "CompositePass");
-        RHICmdList->SetGraphicsPipelineState(FullscreenPSO.get());
         FrameCB Identity;
         DirectX::XMStoreFloat4x4(&Identity.WVP, DirectX::XMMatrixIdentity());
-        VertexShader->SetParameters(*RHICmdList, &Identity, sizeof(Identity));
-        PixelShader->SetParameters(*RHICmdList, SceneColorSRV.get());
-        RHICmdList->SetStreamSource(0, FullscreenVB.get());
-        RHICmdList->DrawIndexedPrimitive(FullscreenIB.get(), 6);
+        const std::vector<FMeshDrawCommand> CompositeCommands = BuildMeshCommands(
+            *CompositeProcessor, FullscreenFactory, FullscreenIB, 2, Identity, SceneColorSRV);
+        for (const FMeshDrawCommand& Command : CompositeCommands) Command.SubmitDraw(*RHICmdList);
         RHICmdList->EndRenderPass();
         // 第三个空 Pass 保留 Stage A 的 Load/Store 回归检查，不需要往返 PRESENT。
 
@@ -273,7 +286,7 @@ public:
 	}
     void Validate()
     {
-        ValidateBackend(Viewport.get(), DepthBuffer.get(), PSO.get(), VB.get(), IB.get());
+        ValidateBackend(Viewport.get(), DepthBuffer.get(), PSO.get(), VB.GetRHI().get(), IB.GetRHI().get());
         ValidateStageB(Viewport.get(), DepthBuffer.get());
         for (uint32 Index = 0; Index < 120; ++Index)
         {
@@ -290,13 +303,36 @@ public:
         CheckDebugMessages();
     }
 private:
+    // 当前由示例提供 WVP/纹理，尚未建立 MaterialRenderProxy/SceneView。
+    // Build 只生成 CPU 绘制快照，SubmitDraw 才录制命令。
+    std::vector<FMeshDrawCommand> BuildMeshCommands(FMeshPassProcessor& Processor,
+        const FVertexFactory& Factory, const FIndexBuffer& IndexBuffer, uint32 NumPrimitives,
+        const FrameCB& Constants, const TRefCountPtr<FRHIShaderResourceView>& Texture)
+    {
+        FMeshBatch Mesh;
+        Mesh.VertexFactory = &Factory;
+        FMeshBatchElement Element;
+        Element.IndexBuffer = &IndexBuffer;
+        Element.NumPrimitives = NumPrimitives;
+        Mesh.Elements.push_back(Element);
+        FMeshDrawShaderBindings Bindings;
+        Bindings.Add(VertexShader->GetConstantsParameter(), SF_Vertex, &Constants, sizeof(Constants));
+        Bindings.Add(PixelShader->GetTextureParameter(), SF_Pixel, Texture);
+        std::vector<FMeshDrawCommand> Commands;
+        Processor.AddMeshBatch(Mesh, Bindings, Commands);
+        return Commands;
+    }
+    std::unique_ptr<FMeshPassProcessor> SceneProcessor, CompositeProcessor;
     FGlobalShaderMap GlobalShaderMap;
     TShaderRef<FTestVS> VertexShader;
     TShaderRef<FTestPS> PixelShader;
     TRefCountPtr<FRHITexture> SceneColor;
     TRefCountPtr<FRHIShaderResourceView> SceneColorSRV;
     TRefCountPtr<FRHIGraphicsPipelineState> FullscreenPSO;
-    TRefCountPtr<FRHIBuffer> FullscreenVB, FullscreenIB;
+    // 声明顺序保证 Factory 先析构，借用的 Buffer 后析构。
+    FTestVertexBuffer FullscreenVB, FullscreenUV;
+    FTestIndexBuffer FullscreenIB;
+    FLocalVertexFactory FullscreenFactory;
     uint64 FrameNumber = 0;
     size_t Variant = 0;
     std::array<TRefCountPtr<FRHITexture>, 2> TextureVariants;
@@ -304,8 +340,9 @@ private:
 	uint32 Height = 1080;
 	TRefCountPtr<FRHIViewport> Viewport;
 	TRefCountPtr<FRHIGraphicsPipelineState> PSO;
-	TRefCountPtr<FRHIBuffer> VB;
-	TRefCountPtr<FRHIBuffer> IB;
+    FTestVertexBuffer VB;
+    FTestIndexBuffer IB;
+    FLocalVertexFactory CubeFactory;
 	TRefCountPtr<FRHITexture> DepthBuffer;
 
 	TRefCountPtr<FRHITexture> Tex;

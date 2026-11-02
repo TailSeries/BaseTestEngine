@@ -212,7 +212,128 @@ stage-c-resource-checks.txt 验证初始化/释放幂等、失败回滚、重入
 编译输出销毁后仍可初始化、访问状态检查、重新创建 RHI Shader、析构释放与外部引用保持。
 原有 C1/C2/C3/A/B 回归继续使用真实 GPU 执行验证。
 
+## C5：Buffer 资源与最小 LocalVertexFactory（2026-11-02）
+
+### 模块及职责
+
+- RenderCore/RenderResource.h：FVertexBuffer、FIndexBuffer 继承 FRenderResource，持有 RHI Buffer 引用。
+- RHITest/TestMeshResources.h：测试派生类拥有 CPU 字节，SetData 复制、InitRHI 创建 UPLOAD Buffer。
+- RenderCore/VertexStreamComponent.h：FVertexStreamComponent 描述单个属性从哪里读取。
+- RenderCore/VertexFactory.h：FVertexFactory 管理去重后的顶点流和 RHI 顶点声明。
+- Engine/LocalVertexFactory.h：FLocalVertexFactory 组织 Position 与一个 UV 通道；模块归属对齐 UE。
+
+### 从示例追调用链
+
+1. VB/IB.SetData 复制 CPU 数据，BeginInitResource 创建 RHI Buffer。
+2. FLocalVertexFactory::FDataType 描述 PositionComponent 与 TextureCoordinates。
+3. Factory.SetData 复制布局描述；不复制/拥有 Buffer。
+4. BeginInitResource(Factory) → InitRHI → AccessStreamComponent，为属性分配或复用流槽位。
+5. InitDeclaration 创建 RHI 顶点声明，交给 PSO 的 BoundShaderState。
+6. Draw 先设置匹配的 PSO，再调用 SetVertexFactoryStreams。
+7. GetStreams 查询 Buffer 当前 RHI 对象并生成流绑定快照，辅助函数逐项调用 SetStreamSource。
+8. 索引缓冲独立交给 DrawIndexedPrimitive，不属于顶点属性流。
+
+### 两种偏移不能混淆
+
+StreamOffset 是整条流在 Buffer 中的起点，最终传给 SetStreamSource。
+Offset 是每个顶点内的属性偏移，进入 FVertexElement.Offset。
+Stride 来自 Component/顶点声明，不能由 Buffer 的 Stride 自动决定。
+
+立方体使用前缀 16 字节：Position {StreamOffset=16, Offset=0, Stride=20}；
+UV {StreamOffset=16, Offset=12, Stride=20}，共享一个 Buffer，因此去重为同一个 Stream 0。
+流去重依据 Buffer 指针、StreamOffset、Stride，不比较每个属性的 Offset。
+全屏网格 Position 使用一个 Buffer（Stride=12），UV 使用另一个 Buffer（Stride=8），生成 Stream 0/1。
+两个都是逐顶点流，索引缓冲中的同一个索引分别取两个流中的对应数据。
+
+### Shader 接口
+
+对齐 UE LocalVertexFactory 的语义编号：Position=ATTRIBUTE0，第一组 UV=ATTRIBUTE4。
+TestShaders.usf 已同步更新，RHI 顶点声明允许语义索引不连续。
+1/2/3 的切线/颜色输入尚未实现，因此当前声明只包含 0 和 4。
+全屏 PSO 必须使用全屏 Factory 的声明，不能再复用立方体的交错单流声明。
+Shader 字节码可以相同，因为输入语义相同，差别由 PSO 输入布局和流绑定处理。
+
+### 所有权与生命周期
+
+Factory 和 Component 借用 FVertexBuffer 指针，FVertexInputStream 借用 FRHIBuffer 指针。
+拥有者必须保证 Buffer 对象活得比 Factory/流快照更久，GPU 使用完成前还要保留底层 RHI 资源。
+App 的成员顺序保证 Factory 先析构，Buffer 后析构，退出前仍先 WaitForGPU。
+初始化顺序是 Buffer → Factory；更新布局必须先释放 Factory，再 SetData/初始化并重建相应 PSO。
+重新创建不同大小/布局的 Buffer 后同样需要重新验证 Factory，不能只靠旧快照继续绘制。
+FVertexBuffer/FIndexBuffer 基类析构清理自身 Buffer 引用；派生类若增加其他 RHI 成员，必须在自己的析构器先 ReleaseResource。
+
+### 简化边界
+
+这不是完整 UE VertexFactory：尚无 FVertexFactoryType 注册、.ush 接口注入、材质排列、法线/切线/颜色、多 UV、Instancing、ManualFetch 或 GPUScene。
+当前 LocalVertexFactory 只支持 float3 Position 与一个 float2 UV；RHI 本身已有的整数格式能力不受此限制影响。
+Component 按 UE 使用 8 位 Offset/Stride，超出 255 明确拒绝；RHI FVertexElement 的 Stride 仍为 16 位。
+没有把 Offset+属性大小<=Stride 当作通用约束；只检查初始化时第一个属性是否落在 Buffer 内。
+完整 Draw 顶点/索引范围和当前 PSO 是否匹配仍由调用方保证。
+GetStreams 的借用快照目前立即提交；后续 MeshDrawCommand 缓存必须另外处理资源存活/更新。
+
+### 验证
+
+2026-11-02：C5 Debug / Release 构建与 C1～C5、A/B 回归全部通过，单流场景和双流合成逐像素一致，调试队列无警告/错误。
+
+stage-c-vertex-factory-checks.txt 覆盖 Buffer 生命周期、依赖初始化顺序、单流去重、16 字节流偏移、
+ATTRIBUTE0/4、双流与各自 Stride、越界/布局修改拒绝、初始化失败回滚和重新初始化。
+实际 ScenePass 使用单流，CompositePass 使用双流，原有逐像素图像比较验证真实 GPU 输入。
+
+## C6：MeshBatch → MeshPassProcessor → MeshDrawCommand（2026-11-02）
+
+### 职责与模块
+
+- Engine/MeshBatch.h：FMeshBatch 借用 VertexFactory，Elements 借用 IndexBuffer 并描述图元数量。
+- Renderer/MeshPassProcessor.h：FMeshPassProcessor 保存一个 Pass 的 Shader/固定状态模板，组织命令构建。
+- FMeshDrawShaderBindings：复制常量字节，持有 SRV，并保存从反射参数对象解析出的绑定索引。
+- FMeshDrawCommand：持有 PSO、ShaderBindings、顶点流快照、顶点/索引 Buffer 引用和图元数量。
+- RHITest::BuildMeshCommands：当前应用层把 WVP、纹理和网格组合起来；尚未实现 MaterialRenderProxy 或 SceneView。
+
+### 实际调用链
+
+1. 初始化时给 SceneProcessor、CompositeProcessor 分别配置固定状态与 Shader。
+2. GetPipelineState 使用 Factory 的声明创建 PSO，并在该 Processor 内按声明身份复用。
+3. 每帧 BuildMeshCommands 组织 FMeshBatch：立方体 NumPrimitives=12，全屏四边形=2。
+4. 通过 Shader 的参数成员向 FMeshDrawShaderBindings 写入 WVP 副本和 SRV 引用。
+5. AddMeshBatch 获取顶点流及 RHI 引用，检查全部 Element 的索引范围和受支持参数。
+6. 每个 Element 生成一个命令，全部成功后才追加到输出数组。
+7. 在 BeginRenderPass/EndRenderPass 之间调用 SubmitDraw：设置 PSO → 常量/SRV → 顶点流 → DrawIndexedPrimitive。
+8. 当前 TriangleList 的 IndexCount = NumPrimitives * 3；12 个三角形对应 36 个索引。
+
+### 生命周期
+
+MeshBatch 借用的上层对象只须覆盖命令构建阶段。
+GetStreams 默认仍返回借用快照；C6 增加可选 OutReferences，在同一次查询中取得资源共享引用。
+MeshDrawCommand 保存这些引用，因此上层 Factory/Buffer 对象释放后，命令中的 FRHIBuffer 指针仍有效。
+常量数据是字节副本，不保存局部 FrameCB 指针；后续修改源常量或源 Bindings 不会影响已构建命令。
+命令持有引用只覆盖其 CPU 生命周期，不代表 GPU 完成；命令销毁后仍需其他所有者或 Fence 延迟释放保护。
+当前 App 持有常驻 Buffer/PSO，换纹理沿用 DeferredDelete，退出前仍 WaitForGPU。
+
+### 当前边界及 UE 差异
+
+对照 UE Engine/Public/MeshBatch.h 和 Renderer/Public/MeshPassProcessor.h。
+保留网格批次、Pass 处理、绑定快照和绘制命令分层，但并未照搬 UE 的全部字段和函数签名。
+当前 FMeshPassProcessor 是可直接实例化的固定状态处理器，AddMeshBatch 接收外部提供的绑定快照，
+尚未包含 SceneProxy/MaterialRenderProxy 选择 Shader、材质排列、DrawListContext、排序、合批、实例化或缓存命令失效处理。
+Processor 的 PSO 缓存仅对自身固定状态模板有效，不是 UE 的全局 PipelineStateCache。
+UE 的 MeshDrawCommand 常通过 PipelineId 和外部资源生命周期体系管理引用；本节直接共享持有 PSO/Buffer/SRV。
+
+只支持 TriangleList、FirstIndex=0、BaseVertexIndex=0、NumInstances=1，明确拒绝其他值，不忽略字段。
+索引计数不能超过 Buffer 容量；本节不扫描索引内容验证每个顶点索引是否落在所有流的有效范围内。
+ShaderBindings 仅支持 VS b0 与 PS t0，静态采样器仍在根签名中；调用方须传入与 Processor Shader 匹配的参数。
+不自动验证所有必需 Shader 参数是否已提供，也不从 SRV 自动推导 Transition。
+命令不拥有 RenderPass，不做资源状态转换或 Present；这些仍由当前帧流程负责，自动 Pass 依赖留给阶段 D。
+命令每帧构建；尚未实现跨帧静态命令缓存。一个 Batch 的全部 Elements 当前共用一份绑定快照。
+
+### 验证
+
+2026-11-02：C6 Debug / Release 构建与 C1～C6、A/B 回归全部通过。121 帧后离屏与合成结果逐像素一致，D3D12 调试队列无警告/错误。
+
+stage-c-mesh-draw-checks.txt 验证常量复制、源 Bindings 修改隔离、PSO 复用、
+上层对象销毁后的 RHI 引用保持、多 Element 生成、范围/实例/溢出拒绝、失败批次不部分追加及最终释放。
+正常单流 ScenePass/双流 CompositePass 全部改走命令提交，并继续运行 C1～C5、A/B GPU 图像回归。
+
 ### 接下来
 
-建立 FVertexBuffer/FIndexBuffer 与 FVertexFactory，逐步把网格的数据布局和顶点流绑定从示例中抽离。
-参数结构体自动绑定、Shader permutation、多寄存器绑定和场景绘制抽象仍待实现；阶段 C 尚未完成。
+引入 Scene/View、网格与简单材质参数，建立多物体收集和按 Pass 组织提交的最小 Renderer。
+参数结构体自动绑定、Shader permutation、多寄存器绑定和完整 VertexFactory Shader 接口仍待实现；阶段 C 尚未完成。

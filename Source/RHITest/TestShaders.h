@@ -12,6 +12,7 @@ public:
         if (GetFrequency() != SF_Vertex) throw std::invalid_argument("FTestVS needs vertex output");
         Constants.Bind(Initializer.ParameterMap, "CB", SPF_Mandatory);
     }
+    const FShaderUniformBufferParameter& GetConstantsParameter() const { return Constants; }
     void SetParameters(FRHICommandList& CmdList, const void* Data, uint32 Size) const
     {
         SetShaderConstantBufferData(CmdList, GetFrequency(), Constants, Data, Size);
@@ -35,6 +36,7 @@ public:
         if (Sampler.GetBaseIndex() != 0 || Sampler.GetNumResources() != 1)
             throw std::invalid_argument("Test shader requires static sampler s0");
     }
+    const FShaderResourceParameter& GetTextureParameter() const { return Texture; }
     void SetParameters(FRHICommandList& CmdList, FRHIShaderResourceView* View) const
     {
         SetSRVParameter(CmdList, GetFrequency(), Texture, View);

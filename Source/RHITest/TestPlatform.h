@@ -17,3 +17,14 @@ std::vector<uint8> ReadbackTextureRGBA(FRHITexture* Texture);
 
 // 阶段 C：编译/反射元数据及 Shader 参数对象验证（调用时 RHI 已初始化）。
 void ValidateStageCCompiler();
+
+// 阶段 C：VertexFactory 声明、流布局和 Buffer 生命周期验证。
+void ValidateStageCVertexFactory();
+
+class FShaderUniformBufferParameter;
+class FShaderResourceParameter;
+// 阶段 C：命令快照、PSO 复用、参数与资源生命周期验证。
+void ValidateStageCMeshDraw(const FGraphicsPipelineStateInitializer& Pipeline,
+    const FShaderUniformBufferParameter& ConstantsParameter,
+    const FShaderResourceParameter& TextureParameter,
+    const TRefCountPtr<FRHIShaderResourceView>& Texture);
