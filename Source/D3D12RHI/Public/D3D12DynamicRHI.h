@@ -37,6 +37,7 @@ public:
 	virtual TRefCountPtr<FRHITexture> RHIGetViewportBackBuffer(FRHIViewport* Viewport) override;
 
 	virtual TRefCountPtr<FRHIViewport> RHICreateViewport(void* WindowHandle, uint32 SizeX, uint32 SizeY, bool bIsFullscreen, EPixelFormat PixelFormat) override;
+    void RHIResizeViewport(FRHIViewport* Viewport, uint32 SizeX, uint32 SizeY) override;
 	// 后端内部及专用验证代码使用；普通绘制代码不获取具体 Device。
 	FD3D12Adapter* GetAdapter() const { return Adapter.get(); }
 	FD3D12Device* GetDevice()  const { return Device; }

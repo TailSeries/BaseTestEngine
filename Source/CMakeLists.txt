@@ -19,6 +19,12 @@ add_subdirectory(Engine)
 add_subdirectory(Renderer)
 add_subdirectory(RHITest)
 
+# 编辑器是可选宿主；RHI / Renderer 不依赖 Qt。未安装 SDK 时照常构建原有目标。
+option(BASETEST_BUILD_EDITOR "Build the Qt Quick editor (requires Qt 6.8+)" OFF)
+if(BASETEST_BUILD_EDITOR)
+    add_subdirectory(Editor)
+endif()
+
 #add_subdirectory(Transfer)
 add_subdirectory(Algorithm)
 add_subdirectory(DirectX12)

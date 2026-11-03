@@ -8,7 +8,11 @@
       "buildRoot": "${projectDir}\\..\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeCommandArgs": "",
-      "ctestCommandArgs": ""
+      "ctestCommandArgs": "",
+      "variables": [
+        { "name": "BASETEST_BUILD_EDITOR", "value": "ON", "type": "BOOL" },
+        { "name": "CMAKE_PREFIX_PATH", "value": "${projectDir}/../out/Qt/6.8.3/msvc2022_64", "type": "PATH" }
+      ]
     },
     {
       "name": "x64-Release",
@@ -18,6 +22,10 @@
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeCommandArgs": "",
       "ctestCommandArgs": "",
+      "variables": [
+        { "name": "BASETEST_BUILD_EDITOR", "value": "ON", "type": "BOOL" },
+        { "name": "CMAKE_PREFIX_PATH", "value": "${projectDir}/../out/Qt/6.8.3/msvc2022_64", "type": "PATH" }
+      ],
       "inheritEnvironments": [ "msvc_x64_x64" ]
     }
   ]

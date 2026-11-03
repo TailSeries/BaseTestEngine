@@ -131,6 +131,7 @@ void FD3D12Viewport::ResizeInternal()
 
 void FD3D12Viewport::Resize(uint32 NewSizeX, uint32 NewSizeY)
 {
+    if (!NewSizeX || !NewSizeY) throw std::invalid_argument("Viewport resize requires nonzero dimensions");
 	if (NewSizeX == SizeX && NewSizeY == SizeY)
 	{
 		return;
@@ -144,6 +145,16 @@ void FD3D12Viewport::Resize(uint32 NewSizeX, uint32 NewSizeY)
 	SizeX = NewSizeX;
 	SizeY = NewSizeY;
 	ResizeInternal();
+}
+
+void FD3D12DynamicRHI::RHIResizeViewport(FRHIViewport* Viewport, uint32 SizeX, uint32 SizeY)
+{
+    if (!Viewport || !SizeX || !SizeY) throw std::invalid_argument("Invalid viewport resize");
+    auto& Context = Device->GetDefaultCommandContext();
+    if (Context.IsFrameOpen()) throw std::logic_error("ResizeViewport must run outside a frame");
+    // 现阶段只有单 Direct Queue。等待也清理在飞帧引用，之后才能 ResizeBuffers。
+    Context.WaitForGPU();
+    static_cast<FD3D12Viewport*>(Viewport)->Resize(SizeX, SizeY);
 }
 
 /*

@@ -561,7 +561,8 @@ public:
 	{
 		return IsClosed.load();
 	}
-	void SetDebugName(const TCHAR* Name)
+    // 当前引擎统一使用 UTF-8 窄字符串，不能随宿主的 UNICODE 宏改变参数类型。
+	void SetDebugName(const char* Name)
 	{
 		DebugName = Name;
 	}

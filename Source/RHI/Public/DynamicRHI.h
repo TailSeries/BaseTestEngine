@@ -41,6 +41,9 @@ public:
 	virtual TRefCountPtr<FRHITexture> RHIGetViewportBackBuffer(FRHIViewport* Viewport) = 0;
 	//我们沿用 UE 的入口参数，暂时只支持窗口模式、RGBA8、两个 backbuffer。
 	virtual TRefCountPtr<FRHIViewport> RHICreateViewport(void* WindowHandle, uint32 SizeX, uint32 SizeY, bool bIsFullscreen, EPixelFormat PixelFormat) = 0;
+    // 编辑器窗口尺寸变化；帧外调用，调用方先释放借用的 backbuffer 引用。
+    // 后端等待 GPU 完成后调整交换链；零尺寸由窗口层跳过。
+    virtual void RHIResizeViewport(FRHIViewport* Viewport, uint32 SizeX, uint32 SizeY) = 0;
 };
 // UE: extern RHI_API FDynamicRHI* GDynamicRHI; —— 全局分发入口，上层只认它
 
@@ -123,6 +126,11 @@ inline TRefCountPtr<FRHIViewport> RHICreateViewport(void* WindowHandle, uint32 S
 		SizeY,
 		bIsFullscreen,
 		PixelFormat);
+}
+
+inline void RHIResizeViewport(FRHIViewport* Viewport, uint32 SizeX, uint32 SizeY)
+{
+    GDynamicRHI->RHIResizeViewport(Viewport, SizeX, SizeY);
 }
 
 // 教学版启动注入：平台引导层选择后端，RHI 本身不包含 D3D12 头文件。
